@@ -9,6 +9,8 @@ import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 import java.util.regex.Pattern
 
 /**
@@ -68,6 +70,11 @@ object AppLogger {
 
     @Volatile
     private var boundContext: Context? = null
+    private val fileLogExecutor = Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "OperitAppLogger").apply {
+            isDaemon = true
+        }
+    }
 
     @JvmStatic
     fun bindContext(context: Context) {
@@ -250,7 +257,16 @@ object AppLogger {
 
     private fun writeToFile(priority: Int, tag: String, msg: String, tr: Throwable?) {
         if (!enableFileLogging) return
+        try {
+            fileLogExecutor.execute {
+                writeToFileSync(priority, tag, msg, tr)
+            }
+        } catch (_: RejectedExecutionException) {
+        }
+    }
 
+    private fun writeToFileSync(priority: Int, tag: String, msg: String, tr: Throwable?) {
+        if (!enableFileLogging) return
         val file = resolveLogFile() ?: return
 
         val time = dateFormat.format(Date())

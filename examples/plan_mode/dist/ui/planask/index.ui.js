@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Screen;
-const plan_mode_constants_js_1 = require("../../shared/plan_mode_constants.js");
 const plan_mode_ask_js_1 = require("../../shared/plan_mode_ask.js");
 const plan_mode_ask_execution_js_1 = require("../../shared/plan_mode_ask_execution.js");
 const plan_mode_i18n_js_1 = require("../../shared/plan_mode_i18n.js");
@@ -28,7 +27,7 @@ function isQuestionAnswered(question, answers, customAnswers) {
     return resolveAnswerText(question, answers, customAnswers).trim() !== "";
 }
 function resolveAnswerText(question, selectedAnswers, customAnswers) {
-    const customText = String(customAnswers[question.id] || "").trim();
+    const customText = (customAnswers[question.id] ?? "").trim();
     if (customText !== "") {
         return customText;
     }
@@ -86,8 +85,8 @@ function Screen(ctx) {
             questionId,
             valueLength: value.length,
             valuePreview: clipLogText(value),
-            storedValueLength: String(nextCustomAnswers[questionId] || "").length,
-            storedValuePreview: clipLogText(String(nextCustomAnswers[questionId] || "")),
+            storedValueLength: (nextCustomAnswers[questionId] ?? "").length,
+            storedValuePreview: clipLogText(nextCustomAnswers[questionId] ?? ""),
             selectedAnswerMarker: nextAnswers[questionId] || "",
             storedCustomAnswerKeys: Object.keys(nextCustomAnswers),
         });
@@ -123,17 +122,18 @@ function Screen(ctx) {
         logPlanaskDebug("submit_answers", {
             answers: parsed.questions.map((question) => ({
                 questionId: question.id,
-                answerLength: String(answerTexts[question.id] || "").length,
-                answerPreview: clipLogText(String(answerTexts[question.id] || "")),
+                answerLength: (answerTexts[question.id] ?? "").length,
+                answerPreview: clipLogText(answerTexts[question.id] ?? ""),
             })),
         });
-        const result = await (0, plan_mode_ask_execution_js_1.submitPlanaskAnswers)(ctx, parsed, answerTexts);
+        const message = (0, plan_mode_ask_js_1.buildPlanaskAnswerMessage)(parsed, answerTexts);
+        const result = (0, plan_mode_ask_execution_js_1.submitPlanaskAnswers)(message);
         submittingState.set(false);
         if (result.success) {
             submittedState.set(true);
             return;
         }
-        errorState.set(result.error ? result.error : "");
+        errorState.set(result.error ?? "");
     };
     const headerTitle = parsed.title || text.askRendererTitle;
     const description = parsed.description || text.askRendererDescriptionFallback;
@@ -243,7 +243,7 @@ function Screen(ctx) {
                     fillMaxWidth: true,
                     label: text.askRendererCustomFieldLabel,
                     placeholder: text.askRendererCustomFieldPlaceholder,
-                    value: String(customAnswersState.value[currentQuestion.id] || ""),
+                    value: customAnswersState.value[currentQuestion.id] ?? "",
                     onValueChange: (value) => {
                         handleCustomAnswerChange(currentQuestion.id, value);
                     },
@@ -280,67 +280,86 @@ function Screen(ctx) {
                     ]),
                 ]),
                 ctx.UI.Text({
-                    text: headerTitle,
+                    text: ready ? headerTitle : text.askRendererTitle,
                     style: "headlineSmall",
                     color: "onSurface",
                     fontWeight: "bold",
                 }),
-                ctx.UI.Markdown({
-                    text: description,
-                    color: "onSurfaceVariant",
-                    fontSize: 12,
-                    fillMaxWidth: true,
-                    padding: { vertical: 2 },
-                    streamTagName: plan_mode_constants_js_1.PLANASK_XML_TAG,
-                }),
-                ...(questionNode
-                    ? [questionNode]
-                    : [
-                        ctx.UI.Text({
-                            text: text.rendererEmpty,
-                            style: "bodyMedium",
+                ...(ready
+                    ? [
+                        ctx.UI.Markdown({
+                            text: description,
                             color: "onSurfaceVariant",
+                            fontSize: 12,
+                            fillMaxWidth: true,
+                            padding: { vertical: 2 },
                         }),
-                    ]),
-                !ready
-                    ? ctx.UI.Text({
-                        text: text.askRendererStreamingHint,
-                        style: "bodySmall",
-                        color: "onSurfaceVariant",
-                    })
-                    : ctx.UI.Row({
-                        fillMaxWidth: true,
-                        horizontalArrangement: "end",
-                    }, [
-                        submittingState.value
-                            ? ctx.UI.Button({
-                                enabled: false,
-                                onClick: handleSubmit,
-                                contentPadding: { horizontal: 12, vertical: 8 },
-                            }, [
-                                ctx.UI.Row({
-                                    verticalAlignment: "center",
-                                    horizontalArrangement: "center",
-                                    spacing: 8,
-                                }, [
-                                    ctx.UI.CircularProgressIndicator({
-                                        width: 14,
-                                        height: 14,
-                                        strokeWidth: 2,
-                                        color: "onPrimary",
-                                    }),
-                                    ctx.UI.Text({ text: text.askRendererSubmitBusy }),
-                                ]),
-                            ])
-                            : ctx.UI.Button({
-                                text: submittedState.value
-                                    ? text.askRendererSubmitted
-                                    : text.askRendererSubmitIdle,
-                                enabled: allAnswered && !submittedState.value,
-                                onClick: handleSubmit,
-                                contentPadding: { horizontal: 12, vertical: 8 },
+                        ...(questionNode
+                            ? [questionNode]
+                            : [
+                                ctx.UI.Text({
+                                    text: text.rendererEmpty,
+                                    style: "bodyMedium",
+                                    color: "onSurfaceVariant",
+                                }),
+                            ]),
+                    ]
+                    : [
+                        ctx.UI.Row({
+                            fillMaxWidth: true,
+                            verticalAlignment: "center",
+                            spacing: 10,
+                        }, [
+                            ctx.UI.CircularProgressIndicator({
+                                width: 16,
+                                height: 16,
+                                strokeWidth: 2,
+                                color: "primary",
                             }),
+                            ctx.UI.Text({
+                                text: text.askRendererStreamingHint,
+                                style: "bodySmall",
+                                color: "onSurfaceVariant",
+                            }),
+                        ]),
                     ]),
+                ...(ready
+                    ? [
+                        ctx.UI.Row({
+                            fillMaxWidth: true,
+                            horizontalArrangement: "end",
+                        }, [
+                            submittingState.value
+                                ? ctx.UI.Button({
+                                    enabled: false,
+                                    onClick: handleSubmit,
+                                    contentPadding: { horizontal: 12, vertical: 8 },
+                                }, [
+                                    ctx.UI.Row({
+                                        verticalAlignment: "center",
+                                        horizontalArrangement: "center",
+                                        spacing: 8,
+                                    }, [
+                                        ctx.UI.CircularProgressIndicator({
+                                            width: 14,
+                                            height: 14,
+                                            strokeWidth: 2,
+                                            color: "onPrimary",
+                                        }),
+                                        ctx.UI.Text({ text: text.askRendererSubmitBusy }),
+                                    ]),
+                                ])
+                                : ctx.UI.Button({
+                                    text: submittedState.value
+                                        ? text.askRendererSubmitted
+                                        : text.askRendererSubmitIdle,
+                                    enabled: allAnswered && !submittedState.value,
+                                    onClick: handleSubmit,
+                                    contentPadding: { horizontal: 12, vertical: 8 },
+                                }),
+                        ]),
+                    ]
+                    : []),
             ]),
         ]),
     ];

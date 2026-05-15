@@ -9,7 +9,7 @@ import com.ai.assistance.operit.core.tools.climode.ToolExposureMode
 import com.ai.assistance.operit.core.tools.packTool.PackageManager
 import com.ai.assistance.operit.data.preferences.ApiPreferences
 import com.ai.assistance.operit.data.skill.SkillRepository
-import com.ai.assistance.operit.ui.features.chat.webview.workspace.process.WorkspaceAttachmentProcessor
+import com.ai.assistance.operit.ui.features.chat.webview.workspace.process.WorkspaceRuleFileReader
 import com.ai.assistance.operit.util.LocaleUtils
 
 object SystemPromptConfig {
@@ -347,7 +347,7 @@ AVAILABLE_TOOLS_SECTION""".trimIndent()
         if (useEnglish) SYSTEM_PROMPT_TEMPLATE else SYSTEM_PROMPT_TEMPLATE_CN
     }
     val workspaceRuleFile =
-        WorkspaceAttachmentProcessor.readWorkspaceRootRuleFile(
+        WorkspaceRuleFileReader.readWorkspaceRootRuleFile(
             context = context,
             workspacePath = workspacePath,
             workspaceEnv = workspaceEnv

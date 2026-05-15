@@ -109,6 +109,24 @@ internal fun buildExecutionRuntimeBridgeScript(): String {
                 return !!value;
             }
 
+            function hasUsableJavaInstanceMarker(value) {
+                if (!value || typeof value !== 'object') {
+                    return false;
+                }
+                try {
+                    return (
+                        Object.prototype.hasOwnProperty.call(value, '__javaHandle') &&
+                        Object.prototype.hasOwnProperty.call(value, '__javaClass') &&
+                        typeof value.__javaHandle === 'string' &&
+                        typeof value.__javaClass === 'string' &&
+                        text(value.__javaHandle).trim().length > 0 &&
+                        text(value.__javaClass).trim().length > 0
+                    );
+                } catch (_javaMarkerError) {
+                    return false;
+                }
+            }
+
             function normalizeSerializableValue(value, seen) {
                 if (
                     value == null ||
@@ -147,10 +165,7 @@ internal fun buildExecutionRuntimeBridgeScript(): String {
                         });
                     }
 
-                    if (
-                        Object.prototype.hasOwnProperty.call(value, '__javaHandle') &&
-                        Object.prototype.hasOwnProperty.call(value, '__javaClass')
-                    ) {
+                    if (hasUsableJavaInstanceMarker(value)) {
                         return {
                             __javaHandle: text(value.__javaHandle),
                             __javaClass: text(value.__javaClass)
@@ -308,6 +323,7 @@ internal fun buildExecutionRuntimeBridgeScript(): String {
                 if (!exportsRef || typeof exportsRef !== 'object') {
                     return;
                 }
+                try { exportsRef.__operit_toolpkg_module_path = modulePath; } catch (_e) {}
                 Object.keys(exportsRef).forEach(function(key) {
                     if (typeof exportsRef[key] === 'function') {
                         try { exportsRef[key].__operit_toolpkg_module_path = modulePath; } catch (_e) {}
@@ -408,6 +424,7 @@ internal fun buildExecutionRuntimeBridgeScript(): String {
                 var callState = registerCallSession(callId, params);
                 var previousCallId = root.__operitCurrentCallId;
                 var previousCallRuntime = root.__operit_call_runtime_ref;
+                var previousDecodeGlobalBridgeTransferValue = root.__operitDecodeGlobalBridgeTransferValue;
                 root.__operitCurrentCallId = callId;
 
                 function markStage(stage) {
@@ -467,6 +484,19 @@ internal fun buildExecutionRuntimeBridgeScript(): String {
                                 delete root.__operit_call_runtime_ref;
                             } catch (_deleteRuntimeError) {
                                 root.__operit_call_runtime_ref = null;
+                            }
+                        }
+                    }
+                    if (root.__operitDecodeGlobalBridgeTransferValue === decodeGlobalBridgeTransferValue) {
+                        if (typeof previousDecodeGlobalBridgeTransferValue === 'function') {
+                            root.__operitDecodeGlobalBridgeTransferValue =
+                                previousDecodeGlobalBridgeTransferValue;
+                        } else {
+                            try {
+                                delete root.__operitDecodeGlobalBridgeTransferValue;
+                            } catch (_deleteDecodeGlobalBridgeError) {
+                                root.__operitDecodeGlobalBridgeTransferValue =
+                                    previousDecodeGlobalBridgeTransferValue || null;
                             }
                         }
                     }
@@ -720,133 +750,431 @@ internal fun buildExecutionRuntimeBridgeScript(): String {
                     return parsed;
                 }
 
-                function readGlobalToolPkgModuleMember(modulePath, memberPath) {
+                function createGlobalBridgeSourceForModule(modulePath) {
+                    return {
+                        type: 'module',
+                        id: normalizePath(modulePath)
+                    };
+                }
+
+                function createGlobalBridgeSourceForHandle(handleId, contextKey) {
+                    return {
+                        type: 'handle',
+                        id: text(handleId).trim(),
+                        contextKey: text(contextKey).trim()
+                    };
+                }
+
+                function getToolPkgBridgeStore() {
+                    var store = root.__operitToolPkgBridgeReturnStore;
+                    if (!store || typeof store !== 'object') {
+                        store = {
+                            nextId: 1,
+                            values: Object.create(null),
+                            objectIds: typeof WeakMap === 'function' ? new WeakMap() : null
+                        };
+                        root.__operitToolPkgBridgeReturnStore = store;
+                    }
+                    if (!store.values || typeof store.values !== 'object') {
+                        store.values = Object.create(null);
+                    }
+                    if (!store.objectIds && typeof WeakMap === 'function') {
+                        store.objectIds = new WeakMap();
+                    }
+                    store.nextId = Number(store.nextId) || 1;
+                    return store;
+                }
+
+                function storeToolPkgBridgeValue(value) {
+                    if (value == null) {
+                        return '';
+                    }
+                    var valueType = typeof value;
+                    if (valueType !== 'object' && valueType !== 'function') {
+                        return '';
+                    }
+                    var store = getToolPkgBridgeStore();
+                    var existingId = '';
+                    if (store.objectIds && typeof store.objectIds.get === 'function') {
+                        existingId = text(store.objectIds.get(value)).trim();
+                    }
+                    if (existingId && store.values[existingId]) {
+                        return existingId;
+                    }
+                    var handleId = 'bridge_' + String(store.nextId++);
+                    store.values[handleId] = value;
+                    if (store.objectIds && typeof store.objectIds.set === 'function') {
+                        store.objectIds.set(value, handleId);
+                    }
+                    return handleId;
+                }
+
+                function buildMainToolPkgExecutionContextKey() {
+                    return packageTarget ? 'toolpkg_main:' + packageTarget : '';
+                }
+
+                function getCurrentToolPkgExecutionContextKey() {
+                    var composeContextKey = text(
+                        readCallValue(
+                            '__operit_compose_execution_context_key',
+                            readCallValue('executionContextKey', '')
+                        )
+                    ).trim();
+                    var scopedContextKey = text(
+                        readCallValue('__operit_execution_context_key', '')
+                    ).trim();
+                    if (composeContextKey.length > 0) {
+                        return composeContextKey;
+                    }
+                    if (scopedContextKey.length > 0) {
+                        return scopedContextKey;
+                    }
+                    return buildMainToolPkgExecutionContextKey();
+                }
+
+                function isHandleGlobalBridgeSource(source) {
+                    return !!source && source.type === 'handle';
+                }
+
+                function getGlobalBridgeSourceContextKey(source) {
+                    return isHandleGlobalBridgeSource(source)
+                        ? text(source && source.contextKey).trim()
+                        : '';
+                }
+
+                function getGlobalBridgeNativeMethodName(action, source) {
+                    if (action === 'read') {
+                        return isHandleGlobalBridgeSource(source)
+                            ? 'readGlobalToolPkgHandleMember'
+                            : 'readGlobalToolPkgModuleMember';
+                    }
+                    if (action === 'invoke') {
+                        return isHandleGlobalBridgeSource(source)
+                            ? 'invokeGlobalToolPkgHandleFunction'
+                            : 'invokeGlobalToolPkgModuleFunction';
+                    }
+                    if (action === 'write') {
+                        return isHandleGlobalBridgeSource(source)
+                            ? 'writeGlobalToolPkgHandleMember'
+                            : 'writeGlobalToolPkgModuleMember';
+                    }
+                    throw new Error('unsupported global bridge action: ' + text(action));
+                }
+
+                function normalizeGlobalBridgeMemberPath(memberPath) {
+                    return Array.isArray(memberPath)
+                        ? memberPath.map(function(item) { return String(item); })
+                        : [];
+                }
+
+                function getGlobalBridgeSourceId(source) {
+                    return isHandleGlobalBridgeSource(source)
+                        ? text(source && source.id).trim()
+                        : normalizePath(source && source.id);
+                }
+
+                function getGlobalBridgeKind(descriptor) {
+                    if (!descriptor || typeof descriptor !== 'object') {
+                        return 'object';
+                    }
+                    if (descriptor.kind === 'function') {
+                        return 'function';
+                    }
+                    if (descriptor.kind === 'array') {
+                        return 'array';
+                    }
+                    return 'object';
+                }
+
+                function normalizeGlobalHandleKind(handleKind) {
+                    var normalized = text(handleKind).trim().toLowerCase();
+                    if (
+                        normalized === 'function' ||
+                        normalized === 'array' ||
+                        normalized === 'object'
+                    ) {
+                        return normalized;
+                    }
+                    return 'object';
+                }
+
+                function readGlobalBridgeHandleKind(value) {
+                    if (!value || (typeof value !== 'object' && typeof value !== 'function')) {
+                        return '';
+                    }
+                    try {
+                        var handleKind = text(
+                            value.__operit_toolpkg_bridge_handle_kind
+                        ).trim();
+                        if (handleKind) {
+                            return normalizeGlobalHandleKind(handleKind);
+                        }
+                    } catch (_readHandleKindError) {
+                    }
+                    return '';
+                }
+
+                function readGlobalBridgeHandleContextKey(value) {
+                    if (!value || (typeof value !== 'object' && typeof value !== 'function')) {
+                        return '';
+                    }
+                    try {
+                        return text(
+                            value.__operit_toolpkg_bridge_context_key
+                        ).trim();
+                    } catch (_readHandleContextError) {
+                    }
+                    return '';
+                }
+
+                function objectHasOwnFunctionValues(value, keys) {
+                    var normalizedKeys = Array.isArray(keys) ? keys : [];
+                    for (var i = 0; i < normalizedKeys.length; i += 1) {
+                        try {
+                            if (typeof value[normalizedKeys[i]] === 'function') {
+                                return true;
+                            }
+                        } catch (_readError) {
+                        }
+                    }
+                    return false;
+                }
+
+                function shouldUseHandleTransferForObject(value, keys) {
+                    return !canSerializeAsPlainObject(value) || objectHasOwnFunctionValues(value, keys);
+                }
+
+                function encodeGlobalBridgeTransferValue(value, seen) {
+                    if (value === undefined) {
+                        return { kind: 'undefined' };
+                    }
+                    if (value === null) {
+                        return { kind: 'null' };
+                    }
+                    if (
+                        typeof value === 'string' ||
+                        typeof value === 'number' ||
+                        typeof value === 'boolean'
+                    ) {
+                        return {
+                            kind: 'primitive',
+                            value: value
+                        };
+                    }
+                    if (typeof value === 'bigint') {
+                        return {
+                            kind: 'primitive',
+                            value: text(value)
+                        };
+                    }
+                    if (hasUsableJavaInstanceMarker(value)) {
+                        return {
+                            kind: 'javaHandle',
+                            value: {
+                                __javaHandle: text(value.__javaHandle),
+                                __javaClass: text(value.__javaClass)
+                            }
+                        };
+                    }
+                    if (
+                        value &&
+                        typeof value === 'object' &&
+                        typeof value.__operit_toolpkg_module_path === 'string' &&
+                        value.__operit_toolpkg_module_path.trim().length > 0
+                    ) {
+                        return {
+                            kind: 'globalModule',
+                            modulePath: normalizePath(value.__operit_toolpkg_module_path)
+                        };
+                    }
+                    if (
+                        value &&
+                        typeof value === 'object' &&
+                        typeof value.__operit_toolpkg_bridge_handle_id === 'string' &&
+                        value.__operit_toolpkg_bridge_handle_id.trim().length > 0
+                    ) {
+                        var existingHandleId = text(value.__operit_toolpkg_bridge_handle_id).trim();
+                        var existingHandleContextKey = readGlobalBridgeHandleContextKey(value);
+                        if (!existingHandleContextKey) {
+                            throw new Error('global bridge handle context key is missing');
+                        }
+                        return {
+                            kind: 'globalHandle',
+                            handleId: existingHandleId,
+                            contextKey: existingHandleContextKey,
+                            handleKind: readGlobalBridgeHandleKind(value)
+                        };
+                    }
+                    if (typeof value === 'function') {
+                        return {
+                            kind: 'globalHandle',
+                            handleId: storeToolPkgBridgeValue(value),
+                            contextKey: getCurrentToolPkgExecutionContextKey(),
+                            handleKind: 'function'
+                        };
+                    }
+                    if (!value || typeof value !== 'object') {
+                        return {
+                            kind: 'primitive',
+                            value: text(value)
+                        };
+                    }
+                    if (!seen) {
+                        seen = [];
+                    }
+                    if (seen.indexOf(value) >= 0) {
+                        return {
+                            kind: 'globalHandle',
+                            handleId: storeToolPkgBridgeValue(value),
+                            contextKey: getCurrentToolPkgExecutionContextKey(),
+                            handleKind: Array.isArray(value) ? 'array' : 'object'
+                        };
+                    }
+                    seen.push(value);
+                    try {
+                        if (Array.isArray(value)) {
+                            return {
+                                kind: 'array',
+                                items: value.map(function(item) {
+                                    return encodeGlobalBridgeTransferValue(item, seen);
+                                })
+                            };
+                        }
+                        var keys = Object.keys(value);
+                        if (shouldUseHandleTransferForObject(value, keys)) {
+                            return {
+                                kind: 'globalHandle',
+                                handleId: storeToolPkgBridgeValue(value),
+                                contextKey: getCurrentToolPkgExecutionContextKey(),
+                                handleKind: Array.isArray(value) ? 'array' : 'object'
+                            };
+                        }
+                        var out = {};
+                        for (var i = 0; i < keys.length; i += 1) {
+                            var key = keys[i];
+                            out[key] = encodeGlobalBridgeTransferValue(value[key], seen);
+                        }
+                        return {
+                            kind: 'object',
+                            value: out
+                        };
+                    } finally {
+                        seen.pop();
+                    }
+                }
+
+                function decodeGlobalBridgeTransferValue(value) {
+                    if (!value || typeof value !== 'object') {
+                        return undefined;
+                    }
+                    if (value.kind === 'undefined') {
+                        return undefined;
+                    }
+                    if (value.kind === 'null') {
+                        return null;
+                    }
+                    if (value.kind === 'primitive') {
+                        return value.value;
+                    }
+                    if (value.kind === 'javaHandle') {
+                        var wrapValue =
+                            typeof root.__operitJavaBridgeWrapValue === 'function'
+                                ? root.__operitJavaBridgeWrapValue
+                                : null;
+                        return wrapValue
+                            ? wrapValue(value.value)
+                            : value.value;
+                    }
+                    if (value.kind === 'globalModule') {
+                        return require('/' + normalizePath(value.modulePath));
+                    }
+                    if (value.kind === 'globalHandle') {
+                        return buildGlobalBridgeValue(
+                            createGlobalBridgeSourceForHandle(
+                                value.handleId,
+                                value.contextKey
+                            ),
+                            [],
+                            {
+                                kind: normalizeGlobalHandleKind(value.handleKind)
+                            }
+                        );
+                    }
+                    if (value.kind === 'array') {
+                        return Array.isArray(value.items)
+                            ? value.items.map(function(item) {
+                                return decodeGlobalBridgeTransferValue(item);
+                            })
+                            : [];
+                    }
+                    if (value.kind === 'object') {
+                        var out = {};
+                        var keys = value.value && typeof value.value === 'object'
+                            ? Object.keys(value.value)
+                            : [];
+                        for (var i = 0; i < keys.length; i += 1) {
+                            var key = keys[i];
+                            out[key] = decodeGlobalBridgeTransferValue(value.value[key]);
+                        }
+                        return out;
+                    }
+                    return undefined;
+                }
+
+                function callGlobalBridge(action, source, memberPath, payload) {
+                    var methodName = getGlobalBridgeNativeMethodName(action, source);
                     if (
                         !packageTarget ||
                         typeof NativeInterface === 'undefined' ||
                         !NativeInterface ||
-                        typeof NativeInterface.readGlobalToolPkgModuleMember !== 'function'
+                        typeof NativeInterface[methodName] !== 'function'
                     ) {
-                        throw new Error('NativeInterface.readGlobalToolPkgModuleMember is unavailable');
+                        throw new Error('NativeInterface.' + methodName + ' is unavailable');
+                    }
+                    var normalizedSourceId = getGlobalBridgeSourceId(source);
+                    var normalizedSourceContextKey = getGlobalBridgeSourceContextKey(source);
+                    var normalizedMemberPath = JSON.stringify(
+                        normalizeGlobalBridgeMemberPath(memberPath)
+                    );
+                    var args = isHandleGlobalBridgeSource(source)
+                        ? [packageTarget, normalizedSourceContextKey, normalizedSourceId, normalizedMemberPath]
+                        : [packageTarget, normalizedSourceId, normalizedMemberPath];
+                    if (isHandleGlobalBridgeSource(source) && !normalizedSourceContextKey) {
+                        throw new Error('global bridge handle source context key is empty');
+                    }
+                    if (action === 'invoke') {
+                        var payloadArgs = Array.isArray(payload) ? payload : [];
+                        var encodedPayloadArgs = payloadArgs.map(function(item) {
+                            return encodeGlobalBridgeTransferValue(item, []);
+                        });
+                        args.push(
+                            JSON.stringify(encodedPayloadArgs)
+                        );
+                    } else if (action === 'write') {
+                        var serializedValue = JSON.stringify(
+                            encodeGlobalBridgeTransferValue(payload, [])
+                        );
+                        args.push(typeof serializedValue === 'string' ? serializedValue : 'null');
                     }
                     return parseGlobalModuleBridgeResponse(
-                        NativeInterface.readGlobalToolPkgModuleMember(
-                            packageTarget,
-                            normalizePath(modulePath),
-                            JSON.stringify(Array.isArray(memberPath) ? memberPath : [])
-                        ),
-                        'readGlobalToolPkgModuleMember(' + normalizePath(modulePath) + ')'
+                        NativeInterface[methodName].apply(NativeInterface, args),
+                        methodName + '(' + normalizedSourceId + ')'
                     );
                 }
 
-                function invokeGlobalToolPkgModuleFunction(modulePath, memberPath, argsArray) {
-                    if (
-                        !packageTarget ||
-                        typeof NativeInterface === 'undefined' ||
-                        !NativeInterface ||
-                        typeof NativeInterface.invokeGlobalToolPkgModuleFunction !== 'function'
-                    ) {
-                        throw new Error('NativeInterface.invokeGlobalToolPkgModuleFunction is unavailable');
-                    }
-                    return parseGlobalModuleBridgeResponse(
-                        NativeInterface.invokeGlobalToolPkgModuleFunction(
-                            packageTarget,
-                            normalizePath(modulePath),
-                            JSON.stringify(Array.isArray(memberPath) ? memberPath : []),
-                            JSON.stringify(Array.isArray(argsArray) ? argsArray : [])
-                        ),
-                        'invokeGlobalToolPkgModuleFunction(' + normalizePath(modulePath) + ')'
-                    );
+                function readGlobalBridgeMember(source, memberPath) {
+                    return callGlobalBridge('read', source, memberPath);
                 }
 
-                function readGlobalToolPkgHandleMember(handleId, memberPath) {
-                    if (
-                        !packageTarget ||
-                        typeof NativeInterface === 'undefined' ||
-                        !NativeInterface ||
-                        typeof NativeInterface.readGlobalToolPkgHandleMember !== 'function'
-                    ) {
-                        throw new Error('NativeInterface.readGlobalToolPkgHandleMember is unavailable');
-                    }
-                    return parseGlobalModuleBridgeResponse(
-                        NativeInterface.readGlobalToolPkgHandleMember(
-                            packageTarget,
-                            text(handleId).trim(),
-                            JSON.stringify(Array.isArray(memberPath) ? memberPath : [])
-                        ),
-                        'readGlobalToolPkgHandleMember(' + text(handleId).trim() + ')'
-                    );
+                function invokeGlobalBridgeFunction(source, memberPath, argsArray) {
+                    return callGlobalBridge('invoke', source, memberPath, argsArray);
                 }
 
-                function invokeGlobalToolPkgHandleFunction(handleId, memberPath, argsArray) {
-                    if (
-                        !packageTarget ||
-                        typeof NativeInterface === 'undefined' ||
-                        !NativeInterface ||
-                        typeof NativeInterface.invokeGlobalToolPkgHandleFunction !== 'function'
-                    ) {
-                        throw new Error('NativeInterface.invokeGlobalToolPkgHandleFunction is unavailable');
-                    }
-                    return parseGlobalModuleBridgeResponse(
-                        NativeInterface.invokeGlobalToolPkgHandleFunction(
-                            packageTarget,
-                            text(handleId).trim(),
-                            JSON.stringify(Array.isArray(memberPath) ? memberPath : []),
-                            JSON.stringify(Array.isArray(argsArray) ? argsArray : [])
-                        ),
-                        'invokeGlobalToolPkgHandleFunction(' + text(handleId).trim() + ')'
-                    );
+                function writeGlobalBridgeMember(source, memberPath, value) {
+                    return callGlobalBridge('write', source, memberPath, value);
                 }
 
-                function writeGlobalToolPkgModuleMember(modulePath, memberPath, value) {
-                    if (
-                        !packageTarget ||
-                        typeof NativeInterface === 'undefined' ||
-                        !NativeInterface ||
-                        typeof NativeInterface.writeGlobalToolPkgModuleMember !== 'function'
-                    ) {
-                        throw new Error('NativeInterface.writeGlobalToolPkgModuleMember is unavailable');
-                    }
-                    var serializedValue = JSON.stringify(value);
-                    if (typeof serializedValue !== 'string') {
-                        serializedValue = 'null';
-                    }
-                    return parseGlobalModuleBridgeResponse(
-                        NativeInterface.writeGlobalToolPkgModuleMember(
-                            packageTarget,
-                            normalizePath(modulePath),
-                            JSON.stringify(Array.isArray(memberPath) ? memberPath : []),
-                            serializedValue
-                        ),
-                        'writeGlobalToolPkgModuleMember(' + normalizePath(modulePath) + ')'
-                    );
-                }
-
-                function writeGlobalToolPkgHandleMember(handleId, memberPath, value) {
-                    if (
-                        !packageTarget ||
-                        typeof NativeInterface === 'undefined' ||
-                        !NativeInterface ||
-                        typeof NativeInterface.writeGlobalToolPkgHandleMember !== 'function'
-                    ) {
-                        throw new Error('NativeInterface.writeGlobalToolPkgHandleMember is unavailable');
-                    }
-                    var serializedValue = JSON.stringify(value);
-                    if (typeof serializedValue !== 'string') {
-                        serializedValue = 'null';
-                    }
-                    return parseGlobalModuleBridgeResponse(
-                        NativeInterface.writeGlobalToolPkgHandleMember(
-                            packageTarget,
-                            text(handleId).trim(),
-                            JSON.stringify(Array.isArray(memberPath) ? memberPath : []),
-                            serializedValue
-                        ),
-                        'writeGlobalToolPkgHandleMember(' + text(handleId).trim() + ')'
-                    );
-                }
-
-                function materializeGlobalInvocationResult(result) {
+                function materializeGlobalInvocationResult(source, result) {
                     if (!result || typeof result !== 'object') {
                         return undefined;
                     }
@@ -863,7 +1191,17 @@ internal fun buildExecutionRuntimeBridgeScript(): String {
                         typeof result.handleId === 'string' &&
                         result.handleId.trim().length > 0
                     ) {
-                        return buildGlobalHandleValue(result.handleId, [], result);
+                        var resultContextKey = isHandleGlobalBridgeSource(source)
+                            ? getGlobalBridgeSourceContextKey(source)
+                            : buildMainToolPkgExecutionContextKey();
+                        if (!resultContextKey) {
+                            throw new Error('global bridge handle result context key is empty');
+                        }
+                        var handleSource = createGlobalBridgeSourceForHandle(
+                            result.handleId,
+                            resultContextKey
+                        );
+                        return buildGlobalBridgeValue(handleSource, [], result);
                     }
                     if (result.kind === 'primitive') {
                         return result.value;
@@ -874,8 +1212,13 @@ internal fun buildExecutionRuntimeBridgeScript(): String {
                     );
                 }
 
-                function materializeGlobalSnapshot(modulePath, memberPath) {
-                    var descriptor = readGlobalToolPkgModuleMember(modulePath, memberPath);
+                function materializeGlobalSnapshot(source, memberPath, descriptor) {
+                    if (arguments.length < 3) {
+                        descriptor = readGlobalBridgeMember(source, memberPath);
+                    }
+                    if (!descriptor || typeof descriptor !== 'object') {
+                        return undefined;
+                    }
                     if (descriptor.kind === 'undefined') {
                         return undefined;
                     }
@@ -885,41 +1228,25 @@ internal fun buildExecutionRuntimeBridgeScript(): String {
                     if (descriptor.kind === 'primitive') {
                         return descriptor.value;
                     }
-                    if (descriptor.kind === 'array') {
-                        var arrayOut = [];
-                        var arrayKeys = Array.isArray(descriptor.keys) ? descriptor.keys : [];
-                        for (var i = 0; i < arrayKeys.length; i += 1) {
-                            var arrayKey = String(arrayKeys[i]);
-                            if (arrayKey === 'length') {
-                                continue;
-                            }
-                            arrayOut[arrayKey] = materializeGlobalSnapshot(
-                                modulePath,
-                                memberPath.concat([arrayKey])
-                            );
-                        }
-                        return arrayOut;
-                    }
-                    var objectOut = {};
-                    var objectKeys = Array.isArray(descriptor.keys) ? descriptor.keys : [];
-                    for (var j = 0; j < objectKeys.length; j += 1) {
-                        var objectKey = String(objectKeys[j]);
-                        objectOut[objectKey] = materializeGlobalSnapshot(
-                            modulePath,
-                            memberPath.concat([objectKey])
+
+                    var kind = getGlobalBridgeKind(descriptor);
+                    var normalizedMemberPath = normalizeGlobalBridgeMemberPath(memberPath);
+                    var keys = Array.isArray(descriptor.keys) ? descriptor.keys : [];
+                    var out = kind === 'array' ? [] : {};
+                    for (var i = 0; i < keys.length; i += 1) {
+                        var key = String(keys[i]);
+                        out[key] = materializeGlobalSnapshot(
+                            source,
+                            normalizedMemberPath.concat([key])
                         );
                     }
-                    return objectOut;
-                }
-
-                function buildGlobalModuleProxyCacheKey(modulePath, memberPath, kind) {
-                    return (
-                        normalizePath(modulePath) +
-                        '::' +
-                        JSON.stringify(Array.isArray(memberPath) ? memberPath : []) +
-                        '::' +
-                        text(kind)
-                    );
+                    if (kind === 'array') {
+                        var nextLength = Number(descriptor.length);
+                        if (!isNaN(nextLength) && nextLength >= 0) {
+                            out.length = nextLength;
+                        }
+                    }
+                    return out;
                 }
 
                 function nextGlobalModuleBridgeCallbackId() {
@@ -931,7 +1258,7 @@ internal fun buildExecutionRuntimeBridgeScript(): String {
                     );
                 }
 
-                function invokeGlobalToolPkgBridgeAsync(actionLabel, nativeInvoker) {
+                function invokeGlobalToolPkgBridgeAsync(source, actionLabel, nativeInvoker) {
                     return new Promise(function(resolve, reject) {
                         var callbackId = nextGlobalModuleBridgeCallbackId();
                         root[callbackId] = function(rawResponse) {
@@ -939,6 +1266,7 @@ internal fun buildExecutionRuntimeBridgeScript(): String {
                             try {
                                 resolve(
                                     materializeGlobalInvocationResult(
+                                        source,
                                         parseGlobalModuleBridgeResponse(rawResponse, actionLabel)
                                     )
                                 );
@@ -955,263 +1283,45 @@ internal fun buildExecutionRuntimeBridgeScript(): String {
                     });
                 }
 
-                function invokeGlobalToolPkgModuleFunctionAsync(modulePath, memberPath, argsArray) {
-                    if (
-                        !packageTarget ||
-                        typeof NativeInterface === 'undefined' ||
-                        !NativeInterface ||
-                        typeof NativeInterface.invokeGlobalToolPkgModuleFunctionAsync !== 'function'
-                    ) {
-                        throw new Error('NativeInterface.invokeGlobalToolPkgModuleFunctionAsync is unavailable');
-                    }
-                    var normalizedModulePath = normalizePath(modulePath);
-                    var serializedMemberPath = JSON.stringify(Array.isArray(memberPath) ? memberPath : []);
-                    var serializedArgs = JSON.stringify(Array.isArray(argsArray) ? argsArray : []);
-                    return invokeGlobalToolPkgBridgeAsync(
-                        'invokeGlobalToolPkgModuleFunction(' + normalizedModulePath + ')',
-                        function(callbackId) {
-                            NativeInterface.invokeGlobalToolPkgModuleFunctionAsync(
-                                callbackId,
-                                packageTarget,
-                                normalizedModulePath,
-                                serializedMemberPath,
-                                serializedArgs
-                            );
-                        }
+                function invokeGlobalBridgeFunctionAsync(source, memberPath, argsArray) {
+                    var methodName = isHandleGlobalBridgeSource(source)
+                        ? 'invokeGlobalToolPkgHandleFunctionAsync'
+                        : 'invokeGlobalToolPkgModuleFunctionAsync';
+                    var normalizedMemberPath = JSON.stringify(
+                        normalizeGlobalBridgeMemberPath(memberPath)
                     );
-                }
-
-                function invokeGlobalToolPkgHandleFunctionAsync(handleId, memberPath, argsArray) {
-                    if (
-                        !packageTarget ||
-                        typeof NativeInterface === 'undefined' ||
-                        !NativeInterface ||
-                        typeof NativeInterface.invokeGlobalToolPkgHandleFunctionAsync !== 'function'
-                    ) {
-                        throw new Error('NativeInterface.invokeGlobalToolPkgHandleFunctionAsync is unavailable');
-                    }
-                    var normalizedHandleId = text(handleId).trim();
-                    var serializedMemberPath = JSON.stringify(Array.isArray(memberPath) ? memberPath : []);
-                    var serializedArgs = JSON.stringify(Array.isArray(argsArray) ? argsArray : []);
-                    return invokeGlobalToolPkgBridgeAsync(
-                        'invokeGlobalToolPkgHandleFunction(' + normalizedHandleId + ')',
-                        function(callbackId) {
-                            NativeInterface.invokeGlobalToolPkgHandleFunctionAsync(
-                                callbackId,
-                                packageTarget,
-                                normalizedHandleId,
-                                serializedMemberPath,
-                                serializedArgs
-                            );
-                        }
-                    );
-                }
-
-                function buildGlobalModuleValue(modulePath, memberPath, descriptor) {
-                    if (!descriptor || typeof descriptor !== 'object') {
-                        return undefined;
-                    }
-                    if (descriptor.kind === 'undefined') {
-                        return undefined;
-                    }
-                    if (descriptor.kind === 'null') {
-                        return null;
-                    }
-                    if (descriptor.kind === 'primitive') {
-                        return descriptor.value;
-                    }
-
-                    var normalizedPath = normalizePath(modulePath);
-                    var normalizedMemberPath =
-                        Array.isArray(memberPath)
-                            ? memberPath.map(function(item) { return String(item); })
-                            : [];
-                    var cacheKey = buildGlobalModuleProxyCacheKey(
-                        normalizedPath,
-                        normalizedMemberPath,
-                        descriptor.kind
-                    );
-                    if (globalRequiredModuleCache[cacheKey]) {
-                        return globalRequiredModuleCache[cacheKey];
-                    }
-
-                    var kind = descriptor.kind === 'array' ? 'array' : (descriptor.kind === 'function' ? 'function' : 'object');
-                    var isAsyncFunction = kind === 'function' && descriptor.isAsync === true;
-                    var target;
-                    if (kind === 'function') {
-                        target = function() {
-                            var args = Array.prototype.slice.call(arguments);
-                            if (isAsyncFunction) {
-                                return invokeGlobalToolPkgModuleFunctionAsync(
-                                    normalizedPath,
-                                    normalizedMemberPath,
-                                    args
-                                );
-                            }
-                            return materializeGlobalInvocationResult(
-                                invokeGlobalToolPkgModuleFunction(
-                                    normalizedPath,
-                                    normalizedMemberPath,
-                                    args
-                                )
-                            );
-                        };
-                    } else if (kind === 'array') {
-                        target = [];
-                    } else {
-                        target = {};
-                    }
-
-                    var proxy = new Proxy(target, {
-                        get: function(proxyTarget, prop, receiver) {
-                            if (typeof prop === 'symbol') {
-                                if (prop === Symbol.toStringTag) {
-                                    return kind === 'array' ? 'Array' : (kind === 'function' ? 'Function' : 'Object');
-                                }
-                                if (kind === 'array' && prop === Symbol.iterator) {
-                                    return function() {
-                                        return materializeGlobalSnapshot(normalizedPath, normalizedMemberPath)[Symbol.iterator]();
-                                    };
-                                }
-                                return Reflect.get(proxyTarget, prop, receiver);
-                            }
-                            if (prop === 'then') {
-                                return undefined;
-                            }
-                            if (prop === '__operit_toolpkg_module_path') {
-                                return normalizedPath;
-                            }
-                            if (kind === 'function' && (
-                                prop === 'name' ||
-                                prop === 'length' ||
-                                prop === 'prototype' ||
-                                prop === 'caller' ||
-                                prop === 'arguments'
-                            )) {
-                                return Reflect.get(proxyTarget, prop, receiver);
-                            }
-                            if (kind === 'array' && prop === 'length') {
-                                var latestArrayDescriptor = readGlobalToolPkgModuleMember(
-                                    normalizedPath,
-                                    normalizedMemberPath
-                                );
-                                return Number(latestArrayDescriptor.length) || 0;
-                            }
-                            if (kind === 'array' && typeof Array.prototype[prop] === 'function') {
-                                return function() {
-                                    var snapshot = materializeGlobalSnapshot(normalizedPath, normalizedMemberPath);
-                                    return Array.prototype[prop].apply(snapshot, arguments);
-                                };
-                            }
-                            if (prop === 'toJSON') {
-                                return function() {
-                                    return materializeGlobalSnapshot(normalizedPath, normalizedMemberPath);
-                                };
-                            }
-
-                            var nextDescriptor = readGlobalToolPkgModuleMember(
-                                normalizedPath,
-                                normalizedMemberPath.concat([String(prop)])
-                            );
-                            return buildGlobalModuleValue(
-                                normalizedPath,
-                                normalizedMemberPath.concat([String(prop)]),
-                                nextDescriptor
-                            );
-                        },
-                        set: function(proxyTarget, prop, value) {
-                            if (typeof prop !== 'string') {
-                                return false;
-                            }
-                            if (kind === 'function' && (
-                                prop === 'name' ||
-                                prop === 'length' ||
-                                prop === 'prototype' ||
-                                prop === 'caller' ||
-                                prop === 'arguments'
-                            )) {
-                                return Reflect.set(proxyTarget, prop, value);
-                            }
-                            writeGlobalToolPkgModuleMember(
-                                normalizedPath,
-                                normalizedMemberPath.concat([String(prop)]),
-                                value
-                            );
-                            return true;
-                        },
-                        ownKeys: function(proxyTarget) {
-                            var latestDescriptor = readGlobalToolPkgModuleMember(
-                                normalizedPath,
-                                normalizedMemberPath
-                            );
-                            var keys = Reflect.ownKeys(proxyTarget);
-                            if (Array.isArray(latestDescriptor.keys)) {
-                                latestDescriptor.keys.forEach(function(key) {
-                                    var normalizedKey = String(key);
-                                    if (keys.indexOf(normalizedKey) < 0) {
-                                        keys.push(normalizedKey);
-                                    }
-                                });
-                            }
-                            if (kind === 'array' && keys.indexOf('length') < 0) {
-                                keys.push('length');
-                            }
-                            return keys;
-                        },
-                        has: function(_proxyTarget, prop) {
-                            if (typeof prop !== 'string') {
-                                return false;
-                            }
-                            if (kind === 'array' && prop === 'length') {
-                                return true;
-                            }
-                            var latestDescriptor = readGlobalToolPkgModuleMember(
-                                normalizedPath,
-                                normalizedMemberPath
-                            );
-                            return Array.isArray(latestDescriptor.keys)
-                                ? latestDescriptor.keys.map(String).indexOf(prop) >= 0
-                                : false;
-                        },
-                        getOwnPropertyDescriptor: function(proxyTarget, prop) {
-                            var localDescriptor = Reflect.getOwnPropertyDescriptor(proxyTarget, prop);
-                            if (localDescriptor) {
-                                return localDescriptor;
-                            }
-                            if (typeof prop !== 'string') {
-                                return undefined;
-                            }
-                            return {
-                                enumerable: true,
-                                configurable: true
-                            };
-                        },
-                        apply: kind === 'function'
-                            ? function(_proxyTarget, _thisArg, argList) {
-                                var safeArgs = Array.isArray(argList) ? argList : [];
-                                if (isAsyncFunction) {
-                                    return invokeGlobalToolPkgModuleFunctionAsync(
-                                        normalizedPath,
-                                        normalizedMemberPath,
-                                        safeArgs
-                                    );
-                                }
-                                return materializeGlobalInvocationResult(
-                                    invokeGlobalToolPkgModuleFunction(
-                                        normalizedPath,
-                                        normalizedMemberPath,
-                                        safeArgs
-                                    )
-                                );
-                            }
-                            : undefined
+                    var payloadArgs = Array.isArray(argsArray) ? argsArray : [];
+                    var encodedPayloadArgs = payloadArgs.map(function(item) {
+                        return encodeGlobalBridgeTransferValue(item, []);
                     });
-
-                    globalRequiredModuleCache[cacheKey] = proxy;
-                    return proxy;
+                    var serializedArgs = JSON.stringify(encodedPayloadArgs);
+                    if (
+                        !packageTarget ||
+                        typeof NativeInterface === 'undefined' ||
+                        !NativeInterface ||
+                        typeof NativeInterface[methodName] !== 'function'
+                    ) {
+                        throw new Error('NativeInterface.' + methodName + ' is unavailable');
+                    }
+                    var normalizedSourceId = getGlobalBridgeSourceId(source);
+                    var normalizedSourceContextKey = getGlobalBridgeSourceContextKey(source);
+                    return invokeGlobalToolPkgBridgeAsync(
+                        source,
+                        methodName.replace(/Async$/, '') + '(' + normalizedSourceId + ')',
+                        function(callbackId) {
+                            NativeInterface[methodName](
+                                callbackId,
+                                packageTarget,
+                                normalizedSourceContextKey,
+                                normalizedSourceId,
+                                normalizedMemberPath,
+                                serializedArgs
+                            );
+                        }
+                    );
                 }
 
-                function buildGlobalHandleValue(handleId, memberPath, descriptor) {
+                function buildGlobalBridgeValue(source, memberPath, descriptor) {
                     if (!descriptor || typeof descriptor !== 'object') {
                         return undefined;
                     }
@@ -1225,51 +1335,53 @@ internal fun buildExecutionRuntimeBridgeScript(): String {
                         return descriptor.value;
                     }
 
-                    var normalizedHandleId = text(handleId).trim();
-                    if (!normalizedHandleId) {
-                        return undefined;
+                    var kind = getGlobalBridgeKind(descriptor);
+                    var normalizedMemberPath = normalizeGlobalBridgeMemberPath(memberPath);
+                    var normalizedSourceId = getGlobalBridgeSourceId(source);
+                    var normalizedSourceContextKey = getGlobalBridgeSourceContextKey(source);
+                    var sourceIdentity = normalizedSourceId;
+                    if (isHandleGlobalBridgeSource(source)) {
+                        sourceIdentity =
+                            normalizedSourceContextKey +
+                            '@@' +
+                            sourceIdentity;
                     }
-                    var normalizedMemberPath =
-                        Array.isArray(memberPath)
-                            ? memberPath.map(function(item) { return String(item); })
-                            : [];
-                    var cacheKey =
-                        'handle::' +
-                        normalizedHandleId +
+                    var cacheKey = (
+                        (isHandleGlobalBridgeSource(source) ? 'handle' : 'module') +
+                        '::' +
+                        sourceIdentity +
                         '::' +
                         JSON.stringify(normalizedMemberPath) +
                         '::' +
-                        text(descriptor.kind);
+                        text(descriptor.kind)
+                    );
                     if (globalRequiredModuleCache[cacheKey]) {
                         return globalRequiredModuleCache[cacheKey];
                     }
 
-                    var kind = descriptor.kind === 'array' ? 'array' : (descriptor.kind === 'function' ? 'function' : 'object');
                     var isAsyncFunction = kind === 'function' && descriptor.isAsync === true;
-                    var target;
-                    if (kind === 'function') {
-                        target = function() {
-                            var args = Array.prototype.slice.call(arguments);
-                            if (isAsyncFunction) {
-                                return invokeGlobalToolPkgHandleFunctionAsync(
-                                    normalizedHandleId,
-                                    normalizedMemberPath,
-                                    args
-                                );
-                            }
-                            return materializeGlobalInvocationResult(
-                                invokeGlobalToolPkgHandleFunction(
-                                    normalizedHandleId,
-                                    normalizedMemberPath,
-                                    args
-                                )
+                    var invokeFn = function(args) {
+                        if (isAsyncFunction) {
+                            return invokeGlobalBridgeFunctionAsync(
+                                source,
+                                normalizedMemberPath,
+                                args
                             );
-                        };
-                    } else if (kind === 'array') {
-                        target = [];
-                    } else {
-                        target = {};
-                    }
+                        }
+                        return materializeGlobalInvocationResult(
+                            source,
+                            invokeGlobalBridgeFunction(
+                                source,
+                                normalizedMemberPath,
+                                args
+                            )
+                        );
+                    };
+                    var target = kind === 'function'
+                        ? function() {
+                            return invokeFn(Array.prototype.slice.call(arguments));
+                        }
+                        : (kind === 'array' ? [] : {});
 
                     var proxy = new Proxy(target, {
                         get: function(proxyTarget, prop, receiver) {
@@ -1279,7 +1391,7 @@ internal fun buildExecutionRuntimeBridgeScript(): String {
                                 }
                                 if (kind === 'array' && prop === Symbol.iterator) {
                                     return function() {
-                                        return materializeGlobalHandleSnapshot(normalizedHandleId, normalizedMemberPath)[Symbol.iterator]();
+                                        return materializeGlobalSnapshot(source, normalizedMemberPath)[Symbol.iterator]();
                                     };
                                 }
                                 return Reflect.get(proxyTarget, prop, receiver);
@@ -1287,8 +1399,26 @@ internal fun buildExecutionRuntimeBridgeScript(): String {
                             if (prop === 'then') {
                                 return undefined;
                             }
-                            if (prop === '__operit_toolpkg_bridge_handle_id') {
-                                return normalizedHandleId;
+                            if (
+                                prop === (
+                                    isHandleGlobalBridgeSource(source)
+                                        ? '__operit_toolpkg_bridge_handle_id'
+                                        : '__operit_toolpkg_module_path'
+                                )
+                            ) {
+                                return normalizedSourceId;
+                            }
+                            if (
+                                isHandleGlobalBridgeSource(source) &&
+                                prop === '__operit_toolpkg_bridge_context_key'
+                            ) {
+                                return normalizedSourceContextKey;
+                            }
+                            if (
+                                isHandleGlobalBridgeSource(source) &&
+                                prop === '__operit_toolpkg_bridge_handle_kind'
+                            ) {
+                                return kind;
                             }
                             if (kind === 'function' && (
                                 prop === 'name' ||
@@ -1299,31 +1429,42 @@ internal fun buildExecutionRuntimeBridgeScript(): String {
                             )) {
                                 return Reflect.get(proxyTarget, prop, receiver);
                             }
-                            if (kind === 'array' && prop === 'length') {
-                                var latestArrayDescriptor = readGlobalToolPkgHandleMember(
-                                    normalizedHandleId,
-                                    normalizedMemberPath
-                                );
-                                return Number(latestArrayDescriptor.length) || 0;
-                            }
-                            if (kind === 'array' && typeof Array.prototype[prop] === 'function') {
+                            if (kind !== 'function' && prop === 'toJSON') {
                                 return function() {
-                                    var snapshot = materializeGlobalHandleSnapshot(normalizedHandleId, normalizedMemberPath);
-                                    return Array.prototype[prop].apply(snapshot, arguments);
+                                    return materializeGlobalSnapshot(source, normalizedMemberPath);
                                 };
                             }
-                            if (prop === 'toJSON') {
+                            if (
+                                kind === 'array' &&
+                                typeof prop === 'string' &&
+                                prop !== 'constructor' &&
+                                typeof Array.prototype[prop] === 'function'
+                            ) {
                                 return function() {
-                                    return materializeGlobalHandleSnapshot(normalizedHandleId, normalizedMemberPath);
+                                    var snapshot = materializeGlobalSnapshot(
+                                        source,
+                                        normalizedMemberPath
+                                    );
+                                    var localMethod = snapshot && snapshot[prop];
+                                    if (typeof localMethod !== 'function') {
+                                        throw new Error(
+                                            'array bridge method is unavailable locally: ' +
+                                                String(prop)
+                                        );
+                                    }
+                                    return localMethod.apply(
+                                        snapshot,
+                                        Array.prototype.slice.call(arguments)
+                                    );
                                 };
                             }
 
-                            var nextDescriptor = readGlobalToolPkgHandleMember(
-                                normalizedHandleId,
+                            var nextDescriptor = readGlobalBridgeMember(
+                                source,
                                 normalizedMemberPath.concat([String(prop)])
                             );
-                            return buildGlobalHandleValue(
-                                normalizedHandleId,
+                            return buildGlobalBridgeValue(
+                                source,
                                 normalizedMemberPath.concat([String(prop)]),
                                 nextDescriptor
                             );
@@ -1341,18 +1482,15 @@ internal fun buildExecutionRuntimeBridgeScript(): String {
                             )) {
                                 return Reflect.set(proxyTarget, prop, value);
                             }
-                            writeGlobalToolPkgHandleMember(
-                                normalizedHandleId,
+                            writeGlobalBridgeMember(
+                                source,
                                 normalizedMemberPath.concat([String(prop)]),
                                 value
                             );
                             return true;
                         },
                         ownKeys: function(proxyTarget) {
-                            var latestDescriptor = readGlobalToolPkgHandleMember(
-                                normalizedHandleId,
-                                normalizedMemberPath
-                            );
+                            var latestDescriptor = readGlobalBridgeMember(source, normalizedMemberPath);
                             var keys = Reflect.ownKeys(proxyTarget);
                             if (Array.isArray(latestDescriptor.keys)) {
                                 latestDescriptor.keys.forEach(function(key) {
@@ -1374,10 +1512,7 @@ internal fun buildExecutionRuntimeBridgeScript(): String {
                             if (kind === 'array' && prop === 'length') {
                                 return true;
                             }
-                            var latestDescriptor = readGlobalToolPkgHandleMember(
-                                normalizedHandleId,
-                                normalizedMemberPath
-                            );
+                            var latestDescriptor = readGlobalBridgeMember(source, normalizedMemberPath);
                             return Array.isArray(latestDescriptor.keys)
                                 ? latestDescriptor.keys.map(String).indexOf(prop) >= 0
                                 : false;
@@ -1397,21 +1532,7 @@ internal fun buildExecutionRuntimeBridgeScript(): String {
                         },
                         apply: kind === 'function'
                             ? function(_proxyTarget, _thisArg, argList) {
-                                var safeArgs = Array.isArray(argList) ? argList : [];
-                                if (isAsyncFunction) {
-                                    return invokeGlobalToolPkgHandleFunctionAsync(
-                                        normalizedHandleId,
-                                        normalizedMemberPath,
-                                        safeArgs
-                                    );
-                                }
-                                return materializeGlobalInvocationResult(
-                                    invokeGlobalToolPkgHandleFunction(
-                                        normalizedHandleId,
-                                        normalizedMemberPath,
-                                        safeArgs
-                                    )
-                                );
+                                return invokeFn(Array.isArray(argList) ? argList : []);
                             }
                             : undefined
                     });
@@ -1420,43 +1541,18 @@ internal fun buildExecutionRuntimeBridgeScript(): String {
                     return proxy;
                 }
 
-                function materializeGlobalHandleSnapshot(handleId, memberPath) {
-                    var descriptor = readGlobalToolPkgHandleMember(handleId, memberPath);
-                    if (descriptor.kind === 'undefined') {
-                        return undefined;
+                function canSerializeAsPlainObject(value) {
+                    if (!value || typeof value !== 'object') {
+                        return false;
                     }
-                    if (descriptor.kind === 'null') {
-                        return null;
+                    if (Array.isArray(value)) {
+                        return true;
                     }
-                    if (descriptor.kind === 'primitive') {
-                        return descriptor.value;
-                    }
-                    if (descriptor.kind === 'array') {
-                        var arrayOut = [];
-                        var arrayKeys = Array.isArray(descriptor.keys) ? descriptor.keys : [];
-                        for (var i = 0; i < arrayKeys.length; i += 1) {
-                            var arrayKey = String(arrayKeys[i]);
-                            if (arrayKey === 'length') {
-                                continue;
-                            }
-                            arrayOut[arrayKey] = materializeGlobalHandleSnapshot(
-                                handleId,
-                                memberPath.concat([arrayKey])
-                            );
-                        }
-                        return arrayOut;
-                    }
-                    var objectOut = {};
-                    var objectKeys = Array.isArray(descriptor.keys) ? descriptor.keys : [];
-                    for (var j = 0; j < objectKeys.length; j += 1) {
-                        var objectKey = String(objectKeys[j]);
-                        objectOut[objectKey] = materializeGlobalHandleSnapshot(
-                            handleId,
-                            memberPath.concat([objectKey])
-                        );
-                    }
-                    return objectOut;
+                    var prototype = Object.getPrototypeOf(value);
+                    return prototype === Object.prototype || prototype === null;
                 }
+
+                root.__operitDecodeGlobalBridgeTransferValue = decodeGlobalBridgeTransferValue;
 
                 function executeModule(modulePath, moduleText, requireInternal) {
                     markStage('execute_required_module');
@@ -1545,8 +1641,15 @@ internal fun buildExecutionRuntimeBridgeScript(): String {
                         if (Object.prototype.hasOwnProperty.call(globalRequiredModuleCache, globalModuleCacheKey)) {
                             return globalRequiredModuleCache[globalModuleCacheKey];
                         }
-                        var globalDescriptor = readGlobalToolPkgModuleMember(resolvedPath, []);
-                        var globalValue = buildGlobalModuleValue(resolvedPath, [], globalDescriptor);
+                        var globalDescriptor = readGlobalBridgeMember(
+                            createGlobalBridgeSourceForModule(resolvedPath),
+                            []
+                        );
+                        var globalValue = buildGlobalBridgeValue(
+                            createGlobalBridgeSourceForModule(resolvedPath),
+                            [],
+                            globalDescriptor
+                        );
                         globalRequiredModuleCache[globalModuleCacheKey] = globalValue;
                         return globalValue;
                     }

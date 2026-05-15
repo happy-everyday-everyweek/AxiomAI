@@ -25,8 +25,9 @@ export default function Screen(ctx: ComposeDslContext): ComposeNode {
   const expandedState = useStateValue(ctx, "expanded", false);
 
   const parsed = parsePlantodoXml(xmlContent);
+  const planContent = parsed.body.trim();
   const ready = parsed.closed || closedState.value;
-  const lines = splitPlanBodyLines(parsed.body);
+  const lines = splitPlanBodyLines(planContent);
   const canExpand = lines.length > PLAN_PREVIEW_LINE_COUNT;
   const shouldRenderFullMarkdown = expandedState.value || !canExpand;
   const visibleLines =
@@ -40,13 +41,13 @@ export default function Screen(ctx: ComposeDslContext): ComposeNode {
     }
     errorState.set("");
     submittingState.set(true);
-    const result = await startPlanImplementation(ctx, xmlContent);
+    const result = await startPlanImplementation(planContent);
     submittingState.set(false);
     if (result.success) {
       startedState.set(true);
       return;
     }
-    errorState.set(result.error ? result.error : "");
+    errorState.set(result.error ?? "");
   };
 
   const children: ComposeNode[] = [
@@ -231,36 +232,6 @@ export default function Screen(ctx: ComposeDslContext): ComposeNode {
       ]
     ),
   ];
-
-  if (startedState.value) {
-    children.push(
-      ctx.UI.Card(
-        {
-          fillMaxWidth: true,
-          containerColor: "primaryContainer",
-          shape: { cornerRadius: 12 },
-          elevation: 0,
-        },
-        [
-          ctx.UI.Row(
-            {
-              padding: { horizontal: 14, vertical: 12 },
-              spacing: 8,
-              verticalAlignment: "center",
-            },
-            [
-              ctx.UI.Icon({ name: "rocketLaunch", tint: "onPrimaryContainer", size: 18 }),
-              ctx.UI.Text({
-                text: text.rendererStarted,
-                style: "bodyMedium",
-                color: "onPrimaryContainer",
-              }),
-            ]
-          ),
-        ]
-      )
-    );
-  }
 
   if (errorState.value !== "") {
     children.push(

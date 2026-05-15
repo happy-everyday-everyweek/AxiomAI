@@ -241,8 +241,7 @@ class JsEngine(private val context: Context) {
                     }
                 }
             }
-        } catch (e: RejectedExecutionException) {
-            AppLogger.d(TAG, "Skip QuickJS evaluation after executor shutdown: $fileName")
+        } catch (_: RejectedExecutionException) {
         }
     }
 
@@ -271,8 +270,7 @@ class JsEngine(private val context: Context) {
                     }
                 }
             }
-        } catch (e: RejectedExecutionException) {
-            AppLogger.d(TAG, "Skip QuickJS function call after executor shutdown: $callSite")
+        } catch (_: RejectedExecutionException) {
         }
     }
 
@@ -801,14 +799,7 @@ class JsEngine(private val context: Context) {
         return try {
             preTimeoutTimer.schedule(
                 object : java.util.TimerTask() {
-                    override fun run() {
-                        if (!session.future.isDone) {
-                            AppLogger.d(
-                                TAG,
-                                "Pre-timeout warning triggered: callId=$callId, function=$functionName"
-                            )
-                        }
-                    }
+                    override fun run() {}
                 },
                 JsTimeoutConfig.PRE_TIMEOUT_SECONDS * 1000
             )
@@ -934,6 +925,18 @@ class JsEngine(private val context: Context) {
             .ifBlank { null }
     }
 
+    private fun normalizeToolPkgBridgeHandleContextKey(
+        packageTarget: String,
+        contextKey: String
+    ): String? {
+        val normalizedTarget = packageTarget.trim()
+        val normalizedContextKey = contextKey.trim()
+        if (normalizedTarget.isEmpty() || normalizedContextKey.isEmpty()) {
+            return null
+        }
+        return normalizedContextKey
+    }
+
     private fun buildToolPkgGlobalBridgeHandleContextPath(handleId: String): String? {
         val normalizedHandleId =
             handleId
@@ -948,10 +951,12 @@ class JsEngine(private val context: Context) {
         return buildJsExecutionErrorPayload(message)
     }
 
-    private fun executeToolPkgGlobalBridgeScript(
+    private fun executeToolPkgScopedScript(
         packageTarget: String,
+        contextKey: String,
         modulePath: String,
         script: String,
+        uiModuleId: String? = null,
         timeoutSec: Long = 15L
     ): String {
         val normalizedTarget = packageTarget.trim()
@@ -961,29 +966,48 @@ class JsEngine(private val context: Context) {
         val normalizedModulePath =
             normalizeToolPkgModulePath(modulePath)
                 ?: return buildToolPkgGlobalBridgeError("toolpkg module path is empty")
-        val engine = packageManager.getToolPkgExecutionEngine("toolpkg_main:$normalizedTarget")
+        val engine = packageManager.getToolPkgExecutionEngine(contextKey)
+        val params =
+            mutableMapOf<String, Any?>(
+                "__operit_ui_package_name" to normalizedTarget,
+                "toolPkgId" to normalizedTarget,
+                "containerPackageName" to normalizedTarget,
+                "__operit_execution_context_key" to contextKey,
+                "__operit_script_screen" to normalizedModulePath
+            )
+        if (!uiModuleId.isNullOrBlank()) {
+            params["__operit_ui_module_id"] = uiModuleId
+        }
         val result =
             engine.executeScriptCode(
                 script = script,
-                params =
-                    mapOf(
-                        "__operit_ui_package_name" to normalizedTarget,
-                        "toolPkgId" to normalizedTarget,
-                        "containerPackageName" to normalizedTarget,
-                        "__operit_execution_context_key" to "toolpkg_main:$normalizedTarget",
-                        "__operit_script_screen" to normalizedModulePath
-                    ),
+                params = params,
                 timeoutSec = timeoutSec
             )
         val text = result?.toString()?.trim().orEmpty()
         if (text.isEmpty()) {
-            return buildToolPkgGlobalBridgeError("global toolpkg bridge returned empty result")
+            return buildToolPkgGlobalBridgeError("toolpkg scoped bridge returned empty result")
         }
         val errorMessage = extractJsExecutionErrorMessage(text)
         if (errorMessage != null) {
             return buildToolPkgGlobalBridgeError(errorMessage)
         }
         return text
+    }
+
+    private fun executeToolPkgGlobalBridgeScript(
+        packageTarget: String,
+        modulePath: String,
+        script: String,
+        timeoutSec: Long = 15L
+    ): String {
+        return executeToolPkgScopedScript(
+            packageTarget = packageTarget,
+            contextKey = "toolpkg_main:${packageTarget.trim()}",
+            modulePath = modulePath,
+            script = script,
+            timeoutSec = timeoutSec
+        )
     }
 
     private fun buildReadGlobalToolPkgModuleMemberScript(
@@ -1090,6 +1114,12 @@ class JsEngine(private val context: Context) {
                 } catch (_error) {
                   return fallback;
                 }
+              }
+              function decodeTransferValue(value) {
+                if (typeof globalThis.__operitDecodeGlobalBridgeTransferValue === 'function') {
+                  return globalThis.__operitDecodeGlobalBridgeTransferValue(value);
+                }
+                return value;
               }
               function getBridgeStore() {
                 var root =
@@ -1198,7 +1228,10 @@ class JsEngine(private val context: Context) {
               }
               var moduleExports = require($safeModuleSpecifier);
               var memberPath = parseArrayJson($safeMemberPathJson, []).map(function(item) { return String(item); });
-              var args = parseArrayJson($safeArgsJson, []);
+              var rawArgs = parseArrayJson($safeArgsJson, []);
+              var args = rawArgs.map(function(item) {
+                return decodeTransferValue(item);
+              });
               var current = moduleExports;
               var owner = null;
               for (var i = 0; i < memberPath.length; i += 1) {
@@ -1371,6 +1404,12 @@ class JsEngine(private val context: Context) {
                   return fallback;
                 }
               }
+              function decodeTransferValue(value) {
+                if (typeof globalThis.__operitDecodeGlobalBridgeTransferValue === 'function') {
+                  return globalThis.__operitDecodeGlobalBridgeTransferValue(value);
+                }
+                return value;
+              }
               function getBridgeStore() {
                 var root =
                   typeof globalThis !== 'undefined'
@@ -1471,7 +1510,10 @@ class JsEngine(private val context: Context) {
                 throw new Error('global toolpkg bridge handle is unavailable: ' + $safeHandleId);
               }
               var memberPath = parseArrayJson($safeMemberPathJson, []).map(function(item) { return String(item); });
-              var args = parseArrayJson($safeArgsJson, []);
+              var rawArgs = parseArrayJson($safeArgsJson, []);
+              var args = rawArgs.map(function(item) {
+                return decodeTransferValue(item);
+              });
               var owner = null;
               for (var i = 0; i < memberPath.length; i += 1) {
                 owner = current;
@@ -1530,6 +1572,12 @@ class JsEngine(private val context: Context) {
               if (memberPath.length === 0) {
                 throw new Error('cannot overwrite global toolpkg bridge handle root');
               }
+              function decodeTransferValue(value) {
+                if (typeof globalThis.__operitDecodeGlobalBridgeTransferValue === 'function') {
+                  return globalThis.__operitDecodeGlobalBridgeTransferValue(value);
+                }
+                return value;
+              }
               var current = readHandleValue($safeHandleId);
               if (typeof current === 'undefined') {
                 throw new Error('global toolpkg bridge handle is unavailable: ' + $safeHandleId);
@@ -1543,7 +1591,7 @@ class JsEngine(private val context: Context) {
               if (current == null) {
                 throw new Error('global toolpkg bridge handle member parent is undefined: ' + memberPath.join('.'));
               }
-              current[memberPath[memberPath.length - 1]] = JSON.parse($safeValueJson);
+              current[memberPath[memberPath.length - 1]] = decodeTransferValue(JSON.parse($safeValueJson));
               return { success: true };
             }
             return __operitWriteGlobalToolPkgHandleMember();
@@ -1572,7 +1620,13 @@ class JsEngine(private val context: Context) {
               if (memberPath.length === 0) {
                 throw new Error('cannot overwrite global module root export');
               }
-              var nextValue = JSON.parse($safeValueJson);
+              function decodeTransferValue(value) {
+                if (typeof globalThis.__operitDecodeGlobalBridgeTransferValue === 'function') {
+                  return globalThis.__operitDecodeGlobalBridgeTransferValue(value);
+                }
+                return value;
+              }
+              var nextValue = decodeTransferValue(JSON.parse($safeValueJson));
               var moduleExports = require($safeModuleSpecifier);
               var current = moduleExports;
               for (var i = 0; i < memberPath.length - 1; i += 1) {
@@ -1654,62 +1708,83 @@ class JsEngine(private val context: Context) {
 
     internal fun readGlobalToolPkgHandleMember(
         packageTarget: String,
+        contextKey: String,
         handleId: String,
         memberPathJson: String
     ): String {
+        val normalizedContextKey =
+            normalizeToolPkgBridgeHandleContextKey(packageTarget, contextKey)
+                ?: return buildToolPkgGlobalBridgeError("toolpkg bridge handle context key is empty")
+        val normalizedHandleId = handleId.trim()
         val contextPath =
-            buildToolPkgGlobalBridgeHandleContextPath(handleId)
+            buildToolPkgGlobalBridgeHandleContextPath(normalizedHandleId)
                 ?: return buildToolPkgGlobalBridgeError("toolpkg bridge handle id is empty")
-        return executeToolPkgGlobalBridgeScript(
+        return executeToolPkgScopedScript(
             packageTarget = packageTarget,
+            contextKey = normalizedContextKey,
             modulePath = contextPath,
             script =
                 buildReadGlobalToolPkgHandleMemberScript(
-                    handleId = handleId,
+                    handleId = normalizedHandleId,
                     memberPathJson = memberPathJson
-                )
+                ),
+            timeoutSec = 15L
         )
     }
 
     internal fun invokeGlobalToolPkgHandleFunction(
         packageTarget: String,
+        contextKey: String,
         handleId: String,
         memberPathJson: String,
         argsJson: String
     ): String {
+        val normalizedContextKey =
+            normalizeToolPkgBridgeHandleContextKey(packageTarget, contextKey)
+                ?: return buildToolPkgGlobalBridgeError("toolpkg bridge handle context key is empty")
+        val normalizedHandleId = handleId.trim()
         val contextPath =
-            buildToolPkgGlobalBridgeHandleContextPath(handleId)
+            buildToolPkgGlobalBridgeHandleContextPath(normalizedHandleId)
                 ?: return buildToolPkgGlobalBridgeError("toolpkg bridge handle id is empty")
-        return executeToolPkgGlobalBridgeScript(
+        return executeToolPkgScopedScript(
             packageTarget = packageTarget,
+            contextKey = normalizedContextKey,
             modulePath = contextPath,
             script =
                 buildInvokeGlobalToolPkgHandleFunctionScript(
-                    handleId = handleId,
+                    handleId = normalizedHandleId,
                     memberPathJson = memberPathJson,
                     argsJson = argsJson
-                )
+                ),
+            timeoutSec = 15L
         )
     }
 
     internal fun writeGlobalToolPkgHandleMember(
         packageTarget: String,
+        contextKey: String,
         handleId: String,
         memberPathJson: String,
         valueJson: String
     ): String {
+        val normalizedContextKey =
+            normalizeToolPkgBridgeHandleContextKey(packageTarget, contextKey)
+                ?: return buildToolPkgGlobalBridgeError("toolpkg bridge handle context key is empty")
+        val normalizedHandleId = handleId.trim()
         val contextPath =
-            buildToolPkgGlobalBridgeHandleContextPath(handleId)
+            buildToolPkgGlobalBridgeHandleContextPath(normalizedHandleId)
                 ?: return buildToolPkgGlobalBridgeError("toolpkg bridge handle id is empty")
-        return executeToolPkgGlobalBridgeScript(
+        return executeToolPkgScopedScript(
             packageTarget = packageTarget,
+            contextKey = normalizedContextKey,
             modulePath = contextPath,
             script =
                 buildWriteGlobalToolPkgHandleMemberScript(
-                    handleId = handleId,
+                    handleId = normalizedHandleId,
                     memberPathJson = memberPathJson,
                     valueJson = valueJson
-                )
+                ),
+            timeoutSec = 15L
         )
     }
 
@@ -1891,7 +1966,6 @@ class JsEngine(private val context: Context) {
     }
 
     fun cancelCurrentExecution(reason: String = "Execution canceled: requested by caller") {
-        AppLogger.d(TAG, "Cancel current JS execution: $reason")
         resetState(cancellationMessage = reason)
     }
 
@@ -2143,6 +2217,7 @@ class JsEngine(private val context: Context) {
         fun invokeGlobalToolPkgModuleFunctionAsync(
             callbackId: String,
             packageTarget: String,
+            contextKey: String,
             modulePath: String,
             memberPathJson: String,
             argsJson: String
@@ -2178,11 +2253,13 @@ class JsEngine(private val context: Context) {
         @JavascriptInterface
         fun readGlobalToolPkgHandleMember(
             packageTarget: String,
+            contextKey: String,
             handleId: String,
             memberPathJson: String
         ): String {
             return this@JsEngine.readGlobalToolPkgHandleMember(
                 packageTarget = packageTarget,
+                contextKey = contextKey,
                 handleId = handleId,
                 memberPathJson = memberPathJson
             )
@@ -2191,12 +2268,14 @@ class JsEngine(private val context: Context) {
         @JavascriptInterface
         fun invokeGlobalToolPkgHandleFunction(
             packageTarget: String,
+            contextKey: String,
             handleId: String,
             memberPathJson: String,
             argsJson: String
         ): String {
             return this@JsEngine.invokeGlobalToolPkgHandleFunction(
                 packageTarget = packageTarget,
+                contextKey = contextKey,
                 handleId = handleId,
                 memberPathJson = memberPathJson,
                 argsJson = argsJson
@@ -2207,6 +2286,7 @@ class JsEngine(private val context: Context) {
         fun invokeGlobalToolPkgHandleFunctionAsync(
             callbackId: String,
             packageTarget: String,
+            contextKey: String,
             handleId: String,
             memberPathJson: String,
             argsJson: String
@@ -2217,6 +2297,7 @@ class JsEngine(private val context: Context) {
             ) {
                 this@JsEngine.invokeGlobalToolPkgHandleFunction(
                     packageTarget = packageTarget,
+                    contextKey = contextKey,
                     handleId = handleId,
                     memberPathJson = memberPathJson,
                     argsJson = argsJson
@@ -2254,12 +2335,14 @@ class JsEngine(private val context: Context) {
         @JavascriptInterface
         fun writeGlobalToolPkgHandleMember(
             packageTarget: String,
+            contextKey: String,
             handleId: String,
             memberPathJson: String,
             valueJson: String
         ): String {
             return this@JsEngine.writeGlobalToolPkgHandleMember(
                 packageTarget = packageTarget,
+                contextKey = contextKey,
                 handleId = handleId,
                 memberPathJson = memberPathJson,
                 valueJson = valueJson
@@ -2939,7 +3022,6 @@ class JsEngine(private val context: Context) {
         /** 向JavaScript发送工具调用结果 */
         private fun sendToolResult(callbackId: String, result: String, isError: Boolean) {
             if (!canScheduleQuickJsWork()) {
-                AppLogger.d(TAG, "Drop tool result after JsEngine destroyed: callbackId=$callbackId")
                 return
             }
             try {
@@ -2963,7 +3045,6 @@ class JsEngine(private val context: Context) {
 
         private fun sendGlobalBridgeResult(callbackId: String, responseJson: String) {
             if (!canScheduleQuickJsWork()) {
-                AppLogger.d(TAG, "Drop global bridge result after JsEngine destroyed: callbackId=$callbackId")
                 return
             }
             try {
@@ -3099,7 +3180,6 @@ class JsEngine(private val context: Context) {
                 }
                 error
             } catch (e: Exception) {
-                AppLogger.d(TAG, "Error parsing error message as JSON: ${e.message}")
                 error
             }
         }
@@ -3130,7 +3210,6 @@ class JsEngine(private val context: Context) {
 
         @JavascriptInterface
         fun logDebug(message: String, data: String) {
-            AppLogger.d(TOOLPKG_TAG, withToolPkgPluginTag("$message | $data"))
         }
 
         @JavascriptInterface

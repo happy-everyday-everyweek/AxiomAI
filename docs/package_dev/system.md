@@ -158,6 +158,7 @@ sendBroadcast({
 ### `terminal.exec(sessionId, command, timeoutMs?)`
 
 在指定会话中执行命令，返回 `TerminalCommandResultData`。
+若发生超时，不会抛错；仍会正常返回结果，并带有 `timedOut = true`。
 
 类型注释建议总是显式传入 `timeoutMs`。
 

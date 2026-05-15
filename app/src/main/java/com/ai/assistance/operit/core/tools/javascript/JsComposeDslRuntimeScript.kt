@@ -114,6 +114,15 @@ internal fun buildComposeDslRuntimeWrappedScript(script: String): String {
                     typeof __root.__operit_call_runtime_ref === 'object' && __root.__operit_call_runtime_ref
                         ? __root.__operit_call_runtime_ref
                         : null;
+                var __options = __runtimeOptions && typeof __runtimeOptions === 'object'
+                    ? Object.assign({}, __runtimeOptions)
+                    : {};
+                if (__activeCallRuntime) {
+                    __options.__operit_call_runtime = __activeCallRuntime;
+                }
+                if (typeof __bundle.updateRuntimeOptions === 'function') {
+                    __bundle.updateRuntimeOptions(__options);
+                }
                 if (__activeCallRuntime && typeof __bundle.setCallRuntime === 'function') {
                     __bundle.setCallRuntime(__activeCallRuntime);
                 }
@@ -136,14 +145,21 @@ internal fun buildComposeDslRuntimeWrappedScript(script: String): String {
                     typeof __root.__operit_call_runtime_ref === 'object' && __root.__operit_call_runtime_ref
                         ? __root.__operit_call_runtime_ref
                         : null;
-                if (__activeCallRuntime && typeof __bundle.setCallRuntime === 'function') {
-                    __bundle.setCallRuntime(__activeCallRuntime);
-                }
 
                 var __request =
                     __actionRequest && typeof __actionRequest === 'object'
                         ? __actionRequest
                         : {};
+                var __runtimeOptions = Object.assign({}, __request);
+                if (__activeCallRuntime) {
+                    __runtimeOptions.__operit_call_runtime = __activeCallRuntime;
+                }
+                if (typeof __bundle.updateRuntimeOptions === 'function') {
+                    __bundle.updateRuntimeOptions(__runtimeOptions);
+                }
+                if (__activeCallRuntime && typeof __bundle.setCallRuntime === 'function') {
+                    __bundle.setCallRuntime(__activeCallRuntime);
+                }
                 var __actionId = String(
                     __request.__action_id || __request.actionId || ''
                 ).trim();

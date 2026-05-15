@@ -285,17 +285,18 @@ class JsToolManager private constructor(
         val script = packageManager.getPackageScript(packageName)
             ?: return "Package not found: $packageName"
 
+        val runtimeParams = buildRuntimeParams(
+            packageName = packageName,
+            params = params.mapValues { it.value as Any? }
+        )
         return withEngineBlocking { engine ->
             try {
-                val runtimeParams = buildRuntimeParams(
-                    packageName = packageName,
-                    params = params.mapValues { it.value as Any? }
-                )
                 engine.executeScriptFunction(
                     script = script,
                     functionName = functionName,
                     params = runtimeParams
-                )?.toString() ?: "null"
+                )?.toString()
+                    ?: "null"
             } catch (e: Exception) {
                 AppLogger.e(
                     TAG,

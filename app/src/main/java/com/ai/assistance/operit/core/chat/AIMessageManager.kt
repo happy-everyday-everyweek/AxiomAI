@@ -24,7 +24,6 @@ import com.ai.assistance.operit.data.model.ChatMessageTimestampAllocator
 import com.ai.assistance.operit.data.model.ToolParameter
 import com.ai.assistance.operit.data.model.PromptFunctionType
 import com.ai.assistance.operit.data.preferences.ApiPreferences
-import com.ai.assistance.operit.ui.features.chat.webview.workspace.process.WorkspaceAttachmentProcessor
 import com.ai.assistance.operit.util.ImagePoolManager
 import com.ai.assistance.operit.util.MediaPoolManager
 import com.ai.assistance.operit.util.ChatUtils
@@ -105,9 +104,6 @@ object AIMessageManager {
      *
      * @param messageText 用户输入的原始文本。
      * @param attachments 附件列表。
-     * @param enableWorkspaceAttachment 是否启用工作区附着功能。
-     * @param workspacePath 工作区路径。
-     * @param workspaceEnv 工作区环境。
      * @param replyToMessage 回复消息。
      * @param enableDirectImageProcessing 是否将图片附件转换为link标签（用于直接图片处理）。
      * @param enableDirectAudioProcessing 是否将音频附件转换为link标签（用于直接音频处理）。
@@ -119,9 +115,6 @@ object AIMessageManager {
         messageText: String,
         proxySenderName: String? = null,
         attachments: List<AttachmentInfo>,
-        enableWorkspaceAttachment: Boolean = false,
-        workspacePath: String? = null,
-        workspaceEnv: String? = null,
         replyToMessage: ChatMessage? = null,
         enableDirectImageProcessing: Boolean = false,
         enableDirectAudioProcessing: Boolean = false,
@@ -165,28 +158,7 @@ object AIMessageManager {
             details = "hasReply=${replyToMessage != null}, length=${replyTag.length}"
         )
 
-        // 3. 根据开关决定是否生成工作区附着
-        val workspaceTagStartTime = messageTimingNow()
-        val workspaceTag = if (enableWorkspaceAttachment && !workspacePath.isNullOrBlank() && !processedMessageText.contains("<workspace_attachment>", ignoreCase = true)) {
-            try {
-                val workspaceContent = WorkspaceAttachmentProcessor.generateWorkspaceAttachment(
-                    context = context,
-                    workspacePath = workspacePath,
-                    workspaceEnv = workspaceEnv
-                )
-                "<workspace_attachment>$workspaceContent</workspace_attachment>"
-            } catch (e: Exception) {
-                AppLogger.e(TAG, "生成工作区附着失败", e)
-                ""
-            }
-        } else ""
-        logMessageTiming(
-            stage = "buildUserMessageContent.workspaceTag",
-            startTimeMs = workspaceTagStartTime,
-            details = "enabled=$enableWorkspaceAttachment, hasWorkspace=${!workspacePath.isNullOrBlank()}, length=${workspaceTag.length}"
-        )
-
-        // 4. 构建附件标签
+        // 3. 构建附件标签
         val attachmentTagsStartTime = messageTimingNow()
         val attachmentTags = if (attachments.isNotEmpty()) {
             attachments.joinToString(" ") { attachment ->
@@ -266,8 +238,8 @@ object AIMessageManager {
             details = "attachments=${attachments.size}, length=${attachmentTags.length}, directImage=$enableDirectImageProcessing, directAudio=$enableDirectAudioProcessing, directVideo=$enableDirectVideoProcessing"
         )
 
-        // 5. 组合最终消息
-        val finalMessageContent = listOf(proxySenderTag, processedMessageText, attachmentTags, workspaceTag, replyTag)
+        // 4. 组合最终消息
+        val finalMessageContent = listOf(proxySenderTag, processedMessageText, attachmentTags, replyTag)
             .filter { it.isNotBlank() }
             .joinToString(" ")
         logMessageTiming(
@@ -406,6 +378,7 @@ object AIMessageManager {
                 AppLogger.d(TAG, "消息处理插件已接管消息处理")
                 val pluginStream = pluginExecution.stream.share(
                     scope = scope,
+                    replay = Int.MAX_VALUE,
                     onComplete = {
                         activeMessageProcessingControllerByChatId.remove(chatKey)
                         activeEnhancedAiServiceByChatId.remove(chatKey)
@@ -463,6 +436,7 @@ object AIMessageManager {
                 )
             ).shareRevisable(
                 scope = scope,
+                replay = Int.MAX_VALUE,
                 onComplete = {
                     activeMessageProcessingControllerByChatId.remove(chatKey)
                     activeEnhancedAiServiceByChatId.remove(chatKey)

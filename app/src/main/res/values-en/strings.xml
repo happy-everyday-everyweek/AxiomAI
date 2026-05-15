@@ -4930,7 +4930,7 @@
     <string name="software_identity_option_lingshu">Lingshu AI</string>
     <string name="app_icon_switch_title">App Icon</string>
     <string name="app_icon_switch_description">Switch the launcher icon shown on your home screen (some launchers refresh with delay).</string>
-    <string name="app_icon_option_default">Default Icon</string>
+    <string name="app_icon_option_default">Classic Icon</string>
     <string name="app_icon_option_simple">Simple Icon</string>
     <string name="app_icon_switch_applied_tip">Icon switched. Check it on your home screen.</string>
     <string name="app_icon_switch_failed">Failed to switch app icon</string>
@@ -6683,6 +6683,8 @@
     <string name="chat_ai_service_unavailable_memory">AI service unavailable, cannot update memory</string>
     <string name="chat_history_empty_no_update">Chat history is empty, no need to update memory</string>
     <string name="chat_selected_messages_no_user_for_memory">The selected messages do not contain any user messages that can be saved to memory</string>
+    <string name="chat_selected_messages_added_to_memory_queue">Added %1$d user message(s) to the autosummary memory queue</string>
+    <string name="chat_selected_messages_add_to_memory_queue_failed">Failed to add to autosummary memory queue: %1$s</string>
     <string name="chat_memory_manually_updated">Memory has been manually updated</string>
     <string name="chat_manual_update_memory_failed">Manual memory update failed: %1$s</string>
     <string name="chat_auto_update_memory_failed">Automatic memory update failed: %1$s</string>
@@ -6806,11 +6808,9 @@
     <string name="terminal_error_missing_command">Missing parameter: command</string>
     <string name="terminal_error_missing_session_id">Missing parameter: session_id</string>
     <string name="terminal_error_session_not_exist">Terminal session \'%1$s\' does not exist or is closed</string>
-    <string name="terminal_error_command_failed">Terminal command execution failed or timed out</string>
-    <string name="terminal_error_command_timeout">Terminal command timed out (%1$dms)</string>
+    <string name="terminal_error_command_failed">Terminal command execution failed</string>
     <string name="terminal_error_command_non_zero_exit">Terminal command exited with non-zero status (exitCode=%1$d)</string>
     <string name="terminal_error_execute_command">Error executing terminal command: %1$s</string>
-    <string name="terminal_error_hidden_command_timeout">Hidden terminal command timed out (%1$dms)</string>
     <string name="terminal_error_hidden_command_non_zero_exit">Hidden terminal command exited with non-zero status (exitCode=%1$d)</string>
     <string name="terminal_error_execute_hidden_command">Error executing hidden terminal command: %1$s</string>
     <string name="terminal_session_closed">Terminal session \'%1$s\' closed successfully.</string>

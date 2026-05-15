@@ -20,8 +20,9 @@ function Screen(ctx) {
     const errorState = useStateValue(ctx, "error", "");
     const expandedState = useStateValue(ctx, "expanded", false);
     const parsed = (0, plan_mode_xml_js_1.parsePlantodoXml)(xmlContent);
+    const planContent = parsed.body.trim();
     const ready = parsed.closed || closedState.value;
-    const lines = (0, plan_mode_xml_js_1.splitPlanBodyLines)(parsed.body);
+    const lines = (0, plan_mode_xml_js_1.splitPlanBodyLines)(planContent);
     const canExpand = lines.length > PLAN_PREVIEW_LINE_COUNT;
     const shouldRenderFullMarkdown = expandedState.value || !canExpand;
     const visibleLines = canExpand && !expandedState.value ? lines.slice(0, PLAN_PREVIEW_LINE_COUNT) : lines;
@@ -33,13 +34,13 @@ function Screen(ctx) {
         }
         errorState.set("");
         submittingState.set(true);
-        const result = await (0, plan_mode_execution_js_1.startPlanImplementation)(ctx, xmlContent);
+        const result = await (0, plan_mode_execution_js_1.startPlanImplementation)(planContent);
         submittingState.set(false);
         if (result.success) {
             startedState.set(true);
             return;
         }
-        errorState.set(result.error ? result.error : "");
+        errorState.set(result.error ?? "");
     };
     const children = [
         ctx.UI.Card({
@@ -193,27 +194,6 @@ function Screen(ctx) {
             ]),
         ]),
     ];
-    if (startedState.value) {
-        children.push(ctx.UI.Card({
-            fillMaxWidth: true,
-            containerColor: "primaryContainer",
-            shape: { cornerRadius: 12 },
-            elevation: 0,
-        }, [
-            ctx.UI.Row({
-                padding: { horizontal: 14, vertical: 12 },
-                spacing: 8,
-                verticalAlignment: "center",
-            }, [
-                ctx.UI.Icon({ name: "rocketLaunch", tint: "onPrimaryContainer", size: 18 }),
-                ctx.UI.Text({
-                    text: text.rendererStarted,
-                    style: "bodyMedium",
-                    color: "onPrimaryContainer",
-                }),
-            ]),
-        ]));
-    }
     if (errorState.value !== "") {
         children.push(ctx.UI.Card({
             fillMaxWidth: true,

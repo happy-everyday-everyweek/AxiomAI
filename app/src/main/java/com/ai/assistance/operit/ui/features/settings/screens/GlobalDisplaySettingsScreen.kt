@@ -959,8 +959,8 @@ fun GlobalDisplaySettingsScreen(
                     scope.launch {
                         displayPreferencesManager.resetDisplaySettings()
                         androidPermissionPreferences.resetRootExecutionSettings()
-                        if (AppIconManager.switchIcon(context, AppIconManager.AppIconType.DEFAULT)) {
-                            currentAppIconType = AppIconManager.AppIconType.DEFAULT
+                        if (AppIconManager.switchIcon(context, AppIconManager.AppIconType.SIMPLE)) {
+                            currentAppIconType = AppIconManager.AppIconType.SIMPLE
                         }
                     }
                 },

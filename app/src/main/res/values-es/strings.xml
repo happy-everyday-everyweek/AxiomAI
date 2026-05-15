@@ -4812,7 +4812,7 @@ Ahora puede usar el modo AutoGLM en la interfaz de conversación.</string>
     <string name="software_identity_option_lingshu">Lingshu AI</string>
     <string name="app_icon_switch_title">Icono de la aplicación</string>
     <string name="app_icon_switch_description">Cambiar el icono de la aplicación que se muestra en el escritorio (algunos escritorios pueden retrasar la actualización).</string>
-    <string name="app_icon_option_default">Icono predeterminado</string>
+    <string name="app_icon_option_default">Icono clasico</string>
     <string name="app_icon_option_simple">Icono simple</string>
     <string name="app_icon_switch_applied_tip">Icono cambiado, vuelve al escritorio para verlo</string>
     <string name="app_icon_switch_failed">Error al cambiar el icono</string>
@@ -6870,11 +6870,9 @@ Ahora puede usar el modo AutoGLM en la interfaz de conversación.</string>
     <string name="terminal_error_missing_command">Falta el parámetro: command</string>
     <string name="terminal_error_missing_session_id">Falta el parámetro: session_id</string>
     <string name="terminal_error_session_not_exist">La sesión del terminal \'%1$s\' no existe o está cerrada</string>
-    <string name="terminal_error_command_failed">El comando del terminal falló o se agotó el tiempo de espera</string>
-    <string name="terminal_error_command_timeout">Tiempo de espera agotado para el comando del terminal (%1$dms)</string>
+    <string name="terminal_error_command_failed">El comando del terminal falló</string>
     <string name="terminal_error_command_non_zero_exit">El comando del terminal terminó con un código de salida distinto de cero (exitCode=%1$d)</string>
     <string name="terminal_error_execute_command">Error al ejecutar el comando del terminal: %1$s</string>
-    <string name="terminal_error_hidden_command_timeout">Tiempo de espera agotado para el comando oculto del terminal (%1$dms)</string>
     <string name="terminal_error_hidden_command_non_zero_exit">El comando oculto del terminal terminó con un código de salida distinto de cero (exitCode=%1$d)</string>
     <string name="terminal_error_execute_hidden_command">Error al ejecutar el comando oculto del terminal: %1$s</string>
     <string name="terminal_session_closed">La sesión del terminal \'%1$s\' se ha cerrado correctamente.</string>

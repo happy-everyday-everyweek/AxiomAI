@@ -529,7 +529,7 @@ fun ChatScreenContent(
                                         selectedMessageIndices
                                             .mapNotNull { index -> chatHistory.getOrNull(index) }
                                             .sortedBy { it.timestamp }
-                                    actualViewModel.manuallyUpdateMemoryWithSelectedMessages(
+                                    actualViewModel.enqueueSelectedMessagesForMemoryAutoSave(
                                         selectedMessages
                                     )
                                 }

@@ -15,8 +15,6 @@ import com.ai.assistance.operit.data.model.*
 import com.ai.assistance.operit.data.model.InputProcessingState as EnhancedInputProcessingState
 import com.ai.assistance.operit.data.model.PromptFunctionType
 import com.ai.assistance.operit.util.stream.SharedStream
-import com.ai.assistance.operit.util.stream.share
-import com.ai.assistance.operit.util.stream.shareRevisable
 import com.ai.assistance.operit.util.stream.TextStreamEventCarrier
 import com.ai.assistance.operit.util.stream.TextStreamEventType
 import com.ai.assistance.operit.util.stream.TextStreamRevisionTracker
@@ -228,9 +226,6 @@ class MessageProcessingDelegate(
     suspend fun buildUserMessageContentForGroupOrchestration(
         messageText: String,
         attachments: List<AttachmentInfo>,
-        enableWorkspaceAttachment: Boolean,
-        workspacePath: String?,
-        workspaceEnv: String?,
         replyToMessage: ChatMessage?,
         chatId: String? = null
     ): String = withContext(Dispatchers.IO) {
@@ -245,9 +240,6 @@ class MessageProcessingDelegate(
             context = context,
             messageText = messageText,
             attachments = attachments,
-            enableWorkspaceAttachment = enableWorkspaceAttachment,
-            workspacePath = workspacePath,
-            workspaceEnv = workspaceEnv,
             replyToMessage = replyToMessage,
             enableDirectImageProcessing = enableDirectImageProcessing,
             enableDirectAudioProcessing = enableDirectAudioProcessing,
@@ -440,7 +432,7 @@ class MessageProcessingDelegate(
     }
 
     fun cancelMessage(chatId: String) {
-        coroutineScope.launch {
+        coroutineScope.launch(Dispatchers.IO) {
             cancelMessageInternal(chatId, keepPartialResponse = true)
         }
     }
@@ -506,7 +498,6 @@ class MessageProcessingDelegate(
             roleCardId: String,
             enableThinking: Boolean = false,
             enableMemoryAutoUpdate: Boolean = true,
-            enableWorkspaceAttachment: Boolean = false, // 新增工作区附着参数
             maxTokens: Int,
             tokenUsageThreshold: Double,
             replyToMessage: ChatMessage? = null, // 新增回复消息参数
@@ -591,9 +582,6 @@ class MessageProcessingDelegate(
                 messageText = messageText,
                 proxySenderName = proxySenderNameOverride,
                 attachments = attachments,
-                enableWorkspaceAttachment = enableWorkspaceAttachment,
-                workspacePath = workspacePath,
-                workspaceEnv = workspaceEnv,
                 replyToMessage = replyToMessage,
                 enableDirectImageProcessing = enableDirectImageProcessing,
                 enableDirectAudioProcessing = enableDirectAudioProcessing,
@@ -745,7 +733,6 @@ class MessageProcessingDelegate(
                     }
 
                 val responseStartTime = messageTimingNow()
-                val deferred = CompletableDeferred<Unit>()
 
                 val userPreferencesManager = UserPreferencesManager.getInstance(context)
 
@@ -883,29 +870,8 @@ class MessageProcessingDelegate(
                     details = "chatId=$activeChatId, requestLength=${requestMessageContent.length}, history=${chatHistory.size}"
                 )
 
-                // 将字符串流共享，以便多个收集器可以使用
-                // 关键修改：设置 replay = Int.MAX_VALUE，确保 UI 重组（重新订阅）时能收到所有历史字符
-                // 文本数据占用内存极小，全量缓冲不会造成内存压力
-                val shareResponseStreamStartTime = messageTimingNow()
-                val sharedCharStream =
-                    responseStream.shareRevisable(
-                        scope = coroutineScope,
-                        replay = Int.MAX_VALUE, 
-                        onComplete = {
-                            deferred.complete(Unit)
-                            logMessageTiming(
-                                stage = "delegate.sharedStreamComplete",
-                                startTimeMs = responseStartTime,
-                                details = "chatId=$activeChatId"
-                            )
-                            chatRuntime.responseStream = null
-                        }
-                    )
-                logMessageTiming(
-                    stage = "delegate.shareResponseStream",
-                    startTimeMs = shareResponseStreamStartTime,
-                    details = "chatId=$activeChatId"
-                )
+                // AIMessageManager 已返回可重放的共享流，这里直接复用，避免在 viewModelScope 上再包一层。
+                val sharedCharStream = responseStream
 
                 // 更新当前响应流，使其可以被其他组件（如悬浮窗）访问
                 chatRuntime.responseStream = sharedCharStream
@@ -1192,12 +1158,15 @@ class MessageProcessingDelegate(
                         }
                     }
 
-                // 等待流完成，以便finally块可以正确执行来更新UI状态
-                deferred.await()
                 val streamCollectionError = streamCollectionResult.await()
                 if (streamCollectionError != null) {
                     throw streamCollectionError
                 }
+                logMessageTiming(
+                    stage = "delegate.sharedStreamComplete",
+                    startTimeMs = responseStartTime,
+                    details = "chatId=$activeChatId"
+                )
 
                 runCatching {
                     turnInputTokens = service.getCurrentInputTokenCount()
@@ -1460,14 +1429,7 @@ class MessageProcessingDelegate(
                     preferenceProfileIdOverride = preferenceProfileIdOverride,
                 )
 
-            val sharedResponseStream =
-                responseStream.shareRevisable(
-                    scope = coroutineScope,
-                    replay = Int.MAX_VALUE,
-                    onComplete = {
-                        chatRuntime.responseStream = null
-                    },
-                )
+            val sharedResponseStream = responseStream
             chatRuntime.responseStream = sharedResponseStream
 
             val aiMessage =

@@ -30,6 +30,7 @@ import com.ai.assistance.operit.ui.common.composedsl.RenderToolPkgComposeDslNode
 import com.ai.assistance.operit.util.AppLogger
 import com.ai.assistance.operit.util.stream.Stream
 import java.util.concurrent.CopyOnWriteArrayList
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -128,23 +129,26 @@ object XmlRenderPluginRegistry {
             if (result == null && errorMessage.isNullOrBlank()) {
                 resolutionFinished = false
             }
-            runCatching {
-                plugin.resolve(
+            try {
+                val resolved =
+                    plugin.resolve(
                     context = context,
                     xmlContent = xmlContent,
                     tagName = tagName,
                     textColor = textColor,
                     xmlStream = xmlStream
                 )
-            }.onSuccess { resolved ->
                 result = resolved
                 errorMessage = null
-            }.onFailure { error ->
+                resolutionFinished = true
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
                 result = null
                 errorMessage = error.message
                 AppLogger.e(TAG, "Xml render plugin failed: ${plugin.id}", error)
+                resolutionFinished = true
             }
-            resolutionFinished = true
         }
 
         return when (val resolved = result) {
@@ -226,6 +230,9 @@ object XmlRenderPluginRegistry {
         var errorMessage by remember(renderInstanceKey, result.containerPackageName, result.screenPath) {
             mutableStateOf<String?>(null)
         }
+        var isRenderLoading by remember(renderInstanceKey, result.containerPackageName, result.screenPath) {
+            mutableStateOf(true)
+        }
         var nextTextInputSyncTicket by remember(
             renderInstanceKey,
             result.containerPackageName,
@@ -295,6 +302,9 @@ object XmlRenderPluginRegistry {
                 "__operit_ui_toolpkg_id" to result.containerPackageName,
                 "uiModuleId" to "xml_render",
                 "__operit_ui_module_id" to "xml_render",
+                "executionContextKey" to executionContextKey,
+                "__operit_execution_context_key" to executionContextKey,
+                "__operit_compose_execution_context_key" to executionContextKey,
                 "__operit_script_screen" to screenPath,
                 "moduleSpec" to buildModuleSpec(screenPath)
             )
@@ -304,7 +314,13 @@ object XmlRenderPluginRegistry {
         suspend fun awaitPendingTextInputSyncs() {
             val pendingCompletions = pendingTextInputSyncs.values.toList()
             pendingCompletions.forEach { completion ->
-                runCatching { completion.await() }
+                try {
+                    completion.await()
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (_: Exception) {
+                    // Ignore individual text input completion failures during best-effort flushes.
+                }
             }
         }
 
@@ -430,9 +446,13 @@ object XmlRenderPluginRegistry {
 
         LaunchedEffect(renderInstanceKey, result.containerPackageName, result.screenPath, liveXmlContent, result.state, result.memo) {
             errorMessage = null
+            if (renderResult?.tree == null) {
+                isRenderLoading = true
+            }
             val screenPath = result.screenPath.trim()
             if (screenPath.isBlank()) {
                 errorMessage = "compose_dsl screen path is blank"
+                isRenderLoading = false
                 return@LaunchedEffect
             }
             val script =
@@ -444,6 +464,7 @@ object XmlRenderPluginRegistry {
                 }
             if (script.isNullOrBlank()) {
                 errorMessage = "compose_dsl screen not found: ${result.containerPackageName}:$screenPath"
+                isRenderLoading = false
                 return@LaunchedEffect
             }
 
@@ -469,8 +490,15 @@ object XmlRenderPluginRegistry {
                         runtimeOptions =
                             mapOf(
                                 "packageName" to result.containerPackageName,
+                                "containerPackageName" to result.containerPackageName,
                                 "toolPkgId" to result.containerPackageName,
+                                "__operit_ui_package_name" to result.containerPackageName,
+                                "__operit_ui_toolpkg_id" to result.containerPackageName,
                                 "uiModuleId" to "xml_render",
+                                "__operit_ui_module_id" to "xml_render",
+                                "executionContextKey" to executionContextKey,
+                                "__operit_execution_context_key" to executionContextKey,
+                                "__operit_compose_execution_context_key" to executionContextKey,
                                 "__operit_script_screen" to screenPath,
                                 "moduleSpec" to buildModuleSpec(screenPath),
                                 "state" to mergedState,
@@ -493,6 +521,7 @@ object XmlRenderPluginRegistry {
                     dispatchAction(onLoadActionId, null)
                 }
             }
+            isRenderLoading = false
         }
 
         Box(modifier = modifier) {
@@ -514,6 +543,17 @@ object XmlRenderPluginRegistry {
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(8.dp)
                     )
+                }
+                isRenderLoading -> {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    }
                 }
             }
         }

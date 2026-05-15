@@ -1,6 +1,5 @@
 import type { ComposeDslContext, ComposeNode } from "../../../../types/compose-dsl";
-import { PLANASK_XML_TAG } from "../../shared/plan_mode_constants.js";
-import { parsePlanaskXml } from "../../shared/plan_mode_ask.js";
+import { buildPlanaskAnswerMessage, parsePlanaskXml } from "../../shared/plan_mode_ask.js";
 import { submitPlanaskAnswers } from "../../shared/plan_mode_ask_execution.js";
 import { resolvePlanModeI18n } from "../../shared/plan_mode_i18n.js";
 
@@ -43,7 +42,7 @@ function resolveAnswerText(
   selectedAnswers: Record<string, string>,
   customAnswers: Record<string, string>
 ): string {
-  const customText = String(customAnswers[question.id] || "").trim();
+  const customText = (customAnswers[question.id] ?? "").trim();
   if (customText !== "") {
     return customText;
   }
@@ -108,8 +107,8 @@ export default function Screen(ctx: ComposeDslContext): ComposeNode {
       questionId,
       valueLength: value.length,
       valuePreview: clipLogText(value),
-      storedValueLength: String(nextCustomAnswers[questionId] || "").length,
-      storedValuePreview: clipLogText(String(nextCustomAnswers[questionId] || "")),
+      storedValueLength: (nextCustomAnswers[questionId] ?? "").length,
+      storedValuePreview: clipLogText(nextCustomAnswers[questionId] ?? ""),
       selectedAnswerMarker: nextAnswers[questionId] || "",
       storedCustomAnswerKeys: Object.keys(nextCustomAnswers),
     });
@@ -152,17 +151,18 @@ export default function Screen(ctx: ComposeDslContext): ComposeNode {
     logPlanaskDebug("submit_answers", {
       answers: parsed.questions.map((question) => ({
         questionId: question.id,
-        answerLength: String(answerTexts[question.id] || "").length,
-        answerPreview: clipLogText(String(answerTexts[question.id] || "")),
+        answerLength: (answerTexts[question.id] ?? "").length,
+        answerPreview: clipLogText(answerTexts[question.id] ?? ""),
       })),
     });
-    const result = await submitPlanaskAnswers(ctx, parsed, answerTexts);
+    const message = buildPlanaskAnswerMessage(parsed, answerTexts);
+    const result = submitPlanaskAnswers(message);
     submittingState.set(false);
     if (result.success) {
       submittedState.set(true);
       return;
     }
-    errorState.set(result.error ? result.error : "");
+    errorState.set(result.error ?? "");
   };
 
   const headerTitle = parsed.title || text.askRendererTitle;
@@ -296,7 +296,7 @@ export default function Screen(ctx: ComposeDslContext): ComposeNode {
                 fillMaxWidth: true,
                 label: text.askRendererCustomFieldLabel,
                 placeholder: text.askRendererCustomFieldPlaceholder,
-                value: String(customAnswersState.value[currentQuestion.id] || ""),
+                value: customAnswersState.value[currentQuestion.id] ?? "",
                 onValueChange: (value) => {
                   handleCustomAnswerChange(currentQuestion.id, value);
                 },
@@ -319,97 +319,119 @@ export default function Screen(ctx: ComposeDslContext): ComposeNode {
         shape: { cornerRadius: 8 },
         elevation: 2,
       },
-      [
-        ctx.UI.Column(
-          {
-            fillMaxWidth: true,
-            padding: 16,
-            spacing: 12,
-          },
-          [
-            ctx.UI.Row({ verticalAlignment: "center", spacing: 10 }, [
-              ctx.UI.Icon({ name: "quiz", tint: "primary", size: 22 }),
-              ctx.UI.Column({ spacing: 2, weight: 1 }, [
-                ctx.UI.Text({
-                  text: text.askRendererTitle,
-                  style: "titleSmall",
-                  fontWeight: "semibold",
-                  color: ctx.MaterialTheme.colorScheme.onSurface,
-                  fontSize: 13,
-                }),
-              ]),
-            ]),
-            ctx.UI.Text({
-              text: headerTitle,
-              style: "headlineSmall",
-              color: "onSurface",
-              fontWeight: "bold",
-            }),
-            ctx.UI.Markdown({
-              text: description,
-              color: "onSurfaceVariant",
-              fontSize: 12,
+        [
+          ctx.UI.Column(
+            {
               fillMaxWidth: true,
-              padding: { vertical: 2 },
-              streamTagName: PLANASK_XML_TAG,
-            }),
-            ...(questionNode
-              ? [questionNode]
-              : [
+              padding: 16,
+              spacing: 12,
+            },
+            [
+              ctx.UI.Row({ verticalAlignment: "center", spacing: 10 }, [
+                ctx.UI.Icon({ name: "quiz", tint: "primary", size: 22 }),
+                ctx.UI.Column({ spacing: 2, weight: 1 }, [
                   ctx.UI.Text({
-                    text: text.rendererEmpty,
-                    style: "bodyMedium",
-                    color: "onSurfaceVariant",
+                    text: text.askRendererTitle,
+                    style: "titleSmall",
+                    fontWeight: "semibold",
+                    color: ctx.MaterialTheme.colorScheme.onSurface,
+                    fontSize: 13,
                   }),
                 ]),
-            !ready
-              ? ctx.UI.Text({
-                  text: text.askRendererStreamingHint,
-                  style: "bodySmall",
-                  color: "onSurfaceVariant",
-                })
-              : ctx.UI.Row(
-                  {
-                    fillMaxWidth: true,
-                    horizontalArrangement: "end",
-                  },
-                  [
-                    submittingState.value
-                      ? ctx.UI.Button(
-                          {
-                            enabled: false,
-                            onClick: handleSubmit,
-                            contentPadding: { horizontal: 12, vertical: 8 },
-                          },
-                          [
-                            ctx.UI.Row(
+              ]),
+              ctx.UI.Text({
+                text: ready ? headerTitle : text.askRendererTitle,
+                style: "headlineSmall",
+                color: "onSurface",
+                fontWeight: "bold",
+              }),
+              ...(ready
+                ? [
+                    ctx.UI.Markdown({
+                      text: description,
+                      color: "onSurfaceVariant",
+                      fontSize: 12,
+                      fillMaxWidth: true,
+                      padding: { vertical: 2 },
+                    }),
+                    ...(questionNode
+                      ? [questionNode]
+                      : [
+                          ctx.UI.Text({
+                            text: text.rendererEmpty,
+                            style: "bodyMedium",
+                            color: "onSurfaceVariant",
+                          }),
+                        ]),
+                  ]
+                : [
+                    ctx.UI.Row(
+                      {
+                        fillMaxWidth: true,
+                        verticalAlignment: "center",
+                        spacing: 10,
+                      },
+                      [
+                        ctx.UI.CircularProgressIndicator({
+                          width: 16,
+                          height: 16,
+                          strokeWidth: 2,
+                          color: "primary",
+                        }),
+                        ctx.UI.Text({
+                          text: text.askRendererStreamingHint,
+                          style: "bodySmall",
+                          color: "onSurfaceVariant",
+                        }),
+                      ]
+                    ),
+                  ]),
+              ...(ready
+                ? [
+                    ctx.UI.Row(
+                      {
+                        fillMaxWidth: true,
+                        horizontalArrangement: "end",
+                      },
+                      [
+                        submittingState.value
+                          ? ctx.UI.Button(
                               {
-                                verticalAlignment: "center",
-                                horizontalArrangement: "center",
-                                spacing: 8,
+                                enabled: false,
+                                onClick: handleSubmit,
+                                contentPadding: { horizontal: 12, vertical: 8 },
                               },
                               [
-                                ctx.UI.CircularProgressIndicator({
-                                  width: 14,
-                                  height: 14,
-                                  strokeWidth: 2,
-                                  color: "onPrimary",
-                                }),
-                                ctx.UI.Text({ text: text.askRendererSubmitBusy }),
+                                ctx.UI.Row(
+                                  {
+                                    verticalAlignment: "center",
+                                    horizontalArrangement: "center",
+                                    spacing: 8,
+                                  },
+                                  [
+                                    ctx.UI.CircularProgressIndicator({
+                                      width: 14,
+                                      height: 14,
+                                      strokeWidth: 2,
+                                      color: "onPrimary",
+                                    }),
+                                    ctx.UI.Text({ text: text.askRendererSubmitBusy }),
+                                  ]
+                                ),
                               ]
-                            ),
-                          ]
-                        )
-                      : ctx.UI.Button({
-                          text: submittedState.value
-                            ? text.askRendererSubmitted
-                            : text.askRendererSubmitIdle,
-                          enabled: allAnswered && !submittedState.value,
-                          onClick: handleSubmit,
-                          contentPadding: { horizontal: 12, vertical: 8 },
-                        }),
+                            )
+                          : ctx.UI.Button({
+                              text: submittedState.value
+                                ? text.askRendererSubmitted
+                                : text.askRendererSubmitIdle,
+                              enabled: allAnswered && !submittedState.value,
+                              onClick: handleSubmit,
+                              contentPadding: { horizontal: 12, vertical: 8 },
+                            }),
+                      ]
+                    ),
                   ]
-                ),
+                : []),
           ]
         ),
       ]

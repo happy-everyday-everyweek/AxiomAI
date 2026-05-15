@@ -168,7 +168,7 @@ export namespace System {
          * @param sessionId The ID of the session.
          * @param command The command to execute.
          * @param timeoutMs Optional timeout in milliseconds. Strongly recommended to always pass explicitly.
-         * @returns Promise resolving to the command execution result.
+         * @returns Promise resolving to the command execution result. On timeout, the promise still resolves and the returned result has `timedOut === true`.
          */
         function exec(sessionId: string, command: string, timeoutMs?: number | string): Promise<TerminalCommandResultData>;
 
@@ -190,7 +190,7 @@ export namespace System {
          * Commands using the same executorKey reuse the same hidden login context and are not shown in the visible terminal UI.
          * @param command The command to execute.
          * @param options Optional hidden executor options.
-         * @returns Promise resolving to the hidden command execution result.
+         * @returns Promise resolving to the hidden command execution result. On timeout, the promise still resolves and the returned result has `timedOut === true`.
          */
         function hiddenExec(command: string, options?: {
             executorKey?: string;

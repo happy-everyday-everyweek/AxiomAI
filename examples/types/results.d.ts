@@ -516,7 +516,7 @@ export interface TerminalCommandResultData {
     /** ID of the terminal session used for execution */
     sessionId: string;
 
-    /** Whether this execution ended due to timeout */
+    /** Whether this execution ended due to timeout. Timeout still resolves normally. */
     timedOut?: boolean;
 
     /** Returns a formatted string representation of the terminal execution result */
@@ -565,7 +565,7 @@ export interface HiddenTerminalCommandResultData {
     /** Hidden executor key used for execution */
     executorKey: string;
 
-    /** Whether this execution ended due to timeout */
+    /** Whether this execution ended due to timeout. Timeout still resolves normally. */
     timedOut?: boolean;
 
     /** Returns a formatted string representation of the hidden terminal execution result */

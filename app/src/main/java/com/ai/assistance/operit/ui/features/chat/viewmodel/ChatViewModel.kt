@@ -3052,8 +3052,8 @@ class ChatViewModel(private val context: Context) : ViewModel() {
         messageCoordinationDelegate.manuallyUpdateMemory()
     }
 
-    fun manuallyUpdateMemoryWithSelectedMessages(messages: List<ChatMessage>) {
-        messageCoordinationDelegate.manuallyUpdateMemoryWithSelectedMessages(messages)
+    fun enqueueSelectedMessagesForMemoryAutoSave(messages: List<ChatMessage>) {
+        messageCoordinationDelegate.enqueueSelectedMessagesForMemoryAutoSave(messages)
     }
 
     fun manuallySummarizeConversation() {

@@ -1,61 +1,75 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.startPlanImplementation = startPlanImplementation;
-const plan_mode_mode_js_1 = require("./plan_mode_mode.js");
-const plan_mode_i18n_js_1 = require("./plan_mode_i18n.js");
-const plan_mode_plan_file_js_1 = require("./plan_mode_plan_file.js");
-const plan_mode_state_js_1 = require("./plan_mode_state.js");
-const plan_mode_xml_js_1 = require("./plan_mode_xml.js");
-function toErrorText(error) {
-    if (error instanceof Error) {
-        return error.message || "error";
-    }
-    return error || "error";
-}
-async function startPlanImplementation(ctx, rawXmlContent) {
-    const text = (0, plan_mode_i18n_js_1.resolvePlanModeI18n)();
-    const parsed = (0, plan_mode_xml_js_1.parsePlantodoXml)(rawXmlContent);
-    const planContent = parsed.body.trim();
-    if (!planContent) {
+const planModeMode = __importStar(require("./plan_mode_mode.js"));
+const planModeI18n = __importStar(require("./plan_mode_i18n.js"));
+const planModePlanFile = __importStar(require("./plan_mode_plan_file.js"));
+const planModeState = __importStar(require("./plan_mode_state.js"));
+async function startPlanImplementation(planContent) {
+    const text = planModeI18n.resolvePlanModeI18n();
+    const normalizedPlanContent = planContent.trim();
+    if (!normalizedPlanContent) {
         const message = text.toastPlanEmpty;
-        await ctx.showToast(message);
+        await Tools.System.toast(message);
         return { success: false, error: message };
     }
     try {
-        const activeView = (0, plan_mode_state_js_1.readSingleActiveChatView)();
+        const activeView = planModeState.readSingleActiveChatView();
         if (!activeView) {
-            await ctx.showToast(text.toastChatViewMissing);
+            await Tools.System.toast(text.toastChatViewMissing);
             return { success: false, error: text.toastChatViewMissing };
         }
-        const written = await (0, plan_mode_plan_file_js_1.writePlanFile)(activeView.chatId, planContent);
-        await (0, plan_mode_mode_js_1.disablePlanMode)(written.chatId);
-        try {
-            await Tools.Chat.sendMessage(text.implementationMessage, written.chatId, undefined, undefined, { runtime: activeView.runtime });
-        }
-        catch (error) {
-            const errorText = error instanceof Error || typeof error === "string" || error == null
-                ? toErrorText(error)
-                : "error";
-            const sendMessage = `${text.toastPlanSendFailedPrefix}${errorText}`;
-            await ctx.showToast(sendMessage);
-            return {
-                success: false,
-                error: sendMessage,
-                path: written.path,
-            };
-        }
-        await ctx.showToast(text.toastPlanStarted);
-        return {
-            success: true,
-            path: written.path,
-        };
+        const written = await planModePlanFile.writePlanFile(activeView.chatId, normalizedPlanContent);
+        await planModeMode.disablePlanMode(written.chatId);
+        void Tools.Chat.sendMessage(text.implementationMessage, written.chatId, undefined, undefined, { runtime: activeView.runtime }).catch((error) => {
+            const errorText = error instanceof Error
+                ? error.message || "error"
+                : (typeof error === "string" || error == null ? error || "error" : "error");
+            const message = `${text.toastPlanSendFailedPrefix}${errorText}`;
+            void Tools.System.toast(message);
+        });
+        void Tools.System.toast(text.toastPlanStarted);
+        return { success: true };
     }
     catch (error) {
-        const errorText = error instanceof Error || typeof error === "string" || error == null
-            ? toErrorText(error)
-            : "error";
+        const errorText = error instanceof Error
+            ? error.message || "error"
+            : (typeof error === "string" || error == null ? error || "error" : "error");
         const message = `${text.toastPlanWriteFailedPrefix}${errorText}`;
-        await ctx.showToast(message);
+        await Tools.System.toast(message);
         return { success: false, error: message };
     }
 }

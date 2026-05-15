@@ -4634,7 +4634,7 @@ Sekarang Anda dapat menggunakan mode AutoGLM di antarmuka percakapan.</string>
     <string name="enable_navigation_animation_description">Saat diaktifkan, mengaktifkan efek animasi yang ditingkatkan untuk sidebar ponsel dan peralihan halaman. Saat dinonaktifkan, menggunakan transisi navigasi yang sederhana.</string>
     <string name="app_icon_switch_title">Ikon Aplikasi</string>
     <string name="app_icon_switch_description">Ganti ikon aplikasi yang ditampilkan di desktop (beberapa desktop mungkin lambat memperbarui).</string>
-    <string name="app_icon_option_default">Ikon Default</string>
+    <string name="app_icon_option_default">Ikon Klasik</string>
     <string name="app_icon_option_simple">Ikon Sederhana</string>
     <string name="app_icon_switch_applied_tip">Ikon telah diganti, silakan kembali ke desktop untuk melihat</string>
     <string name="app_icon_switch_failed">Gagal mengganti ikon</string>
@@ -6383,11 +6383,9 @@ Sekarang Anda dapat menggunakan mode AutoGLM di antarmuka percakapan.</string>
     <string name="terminal_error_missing_command">Parameter hilang: command</string>
     <string name="terminal_error_missing_session_id">Parameter hilang: session_id</string>
     <string name="terminal_error_session_not_exist">Sesi terminal \'%1$s\' tidak ada atau sudah ditutup</string>
-    <string name="terminal_error_command_failed">Eksekusi perintah terminal gagal atau waktu habis</string>
-    <string name="terminal_error_command_timeout">Eksekusi perintah terminal waktu habis (%1$dms)</string>
+    <string name="terminal_error_command_failed">Eksekusi perintah terminal gagal</string>
     <string name="terminal_error_command_non_zero_exit">Perintah terminal keluar dengan status bukan nol (exitCode=%1$d)</string>
     <string name="terminal_error_execute_command">Kesalahan saat mengeksekusi perintah terminal: %1$s</string>
-    <string name="terminal_error_hidden_command_timeout">Eksekusi perintah terminal tersembunyi waktu habis (%1$dms)</string>
     <string name="terminal_error_hidden_command_non_zero_exit">Perintah terminal tersembunyi keluar dengan status bukan nol (exitCode=%1$d)</string>
     <string name="terminal_error_execute_hidden_command">Kesalahan saat mengeksekusi perintah terminal tersembunyi: %1$s</string>
     <string name="terminal_session_closed">Sesi terminal \'%1$s\' berhasil ditutup.</string>

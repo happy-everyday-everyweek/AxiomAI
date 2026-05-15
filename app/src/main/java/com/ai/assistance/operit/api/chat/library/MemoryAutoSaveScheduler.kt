@@ -129,15 +129,37 @@ class MemoryAutoSaveScheduler(
                             .thenBy { it.createdAt.time }
                     )
                 val batchCandidates = orderedCandidates.take(MAX_CANDIDATES_PER_RUN_PER_CHAT)
-                processChatCandidateGroup(
-                    profileId = profileId,
-                    chatId = chatId,
-                    candidates = batchCandidates,
-                    repository = repository,
-                    messageDao = messageDao,
-                    toolHandler = toolHandler,
-                    memoryService = memoryService
-                )
+                val selectedUserCandidates =
+                    batchCandidates.filter {
+                        MemoryAutoSaveCandidate.isSelectedUserMessageSource(it.sourceType)
+                    }
+                val automaticCandidates =
+                    batchCandidates.filterNot {
+                        MemoryAutoSaveCandidate.isSelectedUserMessageSource(it.sourceType)
+                    }
+
+                if (selectedUserCandidates.isNotEmpty()) {
+                    processChatCandidateGroup(
+                        profileId = profileId,
+                        chatId = chatId,
+                        candidates = selectedUserCandidates,
+                        repository = repository,
+                        messageDao = messageDao,
+                        toolHandler = toolHandler,
+                        memoryService = memoryService
+                    )
+                }
+                if (automaticCandidates.isNotEmpty()) {
+                    processChatCandidateGroup(
+                        profileId = profileId,
+                        chatId = chatId,
+                        candidates = automaticCandidates,
+                        repository = repository,
+                        messageDao = messageDao,
+                        toolHandler = toolHandler,
+                        memoryService = memoryService
+                    )
+                }
             }
             scheduleNextRun(profileId, System.currentTimeMillis() + intervalMs)
         }
@@ -177,19 +199,39 @@ class MemoryAutoSaveScheduler(
     ) {
         if (candidates.isEmpty()) return
 
+        val isSelectedUserBatch =
+            candidates.all {
+                MemoryAutoSaveCandidate.isSelectedUserMessageSource(it.sourceType)
+            }
         val candidateIds = candidates.map { it.id }
-        val latestTriggerTimestamp = candidates.maxOf { it.triggerMessageTimestamp }
         repository.markProcessing(candidateIds)
 
         try {
             val messages =
-                withContext(Dispatchers.IO) {
-                    messageDao.getMessagesForChatBeforeTimestampDesc(
-                        chatId = chatId,
-                        maxTimestamp = latestTriggerTimestamp,
-                        limit = MAX_MESSAGES_PER_BATCH
-                    )
-                }.asReversed()
+                if (isSelectedUserBatch) {
+                    val selectedMessages =
+                        withContext(Dispatchers.IO) {
+                            candidates
+                                .mapNotNull { candidate ->
+                                    messageDao.getMessageByTimestamp(
+                                        chatId = chatId,
+                                        timestamp = candidate.triggerMessageTimestamp
+                                    )?.toChatMessage()
+                                }
+                        }
+                    selectedMessages
+                        .filter { it.sender == "user" && it.content.isNotBlank() }
+                        .sortedBy { it.timestamp }
+                } else {
+                    val latestTriggerTimestamp = candidates.maxOf { it.triggerMessageTimestamp }
+                    withContext(Dispatchers.IO) {
+                        messageDao.getMessagesForChatBeforeTimestampDesc(
+                            chatId = chatId,
+                            maxTimestamp = latestTriggerTimestamp,
+                            limit = MAX_MESSAGES_PER_BATCH
+                        )
+                    }.asReversed().map { it.toChatMessage() }
+                }
 
             if (messages.isEmpty()) {
                 AppLogger.w(TAG, "未找到候选对应消息，直接清理候选: profileId=$profileId, chatId=$chatId")
@@ -216,13 +258,20 @@ class MemoryAutoSaveScheduler(
                 return
             }
 
-            val latestAssistantMessage =
-                conversationHistory.lastOrNull { (role, content) ->
-                    role == "assistant" && content.isNotBlank()
-                }?.second
+            val memoryContent =
+                if (isSelectedUserBatch) {
+                    conversationHistory
+                        .filter { it.first == "user" }
+                        .joinToString("\n\n") { it.second }
+                        .trim()
+                } else {
+                    conversationHistory.lastOrNull { (role, content) ->
+                        role == "assistant" && content.isNotBlank()
+                    }?.second.orEmpty()
+                }
 
-            if (latestAssistantMessage.isNullOrBlank()) {
-                AppLogger.w(TAG, "候选消息缺少有效助手回复，直接清理候选: profileId=$profileId, chatId=$chatId")
+            if (memoryContent.isBlank()) {
+                AppLogger.w(TAG, "候选消息缺少可写入的记忆内容，直接清理候选: profileId=$profileId, chatId=$chatId")
                 repository.deleteCandidates(candidateIds)
                 return
             }
@@ -231,7 +280,7 @@ class MemoryAutoSaveScheduler(
                 context = context,
                 toolHandler = toolHandler,
                 conversationHistory = conversationHistory,
-                content = latestAssistantMessage,
+                content = memoryContent,
                 aiService = memoryService,
                 profileIdOverride = profileId
             )

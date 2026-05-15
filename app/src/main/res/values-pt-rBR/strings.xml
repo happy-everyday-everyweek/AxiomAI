@@ -4341,7 +4341,7 @@ Agora é possível usar o modo AutoGLM na interface de diálogo.</string>
     <string name="enable_navigation_animation_description">Ativa o conjunto aprimorado de animações para a barra lateral do celular e para as transições de página. Desative para usar uma navegação mais simples.</string>
     <string name="app_icon_switch_title">ícone de software</string>
     <string name="app_icon_switch_description">Mude o ícone do aplicativo exibido na área de trabalho (alguns desktops podem demorar para atualizar).</string>
-    <string name="app_icon_option_default">Ícone padrão</string>
+    <string name="app_icon_option_default">Ícone clássico</string>
     <string name="app_icon_option_simple">Ícone simples</string>
     <string name="app_icon_switch_applied_tip">O ícone foi trocado, retorne à área de trabalho para visualizar</string>
     <string name="app_icon_switch_failed">Falha na troca de ícones</string>
@@ -6043,11 +6043,9 @@ Agora é possível usar o modo AutoGLM na interface de diálogo.</string>
     <string name="terminal_error_missing_command">Parâmetro ausente: comando</string>
     <string name="terminal_error_missing_session_id">Parâmetro ausente: session_id</string>
     <string name="terminal_error_session_not_exist">A sessão do terminal \'%1$s\' não existe ou está fechada</string>
-    <string name="terminal_error_command_failed">A execução do comando do terminal falhou ou expirou</string>
-    <string name="terminal_error_command_timeout">A execução do comando do terminal expirou (%1$dms)</string>
+    <string name="terminal_error_command_failed">A execução do comando do terminal falhou</string>
     <string name="terminal_error_command_non_zero_exit">Comando do terminal encerrado com status diferente de zero (exitCode=%1$d)</string>
     <string name="terminal_error_execute_command">Erro ao executar o comando do terminal: %1$s</string>
-    <string name="terminal_error_hidden_command_timeout">Tempo limite de execução de comando de terminal oculto (%1$dms)</string>
     <string name="terminal_error_hidden_command_non_zero_exit">O comando do terminal oculto saiu com status diferente de zero (exitCode=%1$d)</string>
     <string name="terminal_error_execute_hidden_command">Erro ao executar comando de terminal oculto: %1$s</string>
     <string name="terminal_session_closed">A sessão do terminal \'%1$s\' foi fechada com sucesso.</string>

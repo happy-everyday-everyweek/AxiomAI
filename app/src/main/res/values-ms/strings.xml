@@ -4716,7 +4716,7 @@ Kini anda boleh menggunakan mod AutoGLM di antara muka perbualan.</string>
     <string name="uidebugger_activity_monitor_item_package">Pakej: %1$s</string>
     <string name="uidebugger_activity_monitor_item_click">Klik</string>
 
-    <string name="app_icon_option_default">Ikon Lalai</string>
+    <string name="app_icon_option_default">Ikon Klasik</string>
     <string name="app_icon_option_simple">Ikon Ringkas</string>
     <string name="app_icon_switch_applied_tip">Ikon telah ditukar, sila kembali ke skrin utama untuk melihat</string>
     <string name="app_icon_switch_failed">Penukaran ikon gagal</string>
@@ -6423,11 +6423,9 @@ Kini anda boleh menggunakan mod AutoGLM di antara muka perbualan.</string>
     <string name="terminal_error_missing_command">Parameter hilang: command</string>
     <string name="terminal_error_missing_session_id">Parameter hilang: session_id</string>
     <string name="terminal_error_session_not_exist">Sesi terminal \'%1$s\' tidak wujud atau telah ditutup</string>
-    <string name="terminal_error_command_failed">Perintah terminal gagal dilaksanakan atau tamat masa</string>
-    <string name="terminal_error_command_timeout">Perintah terminal tamat masa pelaksanaan (%1$dms)</string>
+    <string name="terminal_error_command_failed">Perintah terminal gagal dilaksanakan</string>
     <string name="terminal_error_command_non_zero_exit">Perintah terminal keluar dengan status bukan sifar (exitCode=%1$d)</string>
     <string name="terminal_error_execute_command">Ralat semasa melaksanakan perintah terminal: %1$s</string>
-    <string name="terminal_error_hidden_command_timeout">Perintah terminal tersembunyi tamat masa pelaksanaan (%1$dms)</string>
     <string name="terminal_error_hidden_command_non_zero_exit">Perintah terminal tersembunyi keluar dengan status bukan sifar (exitCode=%1$d)</string>
     <string name="terminal_error_execute_hidden_command">Ralat semasa melaksanakan perintah terminal tersembunyi: %1$s</string>
     <string name="terminal_session_closed">Sesi terminal \'%1$s\' telah berjaya ditutup.</string>
