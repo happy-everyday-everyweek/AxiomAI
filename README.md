@@ -394,9 +394,11 @@ Memory 实体包含的评分相关字段：
 
 保留部分角色/人格功能，但对用户不可见。内置多智能体团队协作人格（Axiom/Atlas/Vigil/Flux/Aura）。
 
-#### D2: 子任务代理(SUBTASK_AGENT) [待确认]
+#### D2: 子任务代理(SUBTASK_AGENT) [已确认：由沙箱包提供]
 
-当前有子任务代理提示词模板，用于工作流中的子任务执行。工作流保留后，子任务代理也保留。确认？
+子任务代理功能不是内置的，而是由沙箱包（如 examples/subagent/）通过 JavaScript 调用 EnhancedAIService 时设置 `isSubTask = true` 来实现。内置的 `SUBTASK_AGENT_PROMPT_TEMPLATE` 是为沙箱包调用子任务模式时提供的提示词模板。
+
+简化后：保留 `SUBTASK_AGENT_PROMPT_TEMPLATE` 和 `isSubTask` 参数，确保沙箱包兼容性。
 
 #### D3: 工作流触发机制 [待确认]
 
