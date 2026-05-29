@@ -57,24 +57,56 @@
 
 注意：项目当前使用 Jetpack Compose (Material 3)，shadcn/ui 风格需要通过自定义 Theme 和组件样式来模拟，而非直接使用 shadcn/ui 库。核心是借鉴其设计理念（简洁、克制、语义化），而非照搬代码。
 
+#### shadcn/ui 组件参考
+
+参考 https://github.com/shadcn-ui/ui 和 https://ui.shadcn.com 的组件设计：
+
+**侧边栏组件 (Sidebar)** - 参考 shadcn/ui Sidebar 组件结构：
+```
+SidebarProvider
+├── Sidebar
+│   ├── SidebarHeader     → 新建对话按钮
+│   ├── SidebarContent    → 可滚动区域
+│   │   ├── SidebarGroup  → 预留按钮区（工作流/日历/待办）
+│   │   └── SidebarGroup  → 历史对话列表
+│   ├── SidebarFooter     → 底部按钮（设置/工具）
+│   └── SidebarRail       → 可选的宽度调节手柄
+└── SidebarInset          → 主内容区域
+```
+
+**色彩变量** - 参考 shadcn/ui Sidebar 主题变量：
+```
+--sidebar-background / --sidebar-foreground
+--sidebar-primary / --sidebar-primary-foreground
+--sidebar-accent / --sidebar-accent-foreground
+--sidebar-border / --sidebar-ring
+```
+
+**其他核心组件** - Button(variant: default/destructive/outline/ghost/link)、Card、Dialog、Input、Switch、Slider、Command(斜杠命令)、Sheet(底部弹出面板)
+
 ### 四、UI优化方向
 
 #### 4.1 侧边栏重构
 
-对齐主流AI应用程序（如ChatGPT、Claude等），侧边栏结构重新设计：
+参考 shadcn/ui Sidebar 组件，对齐主流AI应用程序（如ChatGPT、Claude等），侧边栏结构重新设计：
 
 ```
-侧边栏布局：
-├── 新建对话
-├── 预留按钮区（新建对话下方、对话历史上方）
-│   ├── 工作流（与日历、待办同级入口）
-│   ├── [预留] 日历
-│   ├── [预留] 待办
-│   └── [预留] 更多新功能
-├── 历史对话列表
-└── 底部按钮
-    ├── 设置
-    └── 工具
+SidebarProvider
+├── Sidebar (collapsible="offcanvas")
+│   ├── SidebarHeader
+│   │   └── 新建对话按钮
+│   ├── SidebarContent (可滚动)
+│   │   ├── SidebarGroup → 预留按钮区
+│   │   │   ├── 工作流
+│   │   │   ├── [预留] 日历
+│   │   │   └── [预留] 待办
+│   │   └── SidebarGroup → 历史对话列表
+│   │       ├── SidebarGroupLabel "历史对话"
+│   │       └── SidebarMenu → 对话列表项
+│   └── SidebarFooter
+│       ├── 设置按钮
+│       └── 工具按钮
+└── SidebarInset → 主聊天区域
 ```
 
 - 预留按钮区位于新建对话下方、对话历史列表上方
@@ -83,6 +115,7 @@
 - 移除底部快捷（关于、帮助、设置三个按钮）
 - 原来分散在各处的功能入口整合到设置中
 - 工具箱作为底部按钮保留，但弱化入口
+- 侧边栏宽度默认 16rem，支持折叠为图标模式
 
 #### 4.2 聊天界面简化
 
