@@ -329,134 +329,194 @@ Memory 实体包含的评分相关字段：
 
 每次用户发送消息时自动检索 + AI判断需要记忆时也触发。
 
-#### Q3: 记忆检索匹配策略权重配置
+#### Q3: 记忆检索匹配策略权重配置 [已确认]
 
-当前代码中MemorySearchConfig的默认权重：keywordWeight=10.0, tagWeight=0.0, vectorWeight=0.0, edgeWeight=0.4。简化后需要综合评分，建议调整权重以启用向量检索和标签匹配：
-
-- [ ] A: keywordWeight=5.0, tagWeight=2.0, vectorWeight=8.0, edgeWeight=1.0（语义优先，向量权重最高）
-- [ ] B: keywordWeight=8.0, tagWeight=3.0, vectorWeight=5.0, edgeWeight=2.0（关键词优先，向量辅助）
-- [ ] C: keywordWeight=5.0, tagWeight=3.0, vectorWeight=5.0, edgeWeight=3.0（均衡模式）
-- [ ] D: 其他方案
-
-此外，Memory实体中的importance和credibility字段是否纳入评分？
-
-- [ ] A: 纳入，importance权重=2.0, credibility权重=1.0
-- [ ] B: 纳入，importance权重=1.0, credibility权重=0.5
-- [ ] C: 不纳入，仅用检索相关性评分
-- [ ] D: 其他方案
-
-时间衰减是否纳入评分？
-
-- [ ] A: 纳入，最近访问的记忆加权（半衰期7天）
-- [ ] B: 纳入，最近访问的记忆加权（半衰期30天）
-- [ ] C: 不纳入时间衰减
-- [ ] D: 其他方案
+- 权重配置：A（语义优先）keywordWeight=5.0, tagWeight=2.0, vectorWeight=8.0, edgeWeight=1.0
+- importance/credibility：B（纳入，低权重）importance=1.0, credibility=0.5
+- 时间衰减：D（作为一项权重因子，而非必须遵循的规则）
 
 #### Q4: 自动注入的记忆条数上限 [已确认: C]
 
 最多5条。
 
-#### Q5: 砍掉功能后的数据迁移方案
+#### Q5: 砍掉功能后的数据迁移方案 [待重新提问]
 
-移除角色卡、桌宠、语音等功能后，已有数据如何处理？
+此问题需要更具体的描述后重新提问。
 
-- [ ] A: 静默忽略，旧数据保留在本地但不展示（兼容备份恢复）
-- [ ] B: 首次启动时提示用户导出旧数据，然后清理
-- [ ] C: 自动清理所有旧数据，不提示
-- [ ] D: 其他方案
+#### Q6: 设置页面中工具箱的展示方式 [已确认: A]
 
-#### Q6: 设置页面中工具箱的展示方式
+作为设置页面的一个子页面"工具"，点击后展示工具列表。
 
-工具箱入口移入设置后，在设置页面中如何展示？
+#### Q7: 侧边栏历史对话列表的展示方式 [已确认: A+B结合]
 
-- [ ] A: 作为设置页面的一个子页面"工具"，点击后展示工具列表（终端、文件管理器、Shell执行器等）
-- [ ] B: 直接在设置页面底部平铺展示所有工具入口
-- [ ] C: 其他方案
+按日期分组展示（今天/昨天/更早），每组内按时间倒序，长按弹出删除/编辑菜单。
 
-#### Q7: 侧边栏历史对话列表的展示方式
+#### Q8: 侧边栏预留按钮区的展示方式 [已确认: B，需修正理解]
 
-历史对话列表如何展示？
+垂直排列的列表项（带图标+文字）。参考主流AI应用程序，新建对话下方会有模式选择等快捷入口，我们的预留按钮区就是这类功能入口（工作流、日历、待办等）。
 
-- [ ] A: 按时间倒序平铺展示（类似ChatGPT），显示对话标题，长按弹出删除/编辑菜单
-- [ ] B: 按日期分组展示（今天/昨天/更早），每组内按时间倒序
-- [ ] C: 其他方案
+#### Q9: 斜杠命令面板的展示方式 [已确认: A]
 
-#### Q8: 侧边栏预留按钮区的展示方式
+参考shadcn/ui Command组件，在输入框上方弹出下拉列表，显示命令名称+描述，支持模糊搜索。
 
-预留按钮区（工作流/日历/待办）如何展示？
+#### Q10: MCP/Skill/包管理合并页面的市场展示 [待重新提问]
 
-- [ ] A: 水平排列的图标按钮（类似ChatGPT的快捷操作区）
-- [ ] B: 垂直排列的列表项（带图标+文字）
-- [ ] C: 其他方案
+此问题需要更具体的描述后重新提问。
 
-#### Q9: 斜杠命令面板的展示方式
+#### Q11: 后台保活默认开启后的行为 [待重新提问]
 
-输入 `/` 后弹出的命令面板如何展示？
+此问题需要更具体的描述后重新提问。
 
-- [ ] A: 参考shadcn/ui Command组件，在输入框上方弹出下拉列表，显示命令名称+描述，支持模糊搜索
-- [ ] B: 在输入框下方弹出底部Sheet（BottomSheet），展示命令网格
-- [ ] C: 其他方案
+#### Q12: 系统默认值调整确认 [待重新提问]
 
-#### Q10: MCP/Skill/包管理合并页面的市场展示
+此问题需要更具体的描述后重新提问。
 
-市场功能合并后，市场入口在哪里？
+#### Q13: 记忆检索评分模式选择 [待重新提问]
 
-- [ ] A: 在合并页面的顶部添加一个"市场"入口按钮，点击后进入统一市场页面
-- [ ] B: 在每个小标题区域（MCP服务器/Skill插件/工具包）下方各添加一个"浏览市场"链接
-- [ ] C: 其他方案
+此问题需要更具体的描述后重新提问。
 
-#### Q11: 后台保活默认开启后的行为
+#### Q14: 向量嵌入配置 [已确认: C]
 
-后台保活默认开启后，应用在后台时如何表现？
+优先本地嵌入模型，本地不可用时回退到云端嵌入API。
 
-- [ ] A: 显示黑色进度气泡（悬浮窗简化版），展示当前任务进度
-- [ ] B: 仅显示通知栏通知，不显示悬浮窗
-- [ ] C: 显示通知栏通知+黑色进度气泡
-- [ ] D: 其他方案
+#### Q15: 外部HTTP聊天设置是否保留 [已确认: A]
 
-#### Q12: 系统默认值调整确认
-
-以下默认值调整是否确认？
-
-| 配置项 | 当前默认值 | 简化后默认值 |
-|-------|-----------|-------------|
-| 后台保活 | false | true |
-| 回车发送 | false | true |
-| 回复通知 | true | true |
-| 导航动画 | true | true |
-
-- [ ] A: 全部确认
-- [ ] B: 部分调整（请说明）
-
-#### Q13: 记忆检索评分模式选择
-
-当前MemoryScoreMode有三种模式，简化后默认使用哪种？
-
-- [ ] A: BALANCED（平衡模式）
-- [ ] B: KEYWORD_FIRST（关键词优先）
-- [ ] C: SEMANTIC_FIRST（语义优先）
-- [ ] D: 其他方案
-
-#### Q14: 向量嵌入配置
-
-当前向量嵌入默认权重为0.0（未启用），简化后需要启用。向量嵌入的计算方式？
-
-- [ ] A: 使用本地嵌入模型（如MNN模型，需下载）
-- [ ] B: 使用云端嵌入API（需配置endpoint/apiKey/model）
-- [ ] C: 优先本地，本地不可用时回退到云端
-- [ ] D: 其他方案
-
-#### Q15: 外部HTTP聊天设置(ExternalHttpChatSettings)是否保留？
-
-当前有一个外部HTTP聊天设置页面，允许外部应用通过HTTP API与AI对话。
-
-- [ ] A: 保留（与web-chat API保留策略一致）
-- [ ] B: 移除（用户不需要手动配置）
-- [ ] C: 其他方案
+保留，与web-chat API保留策略一致。
 
 ---
 
-## 项目代码结构分析
+## 项目核心架构分析
+
+### AI对话生命周期
+
+```
+用户输入 → ChatViewModel.sendMessage()
+  → ChatRuntimeHolder (管理对话上下文和运行时状态)
+  → EnhancedAIService (核心AI服务，处理LLM调用)
+  → 系统提示词构建 (SystemPromptConfig.getSystemPrompt())
+    → BEGIN_SELF_INTRODUCTION_SECTION (自我介绍/角色设定)
+    → WORKSPACE_GUIDELINES_SECTION (工作区规则)
+    → TOOL_USAGE_GUIDELINES_SECTION (工具使用指南)
+    → PACKAGE_SYSTEM_GUIDELINES_SECTION (包系统指南)
+    → ACTIVE_PACKAGES_SECTION (已激活的包)
+    → AVAILABLE_TOOLS_SECTION (可用工具列表)
+  → 记忆自动注入 (MemoryLibrary → 系统提示词中)
+  → AI响应 → 工具调用循环 (ToolExecutionManager)
+    → 工具注册 (ToolRegistration)
+    → 工具获取 (ToolGetter，受权限级别控制)
+    → 工具执行 (MCPToolExecutor / SkillManager / PackageManager / 系统工具)
+    → 结果返回 → 继续AI响应循环
+  → 流式输出到UI
+```
+
+### 系统提示词构建
+
+系统提示词由以下部分动态拼接：
+
+| Section | 说明 | 简化影响 |
+|---------|------|---------|
+| BEGIN_SELF_INTRODUCTION_SECTION | AI自我介绍/角色设定 | 角色卡砍掉后需简化 |
+| WORKSPACE_GUIDELINES_SECTION | 工作区规则 | 保留 |
+| TOOL_USAGE_GUIDELINES_SECTION | 工具使用指南 | 保留 |
+| PACKAGE_SYSTEM_GUIDELINES_SECTION | 包系统指南 | 保留 |
+| ACTIVE_PACKAGES_SECTION | 已激活的包列表 | 保留 |
+| AVAILABLE_TOOLS_SECTION | 可用工具列表 | 语音工具砍掉后需移除 |
+
+### 工具系统架构
+
+```
+ToolRegistration (工具注册中心)
+├── 默认工具 (defaultTool/)
+│   ├── StandardSystemOperationTools (系统操作工具)
+│   ├── StandardChatManagerTool (聊天管理工具)
+│   ├── MemoryQueryToolExecutor (记忆查询工具)
+│   └── ...
+├── MCP工具 (mcp/)
+│   ├── MCPToolExecutor (MCP工具执行器)
+│   └── MCPBridge (MCP通信桥接)
+├── Skill工具 (skill/)
+│   └── SkillManager (技能管理器)
+├── 包工具 (packTool/)
+│   ├── PackageManager (包管理器)
+│   ├── ToolPkgParser (包解析器)
+│   ├── ToolPkgComposeDslParser (Compose DSL解析器)
+│   └── JsToolManager/JsEngine (JavaScript执行引擎)
+└── 系统工具 (system/)
+    └── ScreenCaptureService (屏幕捕捉服务)
+```
+
+### 权限系统对工具的影响
+
+ToolGetter 根据权限级别过滤可用工具：
+- 基本级：仅基础工具
+- 高级级（无障碍）：全部工具（包括屏幕操作、通知读取等）
+
+简化后权限级别重命名为"基本"和"高级"，逻辑不变。
+
+### 沙箱包系统
+
+沙箱包是第三方扩展机制：
+- 包格式：包含元数据 + JavaScript脚本 + Compose DSL UI定义
+- 包工具通过 JsEngine 执行JavaScript代码
+- 包UI通过 ToolPkgComposeDslParser 解析并渲染
+- 包生命周期通过 ToolPkgToolLifecycleBridge 管理
+- 包与主系统通过 ToolPkgCommonBridgePlugin 桥接
+
+简化后必须保持沙箱包的完整兼容性。
+
+### 记忆库系统
+
+```
+MemoryLibrary (记忆库管理)
+├── saveMemoryNow() - 保存记忆（AI分析对话内容后结构化存储）
+├── autoCategorizeMemories() - 自动分类记忆到文件夹
+├── 记忆实体 (Memory)
+│   ├── 核心字段：title, content, contentType, source
+│   ├── 评分字段：credibility, importance
+│   ├── 向量字段：embedding (Embedding)
+│   ├── 关联：tags, links, backlinks, properties
+│   ├── 文档：documentPath, isDocumentNode, documentChunks
+│   └── 分类：folderPath
+├── 记忆检索 (MemorySearchConfig)
+│   ├── keywordWeight, tagWeight, vectorWeight, edgeWeight
+│   └── MemoryScoreMode: BALANCED / KEYWORD_FIRST / SEMANTIC_FIRST
+└── 记忆注入 → 系统提示词
+```
+
+### 后台保活机制
+
+```
+AIForegroundService (前台服务)
+├── ForegroundServiceCompat (前台服务兼容层)
+├── ChatServiceCore (聊天核心服务)
+└── FloatingChatService (悬浮窗服务)
+    └── FloatingWindowManager (悬浮窗管理器)
+```
+
+后台保活当前默认关闭，简化后默认开启。开启后：
+- 应用在后台时保持AI任务继续执行
+- 通过前台服务通知保持进程存活
+- 悬浮窗简化为黑色进度气泡
+
+### web-chat HTTP API
+
+```
+ExternalChatHttpServer
+├── GET /api/health - 健康检查
+├── POST /api/external-chat - 外部聊天
+└── /api/web/* → WebChatHttpBridge
+    ├── /bootstrap - 启动配置
+    ├── /character-selector - 角色选择器（移除）
+    ├── /model-selector - 模型选择器
+    ├── /memory-selector - 记忆选择器
+    ├── /input-settings - 输入设置
+    ├── /chats - 聊天管理
+    ├── /chat-groups - 聊天组管理
+    ├── /uploads - 文件上传
+    └── /actions - 手动操作（记忆更新/对话摘要）
+```
+
+---
 
 ### 导航系统
 
