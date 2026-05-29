@@ -24,8 +24,8 @@
 | 市场（MCP/Skill/提示词/工具包） | 保留市场功能，简化UI |
 | 备份恢复 | 简化为一键备份/一键恢复 |
 | 悬浮窗 | 移除输入相关功能，仅保留进度展示和后台保活能力。UI为一个黑色气泡，悬浮在屏幕中间上部 |
-| 侧边栏导航 | 保留侧边栏抽屉导航，精简菜单项 |
 | web-chat模块 | 保留暴露的API（后续可能基于此进一步开发），移除Web UI |
+| 工作流 | 完整保留，UI重构。功能入口级别与日历、待办等新功能同级 |
 
 ### 二、砍掉的功能
 
@@ -35,23 +35,60 @@
 | 桌宠 + 虚拟形象 | 移除DragonBones/FBX/MMD虚拟形象、桌宠功能、液态玻璃主题 |
 | 语音交互 | 移除语音对话、TTS、STT、语音唤醒等全部语音功能 |
 | 深度搜索 | 完全移除 |
+| 对话框样式 (Bubble) | 聊天样式仅保留"命令框"(Cursor)，移除"对话框"(Bubble) |
+| 经典输入模式 (Classic) | 输入框样式仅保留"智能体模式"(Agent)，移除"经典模式"(Classic) |
 
 ### 三、UI优化方向
 
+#### 3.1 侧边栏重构
+
+对齐主流AI应用程序，侧边栏结构重新设计：
+
+```
+侧边栏布局：
+├── 新建对话
+├── 历史对话列表
+├── 预留按钮区（新建对话下方）
+│   ├── 工作流（与日历、待办同级入口）
+│   ├── [预留] 日历
+│   ├── [预留] 待办
+│   └── [预留] 更多新功能
+└── 底部按钮
+    ├── 设置
+    └── 工具
+```
+
+- 移除原有的快捷操作区（包管理、权限、工作流三个卡片）
+- 移除AI功能分组（AI聊天、记忆库、助手配置）
+- 移除底部快捷（关于、帮助、设置三个按钮）
+- 原来分散在各处的功能入口整合到设置中
+- 工具箱作为底部按钮保留
+
+#### 3.2 聊天界面简化
+
 | 优化项 | 具体方案 |
 |-------|---------|
-| 聊天风格 | 统一为一种风格，移除气泡/光标等多种样式选择 |
+| 聊天样式 | 仅保留"命令框"(Cursor)样式，移除"对话框"(Bubble)样式及其全部配置项 |
+| 输入框样式 | 仅保留"智能体模式"(Agent)，移除"经典模式"(Classic)及其设置栏 |
 | 工具调用展示 | 保留一行小灰字，简单说明使用的工具名称；成功后灰色变绿色，3秒后变回灰色；失败则变红色后变回灰色 |
-| 设置页面 | 保留：模型+API配置、显示设置、权限设置、备份+关于；每个页面都要彻底简化 |
+| 智能体输入框简化 | 需进一步确认保留哪些按钮和配置项 |
+
+#### 3.3 设置页面简化
+
+| 优化项 | 具体方案 |
+|-------|---------|
+| 保留的子页面 | 模型+API配置、显示设置、权限设置、备份+关于 |
 | 权限级别 | 移除Root和ADB级别，名称改为"基本"和"高级"（高级=无障碍） |
-| 侧边栏 | 精简菜单项 |
-| 整体原则 | 大部分规则由系统自动管理，用户不需要接触具体的规则和配置 |
+| 每个页面 | 都要彻底简化，大部分配置由系统自动管理 |
+
+#### 3.4 整体原则
+
+大部分规则由系统自动管理，用户不需要接触具体的规则和配置。
 
 ### 四、待进一步确认的事项
 
-- [ ] 侧边栏具体保留哪些菜单项
+- [ ] 智能体输入框(AgentChatInputSection)的具体简化方案（保留哪些按钮/开关/配置）
 - [ ] 设置页面的具体简化方案（每个子页面保留哪些配置项）
-- [ ] 聊天输入区域的具体简化方案
 - [ ] 市场UI的具体简化方案
 - [ ] 工具包管理的具体简化方案
 - [ ] 记忆库UI的具体简化方案
@@ -59,6 +96,8 @@
 - [ ] 终端UI的具体简化方案
 - [ ] web-chat模块API的保留范围
 - [ ] 砍掉功能后的数据迁移/兼容方案
+- [ ] 命令框样式下需要移除的配置项清单（液态玻璃/水玻璃/自定义颜色等）
+- [ ] 工具箱页面保留哪些工具
 
 ---
 
@@ -83,99 +122,131 @@
 
 **Screen路由表**（OperitScreens.kt 中定义的所有Screen）：
 
-| Screen | 类型 | 说明 |
-|--------|------|------|
-| AiChat | 主页面 | AI聊天界面 |
-| MemoryBase | 主页面 | 记忆库 |
-| Packages | 主页面 | 包管理器 |
-| Market | 子页面 | 统一市场（MCP/Skill/Artifact Tab） |
-| ArtifactManage/Detail/Publish | 子页面 | Artifact管理/详情/发布 |
-| SkillManage/Detail/Publish | 子页面 | Skill管理/详情/发布 |
-| MCPManage/PluginDetail/Publish | 子页面 | MCP管理/详情/发布 |
-| Toolbox | 主页面 | 工具箱 |
-| ShizukuCommands | 主页面 | 权限配置（ShizukuDemo） |
-| Settings | 主页面 | 设置 |
-| Workflow/WorkflowDetail | 主页面 | 工作流列表/详情 |
-| AssistantConfig | 主页面 | 助手配置（虚拟形象等） |
-| About | 主页面 | 关于 |
-| Help | 主页面 | 帮助 |
-| Agreement | 主页面 | 用户协议 |
-| TokenConfig | 子页面 | Token配置（WebView） |
-| UpdateHistory | 子页面 | 更新历史 |
-| ToolPermission | 设置子页面 | 工具权限 |
-| UserPreferencesGuide | 设置子页面 | 用户偏好引导 |
-| UserPreferencesSettings | 设置子页面 | 用户偏好设置 |
-| ModelConfig | 设置子页面 | 模型配置 |
-| SpeechServicesSettings | 设置子页面 | 语音服务设置 |
-| ExternalHttpChatSettings | 设置子页面 | 外部HTTP聊天设置 |
-| MnnModelDownload | 设置子页面 | MNN模型下载 |
-| PersonaCardGeneration | 设置子页面 | 人设卡生成 |
-| WaifuModeSettings | 设置子页面 | 桌宠模式设置 |
-| CustomEmojiManagement | 设置子页面 | 自定义表情管理 |
-| TagMarket | 设置子页面 | 提示词市场 |
-| ModelPromptsSettings | 设置子页面 | 模型提示词设置 |
-| FunctionalConfig | 设置子页面 | 功能配置 |
-| ThemeSettings | 设置子页面 | 主题设置 |
-| GlobalDisplaySettings | 设置子页面 | 全局显示设置 |
-| LayoutAdjustmentSettings | 设置子页面 | 布局调整设置 |
-| ChatHistorySettings | 设置子页面 | 聊天历史设置 |
-| ChatBackupSettings | 设置子页面 | 聊天备份设置 |
-| LanguageSettings | 设置子页面 | 语言设置 |
-| TokenUsageStatistics | 设置子页面 | Token使用统计 |
-| ContextSummarySettings | 设置子页面 | 上下文摘要设置 |
-| GitHubAccount | 设置子页面 | GitHub账号 |
-| FileManager | 工具箱子页面 | 文件管理器 |
-| Terminal/TerminalSetup/TerminalAutoConfig | 工具箱子页面 | 终端 |
-| AppPermissions | 工具箱子页面 | 应用权限 |
-| UIDebugger | 工具箱子页面 | UI调试器 |
-| ShellExecutor | 工具箱子页面 | Shell执行器 |
-| Logcat | 工具箱子页面 | 日志查看 |
-| SqlViewer | 工具箱子页面 | SQL查看器 |
-| FFmpegToolbox | 工具箱子页面 | FFmpeg工具箱 |
-| MarkdownDemo | 工具箱子页面 | Markdown演示 |
-| ToolTester | 工具箱子页面 | 工具测试 |
-| TextToSpeech | 工具箱子页面 | TTS工具 |
-| SpeechToText | 工具箱子页面 | STT工具 |
-| DefaultAssistantGuide | 工具箱子页面 | 默认助手引导 |
-| ProcessLimitRemover | 工具箱子页面 | 进程限制移除 |
-| HtmlPackager | 工具箱子页面 | HTML打包器 |
-| AutoGlmOneClick/AutoGlmTool | 工具箱子页面 | AutoGLM工具 |
-| ToolPkgComposeDsl/ToolPkgPluginConfig | 动态页面 | 工具包Compose DSL页面 |
+| Screen | 类型 | 说明 | 简化后状态 |
+|--------|------|------|-----------|
+| AiChat | 主页面 | AI聊天界面 | 保留 |
+| MemoryBase | 主页面 | 记忆库 | 保留（入口移至设置或对话内） |
+| Packages | 主页面 | 包管理器 | 保留（入口移至设置或工具） |
+| Market | 子页面 | 统一市场 | 保留 |
+| ArtifactManage/Detail/Publish | 子页面 | Artifact管理/详情/发布 | 保留 |
+| SkillManage/Detail/Publish | 子页面 | Skill管理/详情/发布 | 保留 |
+| MCPManage/PluginDetail/Publish | 子页面 | MCP管理/详情/发布 | 保留 |
+| Toolbox | 主页面 | 工具箱 | 保留（侧边栏底部按钮） |
+| ShizukuCommands | 主页面 | 权限配置 | 保留（入口移至设置） |
+| Settings | 主页面 | 设置 | 保留（侧边栏底部按钮） |
+| Workflow/WorkflowDetail | 主页面 | 工作流列表/详情 | 保留（侧边栏预留按钮区） |
+| AssistantConfig | 主页面 | 助手配置（虚拟形象等） | 移除（虚拟形象砍掉） |
+| About | 主页面 | 关于 | 保留（入口移至设置） |
+| Help | 主页面 | 帮助 | 待确认 |
+| Agreement | 主页面 | 用户协议 | 保留 |
+| TokenConfig | 子页面 | Token配置（WebView） | 保留 |
+| UpdateHistory | 子页面 | 更新历史 | 保留 |
+| ToolPermission | 设置子页面 | 工具权限 | 保留 |
+| UserPreferencesGuide | 设置子页面 | 用户偏好引导 | 保留 |
+| UserPreferencesSettings | 设置子页面 | 用户偏好设置 | 保留 |
+| ModelConfig | 设置子页面 | 模型配置 | 保留 |
+| SpeechServicesSettings | 设置子页面 | 语音服务设置 | 移除（语音砍掉） |
+| ExternalHttpChatSettings | 设置子页面 | 外部HTTP聊天设置 | 待确认 |
+| MnnModelDownload | 设置子页面 | MNN模型下载 | 保留 |
+| PersonaCardGeneration | 设置子页面 | 人设卡生成 | 移除（角色卡砍掉） |
+| WaifuModeSettings | 设置子页面 | 桌宠模式设置 | 移除（桌宠砍掉） |
+| CustomEmojiManagement | 设置子页面 | 自定义表情管理 | 移除（桌宠砍掉） |
+| TagMarket | 设置子页面 | 提示词市场 | 待确认 |
+| ModelPromptsSettings | 设置子页面 | 模型提示词设置 | 保留 |
+| FunctionalConfig | 设置子页面 | 功能配置 | 保留 |
+| ThemeSettings | 设置子页面 | 主题设置 | 保留（大幅简化） |
+| GlobalDisplaySettings | 设置子页面 | 全局显示设置 | 保留（大幅简化） |
+| LayoutAdjustmentSettings | 设置子页面 | 布局调整设置 | 待确认 |
+| ChatHistorySettings | 设置子页面 | 聊天历史设置 | 保留 |
+| ChatBackupSettings | 设置子页面 | 聊天备份设置 | 保留（简化为一键操作） |
+| LanguageSettings | 设置子页面 | 语言设置 | 保留 |
+| TokenUsageStatistics | 设置子页面 | Token使用统计 | 待确认 |
+| ContextSummarySettings | 设置子页面 | 上下文摘要设置 | 保留（简化） |
+| GitHubAccount | 设置子页面 | GitHub账号 | 待确认 |
+| FileManager | 工具箱子页面 | 文件管理器 | 保留 |
+| Terminal/TerminalSetup/TerminalAutoConfig | 工具箱子页面 | 终端 | 保留 |
+| AppPermissions | 工具箱子页面 | 应用权限 | 保留 |
+| UIDebugger | 工具箱子页面 | UI调试器 | 待确认 |
+| ShellExecutor | 工具箱子页面 | Shell执行器 | 保留 |
+| Logcat | 工具箱子页面 | 日志查看 | 保留 |
+| SqlViewer | 工具箱子页面 | SQL查看器 | 保留 |
+| FFmpegToolbox | 工具箱子页面 | FFmpeg工具箱 | 保留 |
+| MarkdownDemo | 工具箱子页面 | Markdown演示 | 移除（演示类） |
+| ToolTester | 工具箱子页面 | 工具测试 | 移除（调试类） |
+| TextToSpeech | 工具箱子页面 | TTS工具 | 移除（语音砍掉） |
+| SpeechToText | 工具箱子页面 | STT工具 | 移除（语音砍掉） |
+| DefaultAssistantGuide | 工具箱子页面 | 默认助手引导 | 待确认 |
+| ProcessLimitRemover | 工具箱子页面 | 进程限制移除 | 待确认 |
+| HtmlPackager | 工具箱子页面 | HTML打包器 | 保留 |
+| AutoGlmOneClick/AutoGlmTool | 工具箱子页面 | AutoGLM工具 | 保留 |
+| ToolPkgComposeDsl/ToolPkgPluginConfig | 动态页面 | 工具包Compose DSL页面 | 保留 |
 
 ### 设置页面层级
 
 SettingsScreen 当前分为以下6个分组，共18个子页面：
 
-| 分组 | 子页面 |
-|------|--------|
-| 账号 | GitHub账号 |
-| 个性化配置 | 用户偏好、语言、主题、全局显示、布局调整 |
-| AI模型配置 | 模型参数、功能模型、语音服务 |
-| 提示词配置 | 提示词、人设卡生成、桌宠模式设置 |
-| 上下文和总结 | 上下文摘要设置 |
-| 数据和权限 | 工具权限、数据备份、聊天历史管理、Token使用统计 |
-| 外部调用 | 外部HTTP聊天设置 |
+| 分组 | 子页面 | 简化后状态 |
+|------|--------|-----------|
+| 账号 | GitHub账号 | 待确认 |
+| 个性化配置 | 用户偏好、语言、主题、全局显示、布局调整 | 保留显示相关，移除桌宠/角色卡相关 |
+| AI模型配置 | 模型参数、功能模型、语音服务 | 保留模型参数和功能模型，移除语音服务 |
+| 提示词配置 | 提示词、人设卡生成、桌宠模式设置 | 保留提示词，移除人设卡和桌宠 |
+| 上下文和总结 | 上下文摘要设置 | 保留 |
+| 数据和权限 | 工具权限、数据备份、聊天历史管理、Token使用统计 | 保留，简化 |
+| 外部调用 | 外部HTTP聊天设置 | 待确认 |
 
 ### 聊天样式系统
 
-当前支持两种聊天样式：
+当前支持两种聊天样式（strings.xml中的中文名）：
 
-| 样式 | 实现文件 | 说明 |
-|------|---------|------|
-| 气泡模式 (Bubble) | BubbleStyleChatMessage.kt, BubbleAiMessageComposable.kt, BubbleUserMessageComposable.kt | 气泡式消息展示，支持液体玻璃效果 |
-| 光标模式 (Cursor) | CursorStyleChatMessage.kt, AiMessageComposable.kt, UserMessageComposable.kt | 光标式消息展示，支持思考过程展示 |
+| 样式 | 代码名 | 中文名 | 实现文件 | 简化后状态 |
+|------|--------|--------|---------|-----------|
+| 命令框 | ChatStyle.CURSOR | 命令框 | CursorStyleChatMessage.kt, AiMessageComposable.kt, UserMessageComposable.kt | 保留 |
+| 对话框 | ChatStyle.BUBBLE | 对话框 | BubbleStyleChatMessage.kt, BubbleAiMessageComposable.kt, BubbleUserMessageComposable.kt | 移除 |
+
+命令框样式下的配置项（ThemeSettingsCoreSections.kt）：
+- 命令式用户消息框跟随主题色
+- 命令式用户消息磨砂玻璃背景（液态玻璃）
+- 命令式用户消息水玻璃背景
+- 命令式用户消息框颜色自定义
+
+对话框样式下的配置项（需移除）：
+- 显示头像、更宽的气泡
+- 用户/AI气泡磨砂玻璃/水玻璃背景
+- 图片气泡渲染模式（.9/九宫格平铺）
+- 圆角气泡、气泡颜色、文字样式、字体、气泡图片等大量配置
+
+### 输入框样式系统
+
+当前支持两种输入框样式：
+
+| 样式 | 代码名 | 说明 | 简化后状态 |
+|------|--------|------|-----------|
+| 智能体模式 | INPUT_STYLE_AGENT | AgentChatInputSection.kt，带功能按钮面板的输入框 | 保留并简化 |
+| 经典模式 | INPUT_STYLE_CLASSIC | ClassicChatInputSection.kt + ClassicChatSettingsBar.kt，传统输入框+侧边设置栏 | 移除 |
+
+智能体模式输入框(AgentChatInputSection)当前包含的功能（需进一步确认简化方案）：
+- 输入框本体（文本输入、发送/排队/取消按钮）
+- 附件功能（截图、通知、位置、记忆、工具包、拍照）
+- 功能开关面板（思考模式、权限切换、记忆自动更新、工具开关、流式输出等）
+- 上下文长度配置
+- 回复引用功能
+- 待发送队列管理
+- 输入框样式配置（透明、浮动、液态玻璃、水玻璃）
 
 ### 悬浮窗系统
 
 FloatingWindowManager 当前支持以下模式：
 
-| 模式 | 说明 |
-|------|------|
-| 全屏模式 | 完整聊天界面 |
-| 窗口模式 | 可调整大小的浮动窗口 |
-| 球形模式 | 最小化球状图标 |
-| 语音球模式 | 语音交互球 |
-| 结果展示模式 | 仅展示结果 |
+| 模式 | 说明 | 简化后状态 |
+|------|------|-----------|
+| 全屏模式 | 完整聊天界面 | 移除 |
+| 窗口模式 | 可调整大小的浮动窗口 | 移除 |
+| 球形模式 | 最小化球状图标 | 移除 |
+| 语音球模式 | 语音交互球 | 移除（语音砍掉） |
+| 结果展示模式 | 仅展示结果 | 保留（简化为黑色进度气泡） |
+
+简化后悬浮窗：仅保留一个黑色气泡，悬浮在屏幕中间上部，展示进度和后台保活。
 
 ### web-chat模块
 
@@ -184,18 +255,19 @@ FloatingWindowManager 当前支持以下模式：
 - Android端：ExternalChatHttpServer 暴露HTTP服务
 - 桥接层：WebChatHttpBridge -> WebChatActionBridge / WebChatManagementBridge / WebChatInputSettingsBridge
 - 前端API：chatApi.ts 封装HTTP请求
+- 简化方案：保留API层，移除Web UI（React组件）
 
 ### 需要砍除的代码模块清单
 
 #### 角色卡系统
 - `data/model/CharacterCard.kt` - 角色卡数据模型
 - `data/model/CharacterGroupCard.kt` - 角色组卡模型
+- `data/model/CharacterCardChatStats.kt` / `CharacterGroupChatStats.kt` - 统计
 - `data/preferences/CharacterCardManager.kt` - 角色卡管理
 - `data/preferences/CharacterGroupCardManager.kt` - 角色组管理
 - `data/preferences/PersonaCardChatHistoryManager.kt` - 角色卡聊天历史
 - `data/preferences/CharacterCardBilingualData.kt` - 双语数据
 - `data/preferences/CharacterCardToolAccessResolver.kt` - 工具访问
-- `data/model/CharacterCardChatStats.kt` / `CharacterGroupChatStats.kt` - 统计
 - `ui/features/settings/screens/PersonaCardGenerationScreen.kt` - 人设卡生成页面
 - `ui/features/chat/components/CharacterSelectorPanel.kt` - 角色选择器
 - `ui/features/chat/components/CharacterCardMemoryBindingSwitchConfirmDialog.kt` - 记忆绑定确认
@@ -222,17 +294,27 @@ FloatingWindowManager 当前支持以下模式：
 - `api/voice/` - 语音合成（VoiceService, OpenAIVoiceProvider, DoubaoVoiceProvider等）
 - `ui/features/assistant/components/VoiceAutoAttachComponents.kt` - 语音自动绑定
 - `ui/features/settings/screens/SpeechServicesSettingsScreen.kt` - 语音服务设置
-- `ui/features/chat/components/style/input/agent/AgentChatInputSection.kt` - Agent输入（语音相关）
+- `ui/features/chat/components/style/input/agent/AgentChatInputSection.kt` - Agent输入中的语音按钮
 - `data/preferences/SpeechServicesPreferences.kt` - 语音偏好
 - `data/preferences/WakeWordPreferences.kt` - 唤醒词偏好
 - `services/assistant/OperitVoiceInteractionService.kt` - 语音交互服务
 - `services/assistant/OperitVoiceInteractionSessionService.kt` - 语音交互会话
+
+#### 对话框样式 (Bubble)
+- `ui/features/chat/components/style/bubble/` - 整个气泡样式目录
+- ThemeSettingsCoreSections.kt 中所有 bubble 相关配置项
+- UserPreferencesManager 中所有 bubble 相关偏好字段
+
+#### 经典输入模式 (Classic)
+- `ui/features/chat/components/style/input/classic/` - 整个经典输入目录
+- ClassicChatInputSection.kt, ClassicChatSettingsBar.kt
 
 #### 深度搜索
 - `examples/deepsearching/` - 深度搜索插件示例
 
 #### 液态玻璃主题
 - `ui/theme/liquidGlass` - 液态玻璃主题效果（DrawerContent中大量使用）
+- 命令框样式中的液态玻璃/水玻璃配置项
 
 ---
 
@@ -243,8 +325,15 @@ FloatingWindowManager 当前支持以下模式：
 - [x] 初步需求收集
 - [x] 整理需求到README
 - [x] 深入研究项目代码结构
-- [ ] 继续与用户对齐需求细节
-- [ ] 完善README中的待确认事项
+- [x] 确认聊天样式简化方案（保留命令框，移除对话框）
+- [x] 确认输入框简化方案（保留智能体模式，移除经典模式）
+- [x] 确认侧边栏重构方案（对齐主流AI应用，新建对话+历史列表+预留按钮区+底部设置/工具）
+- [x] 确认工作流保留方案（完整保留，UI重构，与日历/待办同级入口）
+- [ ] 确认智能体输入框的具体简化方案
+- [ ] 确认设置页面每个子页面的具体简化方案
+- [ ] 确认市场/工具包/记忆库/对话历史/终端的UI简化方案
+- [ ] 确认命令框样式下需要移除的配置项
+- [ ] 确认工具箱保留哪些工具
 
 ### 阶段二：功能砍除
 
@@ -252,20 +341,24 @@ FloatingWindowManager 当前支持以下模式：
 - [ ] 移除桌宠+虚拟形象相关代码
 - [ ] 移除语音交互相关代码
 - [ ] 移除深度搜索相关代码
+- [ ] 移除对话框(Bubble)样式及全部配置项
+- [ ] 移除经典输入模式(Classic)及设置栏
 - [ ] 简化悬浮窗功能（移除输入功能，仅保留进度气泡）
 - [ ] 移除web-chat的Web UI（保留API）
 - [ ] 清理砍除功能后的残留引用和资源
 
 ### 阶段三：UI简化
 
-- [ ] 统一聊天风格为一种
+- [ ] 重构侧边栏（新建对话+历史列表+预留按钮区+底部设置/工具）
+- [ ] 简化命令框样式配置项（移除液态玻璃/水玻璃等）
+- [ ] 简化智能体输入框
 - [ ] 简化工具调用展示（灰/绿/红状态文字）
-- [ ] 精简侧边栏菜单项
 - [ ] 简化设置页面（保留模型+API、显示、权限、备份+关于）
 - [ ] 权限级别重命名（基本/高级）
 - [ ] 简化市场UI
 - [ ] 简化备份恢复为一键操作
 - [ ] 简化终端UI（移除配置项）
+- [ ] 工作流UI重构
 
 ### 阶段四：系统规则自动化
 
