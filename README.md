@@ -326,6 +326,50 @@ Memory 实体包含的评分相关字段：
 
 大部分规则由系统自动管理，用户不需要接触具体的规则和配置。
 
+#### 4.13 首次使用引导（新增）
+
+将现有的分页式权限引导（PermissionGuideScreen）重构为聊天式引导，整个引导在类似聊天页面的界面中完成，AI逐步发送消息和卡片引导用户配置。
+
+**引导流程**：
+
+| 步骤 | 内容 | 交互方式 | 可跳过 |
+|------|------|---------|--------|
+| 0 | 后台静默安装终端依赖（Node.js/PNPM/Python/Pip/uv等） | 无UI，后台异步执行 | - |
+| 1 | AI自我介绍，简单说明能力 | AI自动发送消息 | 否 |
+| 2 | GitHub登录 | 卡片：登录按钮 + 跳过按钮 | 是 |
+| 3 | 主题选择（明快/温暖） | 卡片：两个选项，选择时页面实时更新主题 | 否 |
+| 4 | DeepSeek API配置 | 文字说明 + 卡片：跳转链接按钮 + API Key输入框 | 是 |
+| 5 | 智谱API配置 | 文字说明 + 卡片：跳转链接按钮 + API Key输入框 | 是 |
+| 6 | 权限授权（存储/悬浮窗/电池优化/位置/通知/无障碍） | 卡片：授权按钮 | 部分可跳过 |
+| 7 | 引导完成通知 | AI自动发送完成消息 | - |
+
+**步骤4 DeepSeek API配置要点**：
+- 文字说明如何获取API Key
+- 卡片按钮跳转到 `https://platform.deepseek.com/api_keys`
+- 建议用户先少充点，只充值1块钱
+- DeepSeek定价参考：deepseek-chat 输入1元/百万Token，输出2元/百万Token
+
+**步骤5 智谱API配置要点**：
+- 文字说明如何获取API Key
+- 卡片按钮跳转到 `https://open.bigmodel.cn/usercenter/apikeys`
+- 告知用户不用充值，智谱有免费模型
+- 智谱免费模型：GLM-4.7-Flash（语言模型，200K上下文）、GLM-4.6V-Flash（多模态视觉推理）、GLM-4V-Flash（图像理解）、CogView-3-Flash（文生图）、CogVideoX-Flash（文生视频）
+- 智谱主要用途：多模态免费模型（图片理解/屏幕分析）+ 手机屏幕操作模型（AutoGLM，限时免费）
+
+**步骤7完成消息**：
+- 终端依赖安装完成 + 至少配置了一个API Key："其他项目我已经帮你配置完成了，现在可以直接和我对话，使用我的全部能力了！"
+- 否则："我的一些能力还没有完成配置，但是大部分功能已经可以稳定使用了。可以先开始和我对话体验一下！"
+
+**技术实现**：
+- 新建 `ui/features/onboarding/OnboardingChatScreen.kt` - 引导聊天页面
+- 新建 `ui/features/onboarding/OnboardingViewModel.kt` - 引导流程状态管理
+- 新建引导卡片组件：GitHubLoginCard、ThemeSelectionCard、ApiKeyConfigCard、PermissionGrantCard
+- 移除现有 `PermissionGuideScreen.kt` 的独立引导页面，权限引导逻辑合并到OnboardingChatScreen
+- 在 `MainActivity.kt` 中检测首次启动，未完成引导则跳转OnboardingChatScreen
+- 引导状态持久化到SharedPreferences，支持中断后恢复
+
+> 详细实施方案见 [PLAN.md](PLAN.md) 第九章
+
 ### 五、待进一步确认的提问清单
 
 > 以下问题按模块分组，每个模块覆盖其核心文件的关键决策点。标注 [已确认] 的问题保留原有结论，标注 [待确认] 的问题需要逐一回复。
@@ -3403,6 +3447,19 @@ FloatingWindowManager 当前支持以下模式：
 - [ ] 简化终端UI（移除配置项）
 - [ ] 弱化工具箱入口
 - [ ] 工作流UI重构
+- [ ] 实现首次使用引导（聊天式引导页面）
+  - [ ] 新建OnboardingChatScreen和OnboardingViewModel
+  - [ ] 实现引导卡片组件（GitHub登录/主题选择/API配置/权限授权）
+  - [ ] 实现AI自我介绍消息自动发送
+  - [ ] 实现GitHub OAuth登录卡片（可跳过）
+  - [ ] 实现主题选择卡片（明快/温暖，实时预览）
+  - [ ] 实现DeepSeek API配置卡片（含跳转链接和充值建议）
+  - [ ] 实现智谱API配置卡片（含免费模型说明）
+  - [ ] 实现权限授权卡片（存储/悬浮窗/电池优化/位置/通知/无障碍）
+  - [ ] 实现引导完成消息（根据配置状态显示不同文案）
+  - [ ] 引导状态持久化（支持中断后恢复）
+  - [ ] MainActivity首次启动检测和引导跳转
+  - [ ] 移除现有PermissionGuideScreen独立引导页面
 
 ### 阶段四：系统规则自动化
 
