@@ -1,913 +1,704 @@
 # Operit AI 简化与增强实施方案
 
-> 本方案基于对项目31个模块的深度研究，结合用户反馈修正，形成可执行的完整方案。
+> 本方案基于对项目全部模块的深度研究，结合用户反馈修正，形成可执行的完整方案。
 
 ---
 
-## 一、总体策略
+## 一、项目完整模块清单
 
-### 1.1 核心原则
+### 1.1 Gradle模块
 
-1. **先删后建**：先完成所有模块移除和简化，再进行新功能开发
-2. **分层推进**：按 数据层 → 逻辑层 → UI层 顺序修改
-3. **API兼容**：移除UI但保留API的功能，用 `@Deprecated` 标注
-4. **增量验证**：每个阶段完成后确保项目可编译运行
+| 模块 | 路径 | 说明 | 简化决策 |
+|------|------|------|---------|
+| app | /workspace/app/ | 主应用模块 | 保留 |
+| mnn | /workspace/mnn/ | MNN本地模型推理 | 保留 |
+| llama | /workspace/llama/ | Llama本地模型推理(JNI stub) | 保留 |
+| quickjs | /workspace/quickjs/ | QuickJS JavaScript引擎 | 保留 |
+| showerclient | /workspace/showerclient/ | Shower客户端通信 | 删除 |
+| dragonbones | /workspace/dragonbones/ | DragonBones动画 | 删除 |
+| fbx | /workspace/fbx/ | FBX动画 | 删除 |
+| mmd | /workspace/mmd/ | MMD动画 | 删除 |
+| tools/desktop | /workspace/tools/desktop/ | 桌面模式工具 | 保留 |
+| tools/shower | /workspace/tools/shower/ | Shower服务端 | 删除 |
 
-### 1.2 分期规划
+### 1.2 应用内功能模块（app/src/main/java/com/ai/assistance/operit/）
 
-| 阶段 | 名称 | 核心目标 |
-|------|------|---------|
-| P0 | 代码清理 | 移除砍掉的模块，清理死代码 |
-| P1 | 架构调整 | 权限系统重构、AutoGLM内置化、长程任务增强 |
-| P2 | UI重构 | 侧边栏、聊天界面、设置页面、主题系统 |
-| P3 | 新功能 | 待办、日程、上下文自动注入 |
-| P4 | 收尾打磨 | 字符串清理、性能优化、兼容性测试 |
+| 模块 | 路径 | 说明 | 简化决策 |
+|------|------|------|---------|
+| api/chat | api/chat/ | 聊天核心（EnhancedAIService, ChatRuntimeHolder, AIForegroundService） | 保留，简化FLOATING槽位 |
+| api/chat/enhance | api/chat/enhance/ | 对话增强（ConversationMarkupManager, InputProcessor, ToolExecutionManager） | 保留 |
+| api/chat/library | api/chat/library/ | 记忆库（MemoryLibrary, MemoryAutoSaveScheduler） | 保留 |
+| api/chat/llmprovider | api/chat/llmprovider/ | LLM提供商（30+个Provider） | 保留 |
+| api/speech | api/speech/ | 语音识别（SpeechService, SherpaSpeechProvider, DeepgramSttProvider） | 保留API，移除唤醒UI |
+| api/voice | api/voice/ | 语音合成（VoiceService, 10+个VoiceProvider） | 保留API，移除独立UI |
+| core/application | core/application/ | 应用核心（OperitApplication, ActivityLifecycleManager） | 保留 |
+| core/avatar | core/avatar/ | 虚拟形象（AvatarController, AvatarModel, DragonBones/MMD/FBX/GLTF实现） | 删除 |
+| core/chat | core/chat/ | 聊天逻辑（AIMessageManager, hooks, plugins） | 保留 |
+| core/config | core/config/ | 系统配置（SystemPromptConfig, SystemToolPrompts, FunctionalPrompts） | 保留 |
+| core/subpack | core/subpack/ | APK/EXE编辑工具 | 保留 |
+| core/tools/agent | core/tools/agent/ | 代理系统（PhoneAgent, ShowerController, VirtualDisplayManager） | 部分删除 |
+| core/tools/calculator | core/tools/calculator/ | 计算器 | 保留 |
+| core/tools/climode | core/tools/climode/ | CLI工具模式（CliToolModeSupport） | 删除 |
+| core/tools/condition | core/tools/condition/ | 条件评估器 | 保留 |
+| core/tools/defaultTool | core/tools/defaultTool/ | 默认工具集（standard/accessibility/admin/debugger/root） | 部分删除 |
+| core/tools/javascript | core/tools/javascript/ | JS引擎（JsEngine, JsToolManager, JsJavaBridge） | 保留 |
+| core/tools/mcp | core/tools/mcp/ | MCP协议（MCPToolExecutor, MCPJson, MCPPackage） | 保留 |
+| core/tools/packTool | core/tools/packTool/ | 沙箱包管理（PackageManager, ToolPkgParser, ToolPkgComposeDslParser） | 保留 |
+| core/tools/skill | core/tools/skill/ | 技能管理（SkillManager） | 保留 |
+| core/tools/system | core/tools/system/ | 系统工具（权限、Shell、终端、截图、无障碍安装） | 部分删除 |
+| core/workflow | core/workflow/ | 工作流（WorkflowExecutor, WorkflowScheduler, WorkflowWorker） | 保留 |
+| data/announcement | data/announcement/ | 远程公告 | 删除 |
+| data/api | data/api/ | 外部API（GitHubApiService, MarketStatsApiService） | 保留 |
+| data/backup | data/backup/ | 备份恢复（RoomDatabaseBackupManager, RawSnapshotBackupManager） | 保留，简化UI |
+| data/collects | data/collects/ | 数据收集（模型定价、API配置） | 保留 |
+| data/converter | data/converter/ | 聊天格式转换（ChatGPT, Markdown, ChatBox, GenericJson） | 部分删除 |
+| data/dao | data/dao/ | 数据库DAO | 保留 |
+| data/db | data/db/ | 数据库（AppDatabase, ObjectBox） | 保留 |
+| data/exporter | data/exporter/ | 导出器（HTML, Markdown, Text） | 部分删除 |
+| data/mcp | data/mcp/ | MCP数据层（MCPBridge, MCPLocalServer, MCPRepository） | 保留 |
+| data/mnn | data/mnn/ | MNN模型下载管理 | 保留 |
+| data/model | data/model/ | 数据模型（40+个模型类） | 部分删除 |
+| data/preferences | data/preferences/ | 偏好管理（30+个Manager） | 部分删除 |
+| data/repository | data/repository/ | 数据仓库 | 部分删除 |
+| data/skill | data/skill/ | 技能数据层 | 保留 |
+| data/updates | data/updates/ | 应用更新 | 保留 |
+| integrations/externalchat | integrations/externalchat/ | 外部聊天集成 | 保留 |
+| integrations/http | integrations/http/ | HTTP服务（ExternalChatHttpServer, WebChatHttpBridge） | 保留 |
+| integrations/intent | integrations/intent/ | Intent集成 | 保留 |
+| integrations/tasker | integrations/tasker/ | Tasker集成 | 保留 |
+| plugins/chatview | plugins/chatview/ | 聊天视图钩子 | 保留 |
+| plugins/lifecycle | plugins/lifecycle/ | 应用生命周期钩子 | 保留 |
+| plugins/toolbox | plugins/toolbox/ | 工具箱插件 | 保留 |
+| plugins/toolpkg | plugins/toolpkg/ | 沙箱包桥接（ToolPkgCommonBridgePlugin, ToolPkgToolLifecycleBridge） | 保留 |
+| plugins/workflow | plugins/workflow/ | 工作流生命周期插件 | 保留 |
+| provider | provider/ | ContentProvider（Memory, Workspace） | 保留 |
+| services/assistant | services/assistant/ | 语音助手服务 | 删除 |
+| services/core | services/core/ | 服务核心（ChatServiceCore, MessageProcessingDelegate） | 保留 |
+| services/floating | services/floating/ | 悬浮窗管理 | 保留 |
+| services/notification | services/notification/ | 通知监听服务 | 保留 |
+| terminal | terminal/ | 终端管理（TerminalManager, SessionManager） | 保留，简化UI |
+| ui/features/assistant | ui/features/assistant/ | 助手配置界面 | 删除 |
+| ui/features/chat | ui/features/chat/ | 聊天界面 | 保留，重构 |
+| ui/features/toolbox | ui/features/toolbox/ | 工具箱界面 | 保留，合并 |
+| ui/features/workflow | ui/features/workflow/ | 工作流界面 | 保留 |
+| ui/features/settings | ui/features/settings/ | 设置界面 | 保留，简化 |
+| ui/floating | ui/floating/ | 悬浮窗UI | 保留 |
+| widget | widget/ | 桌面小部件 | 部分删除 |
 
 ---
 
-## 二、P0 - 代码清理
+## 二、模块依赖关系图
 
-### 2.1 虚拟形象系统移除
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        UI层 (Jetpack Compose)                       │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ │
+│  │ 聊天界面  │ │ 侧边栏   │ │ 设置页面  │ │ 工具箱   │ │ 工作流UI │ │
+│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ │
+└───────┼────────────┼────────────┼────────────┼────────────┼────────┘
+        │            │            │            │            │
+┌───────┼────────────┼────────────┼────────────┼────────────┼────────┐
+│       │     ViewModel / Service层                              │
+│  ┌────▼─────┐ ┌────▼─────┐ ┌────▼─────┐ ┌────▼─────┐ ┌────▼─────┐│
+│  │ChatVM    │ │Floating  │ │SettingsVM│ │AutoGlmVM │ │WorkflowVM││
+│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘│
+└───────┼────────────┼────────────┼────────────┼────────────┼───────┘
+        │            │            │            │            │
+┌───────┼────────────┼────────────┼────────────┼────────────┼───────┐
+│       │     核心服务层                                         │
+│  ┌────▼────────────────────────────────────────────────────▼─────┐│
+│  │              ChatServiceCore (聊天核心)                        ││
+│  │    ┌──────────────┐ ┌──────────────┐ ┌──────────────┐        ││
+│  │    │AIMessageMgr  │ │ToolExecution │ │MsgProcessing │        ││
+│  │    └──────┬───────┘ └──────┬───────┘ └──────┬───────┘        ││
+│  └───────────┼────────────────┼────────────────┼────────────────┘│
+└──────────────┼────────────────┼────────────────┼─────────────────┘
+               │                │                │
+┌──────────────┼────────────────┼────────────────┼─────────────────┐
+│              │     工具执行层                                   │
+│  ┌───────────▼────────────────▼────────────────▼──────────────┐  │
+│  │              AIToolHandler (工具调度)                        │  │
+│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐      │  │
+│  │  │ToolReg   │ │JsToolMgr │ │MCPExec   │ │SkillMgr  │      │  │
+│  │  │(内置工具)│ │(JS沙箱)  │ │(MCP工具) │ │(技能)    │      │  │
+│  │  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘      │  │
+│  └───────┼────────────┼────────────┼────────────┼─────────────┘  │
+└──────────┼────────────┼────────────┼────────────┼────────────────┘
+           │            │            │            │
+┌──────────┼────────────┼────────────┼────────────┼────────────────┐
+│          │     原生能力层                                          │
+│  ┌───────▼───────┐ ┌──▼───────────┐ ┌▼────────────┐ ┌▼────────┐│
+│  │StandardTools  │ │JsEngine      │ │MCPBridge    │ │PhoneAgent││
+│  │(UI/FS/Shell/  │ │(QuickJS)     │ │(MCP通信)    │ │(UI自动化)││
+│  │ Http/Music/   │ │              │ │              │ │          ││
+│  │ Browser/      │ │  ┌─────────┐ │ │              │ │          ││
+│  │ Terminal/     │ │  │JavaBridge│ │ │              │ │          ││
+│  │ Calculator/   │ │  │(78个API) │ │ │              │ │          ││
+│  │ Speech/       │ │  └─────────┘ │ │              │ │          ││
+│  │ Workflow)     │ │              │ │              │ │          ││
+│  └───────┬───────┘ └──────────────┘ └──────────────┘ └────┬─────┘│
+└──────────┼─────────────────────────────────────────────────┼──────┘
+           │                                                  │
+┌──────────┼──────────────────────────────────────────────────┼─────┐
+│          │     系统服务层                                     │     │
+│  ┌───────▼───────────────────────────────────────────────▼─────┐  │
+│  │  权限系统 (STANDARD → ACCESSIBILITY)                        │  │
+│  │  Shell执行器 (StandardShell → AccessibilityShell)           │  │
+│  │  无障碍服务 (AccessibilityService, AccessibilityUITools)    │  │
+│  │  屏幕捕获 (MediaProjectionCaptureManager)                   │  │
+│  │  通知监听 (OperitNotificationListenerService)               │  │
+│  └─────────────────────────────────────────────────────────────┘  │
+└───────────────────────────────────────────────────────────────────┘
+
+┌───────────────────────────────────────────────────────────────────┐
+│  沙箱包依赖关系                                                    │
+│                                                                   │
+│  automatic_ui_subagent ──→ Tools.UI.runSubAgent ──→ PhoneAgent    │
+│  automatic_ui_base ────→ Tools.UI.tap/swipe/click ──→ StdUITools │
+│  browser ──────────────→ Tools.Browser.* ──→ StdBrowserSession   │
+│  所有JS包 ─────────────→ callTool/callToolAsync ──→ AIToolHandler│
+│  所有JS包 ─────────────→ JavaBridge (78个API) ──→ JsEngine      │
+│  所有JS包 ─────────────→ ToolPkgCommonBridgePlugin ──→ 桥接层   │
+└───────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 三、沙箱包原生API完整清单
+
+### 3.1 JsEngine @JavascriptInterface API（78个方法）
+
+#### 工具调用类（3个）
+
+| 方法 | 参数 | 功能 |
+|------|------|------|
+| `callTool` | toolType, toolName, paramsJson | 同步工具调用 |
+| `callToolAsync` | callbackId, toolType, toolName, paramsJson | 异步工具调用 |
+| `callToolAsyncStreaming` | callbackId, intermediateCallbackId, toolType, toolName, paramsJson | 流式异步工具调用 |
+
+#### 包管理类（6个）
+
+| 方法 | 参数 | 功能 |
+|------|------|------|
+| `isPackageImported` | packageName | 检查包是否已导入 |
+| `importPackage` | packageName | 导入包 |
+| `removePackage` | packageName | 移除包 |
+| `usePackage` | packageName | 使用包 |
+| `listImportedPackagesJson` | - | 列出已导入包 |
+| `resolveToolName` | packageName, subpackageId, toolName, preferImported | 解析工具名 |
+
+#### 资源读取类（3个）
+
+| 方法 | 参数 | 功能 |
+|------|------|------|
+| `readToolPkgResource` | packageNameOrSubpackageId, resourceKey, outputFileName, internal | 读取包资源文件 |
+| `readToolPkgTextResource` | packageNameOrSubpackageId, resourcePath | 读取包文本资源 |
+| `getPluginConfigDir` | pluginId | 获取插件配置目录 |
+
+#### 沙箱包注册钩子类（16个）
+
+| 方法 | 功能 |
+|------|------|
+| `registerToolPkgToolboxUiModule` | 注册工具箱UI模块 |
+| `registerToolPkgUiRoute` | 注册UI路由 |
+| `registerToolPkgNavigationEntry` | 注册导航入口 |
+| `registerToolPkgDesktopWidget` | 注册桌面小部件 |
+| `registerToolPkgAppLifecycleHook` | 注册应用生命周期钩子 |
+| `registerToolPkgMessageProcessingPlugin` | 注册消息处理插件 |
+| `registerToolPkgXmlRenderPlugin` | 注册XML渲染插件 |
+| `registerToolPkgInputMenuTogglePlugin` | 注册输入菜单切换插件 |
+| `registerToolPkgChatInputHook` | 注册聊天输入钩子 |
+| `registerToolPkgChatViewHook` | 注册聊天视图钩子 |
+| `registerToolPkgToolLifecycleHook` | 注册工具生命周期钩子 |
+| `registerToolPkgPromptInputHook` | 注册提示词输入钩子 |
+| `registerToolPkgPromptHistoryHook` | 注册提示词历史钩子 |
+| `registerToolPkgSystemPromptComposeHook` | 注册系统提示词组合钩子 |
+| `registerToolPkgToolPromptComposeHook` | 注册工具提示词组合钩子 |
+| `registerToolPkgSummaryGenerateHook` | 注册摘要生成钩子 |
+
+#### Java桥接类（14个）
+
+| 方法 | 功能 |
+|------|------|
+| `javaClassExists` | 检查Java类是否存在 |
+| `javaLoadDex` | 加载DEX文件 |
+| `javaLoadJar` | 加载JAR文件 |
+| `javaListLoadedCodePaths` | 列出已加载代码路径 |
+| `javaGetApplicationContext` | 获取应用上下文 |
+| `javaGetCurrentActivity` | 获取当前Activity |
+| `javaNewInstance` | 创建Java实例 |
+| `javaCallStatic` | 调用静态方法 |
+| `javaCallInstance` | 调用实例方法 |
+| `javaCallStaticSuspend` | 异步调用静态方法 |
+| `javaCallInstanceSuspend` | 异步调用实例方法 |
+| `javaGetStaticField` | 获取静态字段 |
+| `javaSetStaticField` | 设置静态字段 |
+| `javaGetInstanceField` | 获取实例字段 |
+
+#### 导航与UI类（6个）
+
+| 方法 | 功能 |
+|------|------|
+| `navigateToRoute` | 导航到路由 |
+| `listRoutes` | 列出所有路由 |
+| `listHostRoutes` | 列出原生路由 |
+| `composeWebViewControllerCommand` | WebView控制器命令 |
+| `composeWebViewControllerCommandSuspend` | 异步WebView控制器命令 |
+| `composeOpenFilePickerSuspend` | 打开文件选择器 |
+
+#### 环境与通用类（14个）
+
+| 方法 | 功能 |
+|------|------|
+| `decompress` | 解压缩数据 |
+| `getEnvForCall` | 获取环境变量 |
+| `setEnv` | 设置环境变量 |
+| `setEnvs` | 批量设置环境变量 |
+| `measureComposeText` | 测量Compose文本 |
+| `invokeToolPkgIpcAsync` | 异步ToolPkg IPC调用 |
+| `registerImageFromBase64` | 注册Base64图片 |
+| `registerImageFromPath` | 注册路径图片 |
+| `image_processing` | 图像处理 |
+| `crypto` | 加密操作 |
+| `sendCallIntermediateResult` | 发送中间结果 |
+| `setCallResult` | 设置调用结果 |
+| `setCallError` | 设置调用错误 |
+| `reportError` / `reportErrorForCall` | 报告错误 |
+
+#### 日志类（5个）
+
+| 方法 | 功能 |
+|------|------|
+| `logInfo` | 记录Info日志 |
+| `logInfoForCall` | 记录调用Info日志 |
+| `logError` | 记录Error日志 |
+| `logErrorForCall` | 记录调用Error日志 |
+| `logDebug` | 记录Debug日志 |
+
+#### Java对象管理类（4个）
+
+| 方法 | 功能 |
+|------|------|
+| `__javaReleaseInstanceInternal` | 释放Java实例 |
+| `javaHasInstanceMethod` | 检查实例方法是否存在 |
+| `javaSetInstanceField` | 设置实例字段 |
+| `javaPollPendingJsCallback` | 轮询待处理JS回调 |
+
+### 3.2 callTool 路由的工具（通过ToolRegistration注册）
+
+沙箱包通过 `callTool(toolType, toolName, paramsJson)` 调用原生工具。toolType对应工具分类，toolName对应具体工具。
+
+**Standard级别工具**（basicTools + fileSystemTools + httpTools + memoryTools）：
+
+| 分类 | 工具名 | 实现类 |
+|------|--------|--------|
+| UI操作 | tap, long_press, double_tap, swipe, click_element, set_text, press_key, get_page_info, capture_screenshot, run_ui_sub_agent | StandardUITools |
+| 文件系统 | read_file, write_file, list_directory, create_directory, delete_file, move_file, copy_file | StandardFileSystemTools |
+| HTTP | http_request | StandardHttpTools |
+| 系统 | start_app, list_apps, get_device_info, send_intent, send_broadcast, modify_setting | StandardSystemOperationTools |
+| Shell | execute_shell | StandardShellToolExecutor |
+| 终端 | execute_terminal_command | StandardTerminalCommandExecutor |
+| 音乐 | play_music, pause_music, resume_music, stop_music | StandardMusicPlaybackTools |
+| 计算器 | calculate | StandardCalculator |
+| 浏览器 | browser_navigate, browser_get_content, browser_click, browser_fill, browser_screenshot | StandardBrowserSessionTools |
+| 网页访问 | visit_webpage | StandardWebVisitTool |
+| 工作流 | list_workflows, run_workflow, create_workflow | StandardWorkflowTools |
+| 聊天管理 | get_chat_history, create_chat, switch_chat | StandardChatManagerTool |
+| 记忆 | query_memory, save_memory, update_memory, delete_memory | MemoryQueryToolExecutor |
+| FFmpeg | ffmpeg_execute | StandardFFmpegTool |
+| 设备信息 | get_device_info | StandardDeviceInfoToolExecutor |
+| Intent | send_intent | StandardIntentToolExecutor |
+| 广播 | send_broadcast | StandardSendBroadcastToolExecutor |
+| 设置 | modify_setting | StandardSoftwareSettingsModifyTools |
+
+**Accessibility级别工具**（accessibilityTools）：
+
+| 工具名 | 实现类 |
+|--------|--------|
+| accessibility_tap, accessibility_swipe, accessibility_click_element, accessibility_set_text | AccessibilityUITools |
+| accessibility_read_file, accessibility_write_file | AccessibilityFileSystemTools |
+| accessibility_start_app, accessibility_list_apps, accessibility_execute_shell | AccessibilitySystemOperationTools |
+
+**Admin级别工具**：AdminSystemOperationTools, AdminFileSystemTools, AdminUITools, AdminDeviceInfoToolExecutor
+
+**Root级别工具**：RootSystemOperationTools
+
+**Debugger级别工具**：DebuggerSystemOperationTools, DebuggerFileSystemTools, DebuggerUITools, DebuggerDeviceInfoToolExecutor
+
+---
+
+## 四、权限系统完整架构
+
+### 4.1 当前权限级别
+
+```
+AndroidPermissionLevel 枚举定义：
+├── STANDARD       - 基础权限，使用StandardShellExecutor
+├── ACCESSIBILITY  - 无障碍权限，使用AccessibilityShellExecutor
+├── ADMIN          - 设备管理员权限，使用AdminShellExecutor
+├── ROOT           - Root权限，使用RootShellExecutor
+├── DEBUGGER       - 调试器权限，使用DebuggerShellExecutor
+└── SHIZUKU        - Shizuku权限（通过ShizukuAuthorizer）
+```
+
+### 4.2 Shell执行器继承体系
+
+```
+ShellExecutor (接口)
+├── StandardShellExecutor      - 基础Shell执行
+├── AccessibilityShellExecutor - 通过无障碍服务执行
+├── AdminShellExecutor         - 通过设备管理员执行
+├── RootShellExecutor          - 通过Root执行
+└── DebuggerShellExecutor      - 通过调试器执行
+
+ShellExecutorFactory - 根据AndroidPermissionLevel创建对应执行器
+```
+
+### 4.3 工具权限映射
+
+```
+STANDARD级别 → Standard*Tools (UI/FS/Shell/Http/Music/Browser/...)
+ACCESSIBILITY级别 → Accessibility*Tools (UI/FS/System/...)
+ADMIN级别 → Admin*Tools (UI/FS/System/DeviceInfo)
+ROOT级别 → Root*Tools (System)
+DEBUGGER级别 → Debugger*Tools (UI/FS/System/DeviceInfo)
+```
+
+### 4.4 简化后权限体系
+
+```
+简化前：STANDARD → ACCESSIBILITY → ADMIN → ROOT → SHIZUKU → DEBUGGER
+简化后：BASIC(基本) → ADVANCED(高级)
+
+BASIC = 原STANDARD级别的能力
+ADVANCED = 原ACCESSIBILITY级别的能力
+
+删除：ROOT、ADMIN、SHIZUKU、DEBUGGER 四个级别
+删除：RootShellExecutor、AdminShellExecutor、DebuggerShellExecutor
+删除：RootAuthorizer、ShizukuAuthorizer、ShizukuInstaller
+删除：Root*Tools、Admin*Tools、Debugger*Tools
+删除：shizuku.apk
+```
+
+---
+
+## 五、GUI操作能力方案（修正）
+
+### 5.1 三个GUI沙箱包
+
+| 沙箱包ID | 文件 | 功能 | 决策 |
+|---------|------|------|------|
+| `Automatic_ui_subagent` | automatic_ui_subagent.js | AutoGLM子代理，执行复杂UI任务（run_subagent_main, run_subagent_virtual, run_subagent_parallel_virtual） | **保留，改为内置能力** |
+| `browser` | browser.js | 浏览器操作（导航、获取内容、点击、填表、截图） | **保留，改为内置能力** |
+| `Automatic_ui_base` | automatic_ui_base.js | 基础UI操作（tap, longPress, clickElement, setText, pressKey, swipe, startApp） | **移除** |
+
+### 5.2 内置化方案
+
+**Automatic_ui_subagent 内置化**：
+- 将 `automatic_ui_subagent.js` 的逻辑迁移到Kotlin原生实现
+- 新建 `core/tools/autoglm/AutoGLMSubAgentExecutor.kt`
+- 调用 `PhoneAgent.kt` 的 `runSubAgent` 方法（保留PhoneAgent）
+- 调用 `StandardUITools.kt` 的基础UI操作方法（保留StandardUITools）
+- 在 `ToolRegistration.kt` 中注册为内置工具
+- 在 `SystemToolPrompts.kt` 中新增内置工具提示词
+- 保留JS包文件供第三方沙箱包通过JS接口调用
+
+**browser 内置化**：
+- 将 `browser.js` 的逻辑迁移到Kotlin原生实现
+- 新建 `core/tools/browser/BrowserToolExecutor.kt`
+- 调用 `StandardBrowserSessionTools.kt` 的浏览器操作方法
+- 在 `ToolRegistration.kt` 中注册为内置工具
+- 在 `SystemToolPrompts.kt` 中新增内置工具提示词
+- 保留JS包文件供第三方沙箱包通过JS接口调用
+
+**Automatic_ui_base 移除**：
+- 删除 `app/src/main/assets/packages/automatic_ui_base.js`
+- 删除 `examples/automatic_ui_base/` 源码目录
+- `StandardUITools.kt` 保留（Automatic_ui_subagent和browser都依赖它）
+- `PhoneAgent.kt` 保留（Automatic_ui_subagent依赖它）
+
+### 5.3 保留的原生依赖
+
+| 文件 | 保留原因 |
+|------|---------|
+| `PhoneAgent.kt` | AutoGLM子代理的runSubAgent方法 |
+| `PhoneAgentJobRegistry.kt` | AutoGLM任务注册 |
+| `StandardUITools.kt` | UI操作基础实现（tap, swipe, click, setText, pressKey, getPageInfo, captureScreenshot, runUiSubAgent） |
+| `StandardBrowserSessionTools.kt` | 浏览器操作基础实现 |
+| `BrowserToolSupport.kt` | 浏览器工具支持 |
+| `AccessibilityUITools.kt` | 无障碍UI操作 |
+| `AccessibilitySystemOperationTools.kt` | 无障碍系统操作 |
+
+### 5.4 移除的文件
+
+| 文件 | 说明 |
+|------|------|
+| `app/src/main/assets/packages/automatic_ui_base.js` | 基础UI操作沙箱包 |
+| `examples/automatic_ui_base/` | 基础UI操作源码 |
+| `core/tools/climode/CliToolModeSupport.kt` | CLI工具模式 |
+| `core/tools/agent/VirtualDisplayManager.kt` | 虚拟显示管理 |
+| `core/tools/agent/ShowerBinderRegistry.kt` (app层) | Shower绑定 |
+| `core/tools/agent/ShowerController.kt` | Shower控制器 |
+| `showerclient/` | Shower客户端Gradle模块 |
+| `app/src/main/assets/shower-server.jar` | Shower服务端 |
+| `app/src/main/assets/packages/operit_editor.js` | 编辑器沙箱包 |
+
+---
+
+## 六、P0 - 代码清理
+
+### 6.1 虚拟形象系统移除
 
 **移除范围**：
 
 | 目录/文件 | 说明 |
 |----------|------|
-| `core/avatar/` | 整个目录删除（含common/impl/factory，DragonBones/MMD/FBX/GLTF控制器、模型、视图、状态） |
-| `ui/features/assistant/` | 整个目录删除（AvatarConfigSection、AvatarPreviewSection、AssistantConfigViewModel、WaifuModeSettingsScreen） |
-| `ui/floating/ui/pet/` | 整个目录删除（AvatarEmotionManager） |
+| `core/avatar/` | 整个目录删除 |
+| `ui/features/assistant/` | 整个目录删除 |
+| `ui/floating/ui/pet/` | 整个目录删除 |
 | `ui/components/ManagedDragonBonesView.kt` | 删除 |
 | `data/model/DragonBones.kt` | 删除 |
 | `data/model/CustomEmoji.kt` | 删除 |
 | `data/model/CharacterGroupCard.kt` | 删除 |
 | `data/repository/AvatarRepository.kt` | 删除 |
+| `data/repository/CustomEmojiRepository.kt` | 删除 |
 | `data/preferences/WaifuPreferences.kt` | 删除 |
-| `app/src/main/cpp/dragonbones/` | 整个C++原生模块删除 |
-| `app/src/main/cpp/fbx/` | 整个C++原生模块删除 |
-| `app/src/main/cpp/mmd/` | 整个C++原生模块删除 |
-| `app/src/main/assets/emoji/` | 表情资源目录删除 |
-| `app/src/main/assets/pets/` | 桌宠资源目录删除 |
-| `app/src/main/assets/dragonbones/` | DragonBones资源目录删除 |
+| `data/preferences/CustomEmojiPreferences.kt` | 删除 |
+| `app/src/main/cpp/dragonbones/` | 整个C++模块删除 |
+| `app/src/main/cpp/fbx/` | 整个C++模块删除 |
+| `app/src/main/cpp/mmd/` | 整个C++模块删除 |
+| `app/src/main/assets/emoji/` | 表情资源删除 |
+| `app/src/main/assets/pets/` | 桌宠资源删除 |
+| `app/src/main/assets/dragonbones/` | DragonBones资源删除 |
 
 **沙箱包API处理**：
-
-`ToolPkgCommonBridgePlugin.kt` 中暴露给JS沙箱包的虚拟形象相关API（avatar、dragonbones、emoji、pet、waifu相关方法），处理方式：
-- 保留方法签名，方法体改为返回空值/默认值
-- 方法标注 `@Deprecated`
-- 在方法注释中说明"虚拟形象功能已移除，此API仅保留兼容性"
-- 沙箱包调用这些API时不会崩溃，但不会产生实际效果
+- `ToolPkgCommonBridgePlugin.kt` 中虚拟形象相关API：保留方法签名，方法体返回空值/默认值，标注 `@Deprecated`
+- 沙箱包调用这些API时不会崩溃，但不产生实际效果
 
 **引用清理**：
-- `OperitApplication.kt`：移除虚拟形象初始化代码
-- `AIForegroundService.kt`：移除桌宠/虚拟形象相关逻辑（`startPetMode`、`stopPetMode`、桌宠悬浮窗控制）
-- `FloatingWindowManager`：移除桌宠模式（PET模式）
+- `OperitApplication.kt`：移除虚拟形象初始化
+- `AIForegroundService.kt`：移除桌宠逻辑
+- `FloatingWindowManager`：移除PET模式
 - `OperitScreens.kt`：移除助手配置页面路由
 - `DrawerContent.kt`：移除助手配置入口
-- `NavItem.kt`：移除助手相关导航项
-- `CMakeLists.txt`：移除 dragonbones、fbx、mmd 三个模块的编译配置
+- `NavItem.kt`：移除助手导航项
+- `CMakeLists.txt`：移除dragonbones/fbx/mmd编译配置
 
-### 2.2 语音系统简化（保留API能力）
-
-语音功能**不是完全移除**，而是移除用户直接交互功能，保留API调用能力。
+### 6.2 语音系统简化（保留API能力）
 
 **移除的用户交互功能**：
 
-| 文件 | 处理方式 |
-|------|---------|
-| `services/assistant/OperitVoiceInteractionService.kt` | 删除（语音唤醒服务） |
-| `services/assistant/OperitVoiceInteractionSessionService.kt` | 删除（语音会话服务） |
-| `ui/floating/voice/SpeechInteractionManager.kt` | 删除（语音交互管理） |
-| `data/preferences/WakeWordPreferences.kt` | 删除（唤醒词配置） |
-| `widget/VoiceAssistantGlanceWidget.kt` | 删除（语音助手桌面小部件） |
-| `ui/features/toolbox/screens/speechtotext/SpeechToTextScreen.kt` | 删除（STT独立界面） |
-| `ui/features/toolbox/screens/texttospeech/TextToSpeechScreen.kt` | 删除（TTS独立界面） |
-| `ui/features/settings/screens/SpeechServicesSettingsScreen.kt` | 删除（语音服务设置界面） |
-| `ui/features/assistant/components/VoiceAutoAttachComponents.kt` | 删除（语音自动附加组件） |
+| 文件 | 说明 |
+|------|------|
+| `services/assistant/OperitVoiceInteractionService.kt` | 语音唤醒服务 |
+| `services/assistant/OperitVoiceInteractionSessionService.kt` | 语音会话服务 |
+| `ui/floating/voice/SpeechInteractionManager.kt` | 语音交互管理 |
+| `data/preferences/WakeWordPreferences.kt` | 唤醒词配置 |
+| `widget/VoiceAssistantGlanceWidget.kt` | 语音助手小部件 |
+| `ui/features/toolbox/screens/speechtotext/` | STT独立界面 |
+| `ui/features/toolbox/screens/texttospeech/` | TTS独立界面 |
+| `ui/features/settings/screens/SpeechServicesSettingsScreen.kt` | 语音设置界面 |
+| `ui/features/assistant/components/VoiceAutoAttachComponents.kt` | 语音自动附加 |
 
 **保留的API能力**：
 
 | 文件 | 保留原因 |
 |------|---------|
-| `api/speech/SpeechService.kt` | 保留，工作流节点和沙箱包通过API调用TTS/STT |
-| `api/voice/VoiceService.kt` | 保留，AI生成音频、工作流语音节点需要 |
-| `data/preferences/SpeechServicesPreferences.kt` | 保留，API调用需要配置信息 |
-| `core/tools/defaultTool/standard/StandardSpeechTools.kt` | 保留，工具注册中的语音工具（`get_speech_services_config`、`set_speech_services_config`、`test_tts_playback`） |
-| `ToolRegistration.kt` 中的语音工具注册 | 保留，AI和工作流通过工具调用使用语音能力 |
-| `ui/common/markdown/MarkdownAudioRenderer.kt` | 保留，AI生成音频时需要渲染播放 |
+| `api/speech/SpeechService.kt` | 工作流和沙箱包通过API调用STT |
+| `api/speech/SherpaSpeechProvider.kt` | 本地语音识别 |
+| `api/speech/OpenAISttProvider.kt` | OpenAI语音识别 |
+| `api/speech/DeepgramSttProvider.kt` | Deepgram语音识别 |
+| `api/voice/VoiceService.kt` | AI生成音频、工作流语音节点 |
+| `api/voice/` 所有VoiceProvider | TTS API调用能力 |
+| `data/preferences/SpeechServicesPreferences.kt` | API配置 |
+| `core/tools/defaultTool/standard/StandardSpeechTools.kt` | 语音工具注册 |
+| `ui/common/markdown/MarkdownAudioRenderer.kt` | 音频渲染 |
+| `ui/common/displays/WaveVisualizer.kt` | 波形可视化 |
 
-**修改的文件**：
-- `AIForegroundService.kt`：移除语音唤醒监听（`startWakeListening`、`stopWakeListening`、`startPersonalWakeListening`），保留TTS播放相关逻辑
-- `ChatViewModel.kt`：移除语音朗读按钮状态管理，保留TTS工具调用支持
-- `AIChatScreen.kt`：移除朗读按钮UI
+**修改**：
+- `AIForegroundService.kt`：移除语音唤醒监听，保留TTS播放
+- `ChatViewModel.kt`：移除朗读按钮状态，保留TTS工具调用
+- `AIChatScreen.kt`：移除朗读按钮
 - `AgentChatInputSection.kt`：移除语音输入按钮
-- `OperitApplication.kt`：移除语音唤醒服务初始化，保留SpeechService初始化
-- `SystemToolPrompts.kt`：保留语音工具提示词（AI通过工具调用使用语音能力）
-- `FunctionalPrompts.kt`：移除语音交互相关提示词，保留语音合成/识别相关提示词
+- `OperitApplication.kt`：移除语音唤醒初始化，保留SpeechService初始化
 
-**工作流语音节点**：
-- `WorkflowExecutor.kt` 中的语音相关节点类型保留
-- 工作流编辑器中的语音节点保留
-- 用户通过工作流仍可使用TTS/STT能力
-
-### 2.3 角色卡系统（UI不可见，后端保留）
-
-角色卡系统**不是移除**，而是在UI层面对用户不可见。所有后端逻辑、数据模型、API接口完整保留。
+### 6.3 角色卡系统（UI不可见，后端保留）
 
 **移除的UI入口**：
 - `OperitScreens.kt`：移除角色卡管理页面路由
 - `DrawerContent.kt`：移除角色卡选择入口
-- `NavItem.kt`：移除角色卡相关导航项
-- `AIChatScreen.kt`：移除角色卡选择器面板（`CharacterSelectorPanel.kt`）
+- `AIChatScreen.kt`：移除角色卡选择器面板
 - `ChatScreenHeader.kt`：移除角色卡切换按钮
 
 **保留的后端**：
-- `data/preferences/CharacterCardManager.kt`：完整保留（1360行）
-- `data/model/CharacterCard.kt`：完整保留
-- `data/model/PromptTag.kt`：完整保留
-- `data/preferences/PromptTagManager.kt`：完整保留
-- `data/preferences/ActivePromptManager.kt`：完整保留
-- `data/preferences/PromptVersionManager.kt`：完整保留
-- `ChatViewModel.kt`：保留角色卡选择/绑定状态
-- `ChatDao.kt`：保留 `characterId` 数据库字段
-- `WebChatHttpBridge.kt`：保留所有角色卡API端点
-- `ToolPkgCommonBridgePlugin.kt`：保留 `__operit_package_caller_card_id` 桥接字段
-- `ToolRegistration.kt`：保留角色卡相关工具（`CliToolModeSupport.isToolNameAllowedForRoleCard`）
+- `CharacterCardManager.kt`、`CharacterCard.kt`、`PromptTag.kt`、`PromptTagManager.kt`、`ActivePromptManager.kt`、`PromptVersionManager.kt`、`CharacterCardToolAccessResolver.kt`、`CharacterGroupCardManager.kt`、`PersonaCardChatHistoryManager.kt` 全部保留
+- `ChatViewModel.kt` 保留角色卡状态
+- `ChatDao.kt` 保留characterId字段
+- `WebChatHttpBridge.kt` 保留角色卡API端点
+- `ToolPkgCommonBridgePlugin.kt` 保留角色卡桥接字段
 
-**沙箱包兼容**：
-- 第三方沙箱包仍可通过API创建、选择、切换角色卡
-- 角色卡的系统提示词注入逻辑保留
-- 角色卡与记忆库的绑定逻辑保留
+### 6.4 聊天样式简化
 
-### 2.4 聊天样式简化
+- 删除 `ui/features/chat/components/style/bubble/` 整个目录
+- 删除 `ui/features/chat/components/style/input/classic/` 整个目录
+- `ChatMessageDisplayMode.kt` 仅保留 CURSOR
+- `ChatScreenContent.kt` 硬编码Cursor样式
 
-**移除范围**：
+### 6.5 深度搜索移除（沙箱包层面）
 
-| 目录/文件 | 说明 |
-|----------|------|
-| `ui/features/chat/components/style/bubble/` | 整个目录删除（BubbleStyleChatMessage、BubbleAiMessageComposable、BubbleUserMessageComposable） |
-| `ui/features/chat/components/style/input/classic/` | 整个目录删除（ClassicChatInputSection） |
-| `data/model/ChatMessageDisplayMode.kt` | 删除 Bubble 枚举值，仅保留 CURSOR |
+- 删除 `examples/deepsearching/` 目录
 
-**修改**：
-- `ChatScreenContent.kt`：移除样式选择逻辑，硬编码使用 Cursor 样式
-- `ChatViewModel.kt`：移除 `chatStyle` 状态
-- `DisplayPreferencesManager.kt`：移除聊天样式偏好字段
-- `UserPreferencesManager.kt`：移除聊天样式和输入模式偏好
+### 6.6 液态玻璃主题移除
 
-### 2.5 原有GUI操作能力移除（沙箱包层面）
+- 删除 `LiquidGlass.kt`、`WaterGlass.kt`、`SerializableColorScheme.kt`、`SerializableTypography.kt`、`ThemePreferenceSnapshot.kt`
+- 删除 `ThemeSettingsScreen.kt`、`ThemeSettingsCoreSections.kt`、`ThemeSettingsColorSection.kt`
 
-AutoGLM和原有GUI操作能力**都是通过沙箱包实现的**，两者有重叠部分。核心原生API（`StandardUITools.kt` 中的 tap、swipe、clickElement、setText、pressKey、getPageInfo、captureScreenshot、runUiSubAgent）是共享的，被两个沙箱包共同调用。
+### 6.7 公告系统移除
 
-**重叠分析**：
-- `automatic_ui_base.js` 调用的原生API：`Tools.UI.tap`、`Tools.UI.longPress`、`Tools.UI.clickElement`、`Tools.UI.setText`、`Tools.UI.pressKey`、`Tools.UI.swipe`、`Tools.System.startApp`、`Tools.System.listApps`
-- `automatic_ui_subagent.js` 调用的原生API：`Tools.UI.runSubAgent`（底层也调用上述基础操作）
-- 两者都依赖 `StandardUITools.kt` 和 `PhoneAgent.kt` 提供的原生方法
+- 删除 `data/announcement/RemoteAnnouncementRepository.kt`
+- 删除 `data/preferences/RemoteAnnouncementPreferences.kt`
 
-**移除方案**：
+### 6.8 权限系统简化
 
-| 文件 | 处理方式 |
-|------|---------|
-| `app/src/main/assets/packages/operit_editor.js` | 删除（原有简单GUI操作的编辑器沙箱包） |
-| `examples/operit_editor.ts` | 删除 |
-| `examples/operit_editor.js` | 删除 |
-
-**保留的文件**（AutoGLM需要）：
-- `PhoneAgent.kt`：保留，提供 `@JavascriptInterface` 原生方法（tap、longPress、clickElement、setText、pressKey、swipe、startApp），AutoGLM沙箱包依赖这些方法
-- `StandardUITools.kt`：保留，提供UI操作的基础实现（tap、swipe、getText、clickElement、setInputText、pressKey、getPageInfo、captureScreenshot、runUiSubAgent），AutoGLM沙箱包依赖这些方法
-- `app/src/main/assets/packages/automatic_ui_base.js`：保留，AutoGLM的基础UI操作沙箱包
-- `app/src/main/assets/packages/automatic_ui_subagent.js`：保留，AutoGLM的子代理沙箱包
-- `ui/features/toolbox/screens/autoglm/AutoGlmToolScreen.kt`：保留
-- `ui/features/toolbox/screens/autoglm/AutoGlmViewModel.kt`：保留
-- `core/tools/agent/PhoneAgentJobRegistry.kt`：保留，AutoGLM任务注册需要
-
-**移除的文件**（原有简单GUI操作专用）：
-- `core/tools/climode/CliToolModeSupport.kt`：删除（688行，原有简单GUI操作的CLI模式支持）
-- `core/tools/agent/VirtualDisplayManager.kt`：删除（虚拟显示管理，仅原有简单GUI操作使用）
-- `core/tools/agent/ShowerBinderRegistry.kt`（app层）：删除
-- `core/tools/agent/ShowerController.kt`：删除
-- `showerclient/`：整个Gradle模块删除
-- `app/src/main/assets/shower-server.jar`：删除
-
-**修改的文件**：
-- `ToolRegistration.kt`：移除 `CliToolModeSupport` 相关的工具注册（`SEARCH_TOOL_NAME`、`PROXY_TOOL_NAME`、`PACKAGE_PROXY_TOOL_NAME`），保留原有UI操作工具注册（AutoGLM依赖）
-- `SystemToolPrompts.kt`：移除CliToolMode相关提示词
-- `AIForegroundService.kt`：移除Shower服务管理逻辑
-- `settings.gradle.kts`：移除 `:showerclient` 模块
-
-### 2.6 深度搜索移除（沙箱包层面）
-
-深度搜索是由沙箱包 `deepsearching` 提供的能力，不是应用内置功能。
-
-**移除范围**：
-
-| 文件 | 说明 |
-|------|------|
-| `examples/deepsearching/` | 整个目录删除（深度搜索沙箱包源码） |
-
-**修改的文件**：
-- `ui/features/chat/components/part/CustomXmlRenderer.kt`：移除深度搜索相关的XML渲染插件注册
-- `strings.xml`（所有语言）：移除深度搜索相关字符串
-
-**注意**：深度搜索是第三方沙箱包，用户可能自行安装。移除内置的 `deepsearching` 包即可，不需要修改应用核心代码。
-
-### 2.7 液态玻璃主题移除
-
-**移除范围**：
-
-| 文件 | 说明 |
-|------|------|
-| `ui/theme/LiquidGlass.kt` | 删除 |
-| `ui/theme/WaterGlass.kt` | 删除 |
-| `data/model/SerializableColorScheme.kt` | 删除（107行） |
-| `data/model/SerializableTypography.kt` | 删除（95行） |
-| `data/preferences/ThemePreferenceSnapshot.kt` | 删除 |
-| `ui/features/settings/screens/ThemeSettingsScreen.kt` | 删除 |
-| `ui/features/settings/sections/ThemeSettingsCoreSections.kt` | 删除 |
-| `ui/features/settings/sections/ThemeSettingsColorSection.kt` | 删除 |
+**删除**：
+- `RootAuthorizer.kt`、`ShizukuAuthorizer.kt`、`ShizukuInstaller.kt`
+- `RootShellExecutor.kt`、`AdminShellExecutor.kt`、`DebuggerShellExecutor.kt`
+- `core/tools/defaultTool/root/` 整个目录
+- `core/tools/defaultTool/admin/` 整个目录
+- `core/tools/defaultTool/debugger/` 整个目录
+- `app/src/main/assets/shizuku.apk`
 
 **修改**：
-- `Theme.kt`：移除Glass效果支持，重构为双主题系统（明快/温暖）
-- `UserPreferencesManager.kt`：移除所有主题自定义字段，仅保留 `themeMode`（明快/温暖/暗色模式）
-- `Compose DSL渲染器`：移除LiquidGlass/WaterGlass渲染器组件
-- `NavigationDrawerAppearance.kt`：简化为shadcn/ui Sidebar风格
+- `AndroidPermissionLevel.kt`：仅保留 STANDARD（重命名BASIC）和 ACCESSIBILITY（重命名ADVANCED）
+- `AndroidPermissionPreferences.kt`：简化为两级
+- `ShellExecutorFactory.kt`：仅创建Standard和Accessibility执行器
+- `ToolPermissionSystem.kt`：简化为两级权限检查
 
-### 2.8 公告系统移除
+### 6.9 无障碍服务内置化
 
-**移除范围**：
-
-| 文件 | 说明 |
-|------|------|
-| `data/announcement/RemoteAnnouncementRepository.kt` | 删除 |
-| `data/preferences/RemoteAnnouncementPreferences.kt` | 删除 |
-
-**修改的文件**：
-- `OperitApplication.kt`：移除公告检查逻辑
-- `OperitScreens.kt`：移除公告弹窗组件
-
-### 2.9 P0阶段数据库迁移
-
-需要新增 Room 数据库迁移（`AppDatabase.kt`）：
-- 移除 `display_mode` 中 Bubble 相关的值
+- 将无障碍服务从辅助APK迁移到主程序
+- 删除 `AccessibilityProviderInstaller.kt` 中的APK安装逻辑
+- 删除 `app/src/main/assets/accessibility.apk`
+- 删除 `IAccessibilityProvider.aidl`、`IAccessibilityEventCallback.aidl`
+- 在 `AndroidManifest.xml` 中声明主程序的AccessibilityService
+- `AccessibilityActionListener.kt` 从AIDL回调改为直接方法调用
 
 ---
 
-## 三、P1 - 架构调整
+## 七、P1 - 架构调整
 
-### 3.1 权限系统重构
+### 7.1 AutoGLM和Browser内置化
 
-**当前权限级别**：BASIC → ADB → ROOT → ACCESSIBILITY
+（详见第五章GUI操作能力方案）
 
-**简化后**：BASIC（基本）→ ACCESSIBILITY（高级）
-
-**移除的文件**：
-
-| 文件 | 说明 |
-|------|------|
-| `RootAuthorizer.kt` | 删除 |
-| `ShizukuAuthorizer.kt` | 删除 |
-| `app/src/main/assets/shizuku.apk` | 删除 |
-
-**修改的文件**：
-
-| 文件 | 修改内容 |
-|------|---------|
-| `AndroidPermissionPreferences.kt` | 移除 ROOT、ADB、SHIZUKU 级别，仅保留 BASIC 和 ACCESSIBILITY，重命名为"基本"和"高级" |
-| `ToolPermissionSystem.kt` | 简化为两级权限检查 |
-| `AccessibilityShellExecutor.kt` | 保留，高级权限下仍需要Shell执行 |
-
-**无障碍服务内置化**：
-
-当前架构：主程序通过 `AccessibilityProviderInstaller.kt` 安装 `accessibility.apk`（辅助APK），辅助APK运行无障碍服务，主程序通过 `IAccessibilityProvider.aidl` 和 `IAccessibilityEventCallback.aidl` 与辅助APK通信。
-
-目标架构：将无障碍服务直接内置到主程序中，不再安装辅助APK。
-
-**实现步骤**：
-1. 在主程序的 `AndroidManifest.xml` 中声明 `AccessibilityService`
-2. 将 `accessibility_service_config.xml` 移入主程序资源
-3. 将辅助APK中的 `AccessibilityService` 实现类移入主程序
-4. 移除 `AccessibilityProviderInstaller.kt` 中的APK安装逻辑
-5. 移除 `IAccessibilityProvider.aidl` 和 `IAccessibilityEventCallback.aidl`（不再需要跨进程通信）
-6. 移除 `app/src/main/assets/accessibility.apk`
-7. `AccessibilityActionListener.kt`：从AIDL回调改为直接方法调用
-8. `AccessibilityUITools.kt`：从AIDL代理调用改为直接调用主程序内的服务
-
-**保留的文件**：
-- `app/src/main/assets/desktop.apk`：保留，桌面模式独立运行需要
-
-### 3.2 AutoGLM GUI操作能力内置化
-
-AutoGLM当前通过沙箱包（`automatic_ui_base.js` + `automatic_ui_subagent.js`）实现，依赖 `PhoneAgent.kt` 和 `StandardUITools.kt` 提供的原生API。
-
-**内置化方案**：
-
-将AutoGLM从"默认启用的内置沙箱包"提升为"应用内置工具"，用户无需安装/管理沙箱包即可使用。
-
-1. **修改 `ToolRegistration.kt`**：
-   - 新增AutoGLM内置工具注册，直接调用 `StandardUITools.kt` 中的方法
-   - 保留原有UI操作工具注册（AutoGLM沙箱包仍可使用）
-
-2. **修改 `SystemToolPrompts.kt`**：
-   - 新增AutoGLM内置工具提示词
-   - 保留原有UI操作工具提示词（沙箱包兼容）
-
-3. **修改 `SystemPromptConfig.kt`**：
-   - 新增AutoGLM GUI操作指南到系统提示词
-
-4. **沙箱包处理**：
-   - `automatic_ui_base.js`：保留，第三方沙箱包仍可通过JS接口调用AutoGLM能力
-   - `automatic_ui_subagent.js`：保留，AutoGLM子代理功能仍通过沙箱包提供
-   - 新增内置工具与沙箱包工具的优先级：内置工具优先，沙箱包工具作为扩展
-
-5. **UI入口**：
-   - `AutoGlmToolScreen.kt`：保留，从工具箱页面移到聊天界面斜杠命令
-   - `AutoGlmViewModel.kt`：保留，调整为同时支持内置工具和沙箱包
-
-### 3.3 长程任务执行能力增强
-
-**当前问题**：
-- 后台任务依赖前台服务保活，但无持久化
-- 网络中断或应用被杀后任务丢失
-- 工具调用无超时重试机制
-- 进度反馈仅通过通知
-
-**增强方案**：
-
-#### 3.3.1 任务持久化
+### 7.2 长程任务执行能力增强
 
 新建 `core/task/` 目录：
-- `TaskRecord.kt` - 任务记录数据模型（ObjectBox实体）
-  - 字段：taskId, chatId, status(PENDING/RUNNING/PAUSED/COMPLETED/FAILED), createdAt, updatedAt, checkpoint(Json), retryCount, lastError
-- `TaskRepository.kt` - 任务记录仓库
-- `TaskCheckpointManager.kt` - 任务检查点管理（序列化工具调用链状态）
+- `TaskRecord.kt` - ObjectBox实体（taskId, chatId, status, checkpoint, retryCount, lastError）
+- `TaskRepository.kt` - 任务仓库
+- `TaskCheckpointManager.kt` - 检查点管理
 
-#### 3.3.2 断点恢复
+修改 `ChatServiceCore.kt`：增加断点恢复
+修改 `AIToolHandler.kt`：增加超时重试（120秒超时，3次重试，指数退避）
+修改 `AIForegroundService.kt`：增强进度通知
+修改 `ToolProgressBus.kt`：增加任务级别进度
 
-修改 `ChatServiceCore.kt`：
-- 每次工具调用完成后保存检查点
-- 应用重启后扫描未完成任务，提示用户是否恢复
-- 恢复时从最后一个检查点继续执行
+### 7.3 模型配置简化
 
-#### 3.3.3 超时与重试
-
-修改 `AIToolHandler.kt`：
-- 新增工具执行超时配置（默认120秒）
-- 新增自动重试机制（最多3次，指数退避）
-- 新增网络中断检测（ConnectivityMonitor），中断时暂停任务
-
-#### 3.3.4 进度反馈增强
-
-修改 `AIForegroundService.kt`：
-- 前台通知显示当前任务进度（步骤 x/n）
-- 支持通过通知暂停/取消任务
-- 悬浮窗黑色气泡显示进度百分比
-
-修改 `ToolProgressBus.kt`：
-- 新增任务级别的进度事件
-- 支持嵌套任务进度
-
-#### 3.3.5 后台保活增强
-
-- `enableBackgroundKeepAlive` 默认值改为 `true`（已确认）
-- 新增 WakeLock 管理：任务运行时获取 WakeLock，完成后释放
-- 新增电池优化白名单引导
-
-### 3.4 模型配置简化
-
-**修改 `ModelConfigManager.kt`**：
-- 保留字段：apiUrl, apiKey, modelName, temperature
-- 移除UI暴露：topP, maxTokens, contextLength, maxContextLength, summaryEnabled, summaryThreshold, customHeaders
-- 保留内部逻辑：以上字段由系统自动计算最优值
-
-**修改 `ModelConfigData.kt`**：
-- 保留所有字段定义（向后兼容）
-- 新增 `companion object` 中的智能默认值计算方法
+`ModelConfigManager.kt`：UI仅暴露4项（apiUrl, apiKey, modelName, temperature），其他参数系统自动计算
 
 ---
 
-## 四、P2 - UI重构
+## 八、P2 - UI重构
 
-### 4.1 主题系统重构（双主题）
+### 8.1 主题系统（明快/温暖双主题）
 
-提供两种主题：**明快** 和 **温暖**。两个主题除颜色不同外，所有完全一致。
+**明快主题**：黑白灰配色，其他颜色仅用于强调
+**温暖主题**：暖黄色、棕色等暖色调
 
-**明快主题**：
-- 仅使用黑白灰配色
-- 其他颜色仅用于强调（如链接、错误、成功状态）
+两个主题除颜色外完全一致，都支持暗色模式变体。
 
-**温暖主题**：
-- 偏暖色调：暖黄色、棕色
-- 背景使用暖白色/暖灰色
+### 8.2 侧边栏重构
 
-**暗色模式**：两个主题都支持暗色模式变体
-
-**新建/重写 `ui/theme/`**：
-
-```
-ui/theme/
-├── Theme.kt              # 重写：双主题 + 暗色模式
-├── Color.kt              # 重写：明快/温暖两套语义化色彩变量
-├── Typography.kt         # 重写：4种字号+2种字重
-├── Spacing.kt            # 新建：8pt网格间距系统
-├── Components.kt         # 新建：统一组件样式
-└── Shape.kt              # 保留但简化
-```
-
-**色彩系统**（参考shadcn/ui，每个主题一套）：
-```
-background / foreground
-primary / primary-foreground
-secondary / secondary-foreground
-accent / accent-foreground
-muted / muted-foreground
-destructive / destructive-foreground
-border / input / ring
-```
-
-**排版系统**：
-- 大标题：24sp / SemiBold
-- 副标题：18sp / SemiBold
-- 正文：14sp / Regular
-- 小字：12sp / Regular
-
-### 4.2 侧边栏重构
-
-**新建组件**：
-
-```
-ui/main/components/sidebar/
-├── AppSidebar.kt           # 主侧边栏
-├── SidebarHeader.kt        # 新建对话按钮
-├── SidebarContent.kt       # 可滚动区域
-├── SidebarGroup.kt         # 分组组件
-├── SidebarFooter.kt        # 底部按钮
-└── SidebarRail.kt          # 宽度调节手柄
-```
-
-**侧边栏结构**：
 ```
 AppSidebar
 ├── SidebarHeader → 新建对话按钮
 ├── SidebarContent
-│   ├── SidebarGroup → 预留按钮区
-│   │   ├── 工作流
-│   │   ├── [预留] 日历
-│   │   └── [预留] 待办
+│   ├── SidebarGroup → 预留按钮区（工作流、[预留]日历、[预留]待办）
 │   └── SidebarGroup → 历史对话列表
 ├── SidebarFooter → 设置按钮
 └── SidebarRail → 宽度调节
 ```
 
-**移除**：
-- `DrawerContent.kt`：重写为 `AppSidebar.kt`
-- 快捷操作区（包管理、权限、工作流三个卡片）
-- AI功能分组（AI聊天、记忆库、助手配置）
-- 底部快捷（关于、帮助、设置三个按钮）
+### 8.3 聊天界面重构
 
-### 4.3 聊天界面重构
+- 工具调用展示：一行小灰字，成功灰→绿3秒→灰，失败灰→红3秒→灰
+- 模型选择弱化：灰色小字显示模型名，点击打开 `/model`
+- Tune按钮移除：输入 `/` 打开斜杠命令面板
+- 附件重构：自动注入区（通知/屏幕/位置/使用时间/记忆）+ 手动选择区（截图/拍照/文件/工具包）
 
-**保留的组件**：
-- `CursorStyleChatMessage.kt`：保留，调整为shadcn/ui风格
-- `AgentChatInputSection.kt`：保留，移除样式配置入口和语音输入按钮
-- `ChatArea.kt`：保留，简化工具调用展示
-- `ChatHistorySelector.kt`：移入侧边栏
+### 8.4 斜杠命令
 
-**工具调用展示**：
-- 一行小灰字显示工具名称
-- 成功：灰色→绿色，3秒后→灰色
-- 失败：灰色→红色，3秒后→灰色
-
-**模型选择弱化**：
-- 移除模型选择框
-- 改为灰色小字显示当前模型名
-- 点击模型名打开斜杠命令 `/model`
-
-**Tune按钮移除**：
-- 移除显式配置按钮
-- 输入 `/` 时打开斜杠命令面板
-
-**附件功能重构**：
-- 自动注入区：通知、屏幕内容、位置、屏幕使用时间、记忆
-- 手动选择区：截图、拍照、文件、工具包
-- 移除角色卡附件选择UI
-
-### 4.4 斜杠命令系统
-
-**新建 `ui/features/chat/components/SlashCommandPanel.kt`**：
-
-参考 shadcn/ui Command 组件风格，输入 `/` 时弹出命令面板：
-
-| 命令 | 功能 | 实现 |
-|------|------|------|
-| /think | 思考模式开关+质量级别 | 修改 SystemPromptConfig |
-| /model | 模型选择 | 弹出模型选择Sheet |
-| /memory | 记忆选择+自动更新开关 | 弹出记忆配置Sheet |
-| /tools | 工具开关+工具提示词管理 | 弹出工具配置Sheet |
-| /permission | 权限级别切换 | 基本/高级切换 |
-| /context | 上下文长度配置 | 弹出配置Sheet |
-| /stream | 流式输出开关 | 切换开关 |
-
-### 4.5 设置页面重构
-
-**保留4个子页面**：
-
-1. **模型+API配置**：仅4项（API URL、API Key、模型名称、温度）
-2. **显示设置**：仅4项（明暗模式、主题选择（明快/温暖）、用户名、权限级别）
-3. **工具箱**：MCP/Skill/包管理合并页面
-4. **备份+关于**：一键备份/恢复 + 应用信息
-
-**移除的页面**：
-- 主题设置页面（合并到显示设置的主题选择）
-- 终端设置页面
-- 语音设置页面
-- 助手配置页面
-
-### 4.6 终端UI简化
-
-**首次使用时后台静默安装的依赖**：
-- Node.js
-- PNPM
-- Python环境
-- Python链接
-- Python虚拟环境
-- Pip
-- uv
-
-**修改终端界面**：
-- 仅保留：命令输入、命令执行、结果展示
-- 移除：历史记录、命令建议、预设命令、清除历史、重新执行、展开/收起
-- 完全移除配置项UI
-
-### 4.7 备份恢复简化
-
-**修改 `RoomDatabaseBackupManager.kt`**：
-- 简化为一键备份/一键恢复
-- 移除格式选择、导入策略选择
-- 移除角色卡/记忆/模型配置的单独导出/导入
-
-### 4.8 MCP/Skill/包管理合并
-
-**新建统一管理页面**：
-```
-ui/features/toolbox/screens/
-├── AddonManagerScreen.kt    # 统一管理页面
-├── McpSection.kt            # MCP服务器区域
-├── SkillSection.kt          # Skill插件区域
-├── ToolPkgSection.kt        # 工具包区域
-└── MarketSection.kt         # 统一市场入口
-```
-
-- 不保留3个Tab，改为小标题展示
-- 市场功能合并（MCP市场、Skill市场、提示词市场统一入口）
-- 完全兼容现有版本的包
-
-### 4.9 移除的UI组件的沙箱包API处理
-
-移除Bubble样式、Classic输入、液态玻璃等UI组件后，沙箱包可能通过 `ToolPkgCommonBridgePlugin.kt` 中的 `XmlRenderPlugin` 和 `InputMenuTogglePlugin` 引用这些组件。
-
-**处理方式**：
-- `ToolPkgComposeDslGeneratedRenderers.kt`：移除LiquidGlass/WaterGlass渲染器组件，保留其他渲染器
-- `ToolPkgComposeDslWebView.kt`：保留，增加安全限制
-- `XmlRenderPluginRegistry.kt`：保留，移除深度搜索相关的XML渲染插件
-- `ToolPkgCommonBridgePlugin.kt` 中的 `InputMenuTogglePlugin`：保留方法签名，沙箱包注册的液态玻璃相关toggle不再生效
-
----
-
-## 五、P3 - 新功能
-
-### 5.1 待办功能
-
-**数据模型**（新建 `data/model/TodoItem.kt`）：
-```kotlin
-@Entity
-data class TodoItem(
-    @Id var id: Long = 0,
-    var title: String,
-    var description: String = "",
-    var status: TodoStatus = TodoStatus.PENDING,
-    var priority: TodoPriority = TodoPriority.MEDIUM,
-    var dueDate: Date? = null,
-    var reminderTime: Date? = null,
-    var repeatRule: TodoRepeatRule = TodoRepeatRule.NONE,
-    var tags: List<String> = emptyList(),
-    var relatedMemoryIds: List<Long> = emptyList(),
-    var relatedChatId: Long? = null,
-    var createdAt: Date = Date(),
-    var updatedAt: Date = Date(),
-    var completedAt: Date? = null
-)
-
-enum class TodoStatus { PENDING, IN_PROGRESS, COMPLETED, CANCELLED }
-enum class TodoPriority { LOW, MEDIUM, HIGH, URGENT }
-enum class TodoRepeatRule { NONE, DAILY, WEEKLY, MONTHLY, YEARLY }
-```
-
-**仓库层**（新建 `data/repository/TodoRepository.kt`）：
-- ObjectBox持久化
-- CRUD操作
-- 按状态/优先级/到期日查询
-- 与记忆库关联
-
-**AI集成**：
-- AI可创建/更新/完成待办事项（通过工具调用）
-- 待办创建工具注册到 `ToolRegistration.kt`
-- 工具提示词添加到 `SystemToolPrompts.kt`
-- AI可基于对话内容自动建议待办
-
-**UI**：
-- 侧边栏预留按钮区入口
-- 待办列表页面（按优先级分组）
-- 待办详情Sheet
-- 新建待办Sheet
-
-### 5.2 日程功能
-
-**数据模型**（新建 `data/model/CalendarEvent.kt`）：
-```kotlin
-@Entity
-data class CalendarEvent(
-    @Id var id: Long = 0,
-    var title: String,
-    var description: String = "",
-    var startTime: Date,
-    var endTime: Date? = null,
-    var isAllDay: Boolean = false,
-    var location: String = "",
-    var reminderMinutes: Int = 15,
-    var repeatRule: EventRepeatRule = EventRepeatRule.NONE,
-    var relatedMemoryIds: List<Long> = emptyList(),
-    var relatedChatId: Long? = null,
-    var createdAt: Date = Date(),
-    var updatedAt: Date = Date()
-)
-
-enum class EventRepeatRule { NONE, DAILY, WEEKLY, MONTHLY, YEARLY }
-```
-
-**仓库层**（新建 `data/repository/CalendarRepository.kt`）：
-- ObjectBox持久化
-- 按日/周/月查询
-- 与记忆库关联
-
-**AI集成**：
-- AI可创建/更新/删除日程（通过工具调用）
-- 日程创建工具注册到 `ToolRegistration.kt`
-- 工具提示词添加到 `SystemToolPrompts.kt`
-- AI可基于对话内容自动建议日程
-
-**UI**：
-- 侧边栏预留按钮区入口
-- 日历视图页面（日/周/月视图）
-- 日程详情Sheet
-- 新建日程Sheet
-
-### 5.3 上下文自动注入
-
-**新建 `core/context/` 目录**：
-
-```
-core/context/
-├── ContextInjectionManager.kt     # 自动注入管理器
-├── NotificationInjector.kt        # 通知注入器
-├── ScreenContentInjector.kt       # 屏幕内容注入器
-├── LocationInjector.kt            # 位置注入器
-├── ScreenTimeInjector.kt          # 屏幕使用时间注入器
-├── MemoryAutoInjector.kt          # 记忆自动注入器
-└── ContextInjectionConfig.kt      # 注入配置
-```
-
-**实现方案**：
-
-1. **通知注入**：
-   - 依赖 `OperitNotificationListenerService`
-   - 格式：纯文本（应用名 + 通知标题 + 通知内容）
-   - 缓存：保留最近20条通知，每次发送消息时取最新5条
-   - 隐私：过滤银行、社交敏感应用（可配置）
-
-2. **屏幕内容注入**：
-   - 依赖无障碍服务获取 AccessibilityNodeInfo 树
-   - 提取当前Activity的可见文字内容
-   - 缓存：30秒内复用
-
-3. **位置注入**：
-   - 优先GPS，降级网络定位
-   - 格式：城市名 + 区域名
-   - 缓存：5分钟内复用
-
-4. **屏幕使用时间注入**：
-   - 使用 UsageStatsManager API
-   - 格式：今日Top5应用使用时长
-   - 缓存：5分钟内复用
-
-5. **记忆自动注入**：
-   - 复用现有 `MemorySearchConfig` 评分体系
-   - 综合评分：关键词(10.0) + 向量(5.0) + 标签(3.0) + 图谱边(0.4) + 重要性(2.0) + 可信度(1.0) + 时间衰减
-   - 最大注入5条记忆
-   - 触发时机：每次用户发送消息时
-
-6. **Token消耗控制**：
-   - 自动注入总计不超过500 Token
-   - 动态调整：根据剩余上下文空间计算
-   - 优先级：记忆 > 通知 > 屏幕内容 > 位置 > 使用时间
-
-7. **权限不足处理**：
-   - 静默跳过，仅注入有权限的信息
-   - 在斜杠命令 `/context` 中显示哪些注入项可用
-
-8. **系统提示词修改**：
-   - 在 `SystemPromptConfig.kt` 中新增自动注入上下文的说明段落
-   - 指导AI如何利用注入的上下文信息
-
----
-
-## 六、P4 - 收尾打磨
-
-### 6.1 字符串资源清理
-
-- 移除所有砍除功能相关的字符串（虚拟形象、语音唤醒、Bubble、Classic、液态玻璃、公告、深度搜索）
-- 清理顺序：中文 → 英文 → 其他语言
-- 使用工具自动检测未使用的字符串资源
-
-### 6.2 C++模块审查
-
-| 模块 | 决策 |
+| 命令 | 功能 |
 |------|------|
-| `streamnative/` | 保留，AI响应解析核心依赖 |
-| `mnn/` | 保留，本地模型推理能力 |
-| `llama/` | 保留但标记为实验性（仅JNI stub） |
-| `quickjs/` | 保留，沙箱包JS执行依赖 |
-| `dragonbones/` | 删除（P0） |
-| `fbx/` | 删除（P0） |
-| `mmd/` | 删除（P0） |
+| /think | 思考模式开关+质量级别 |
+| /model | 模型选择 |
+| /memory | 记忆选择+自动更新开关 |
+| /tools | 工具开关+提示词管理 |
+| /permission | 权限级别切换 |
+| /context | 上下文长度配置 |
+| /stream | 流式输出开关 |
 
-### 6.3 辅助系统决策
+### 8.5 设置页面（4个子页面）
 
-| 模块 | 决策 |
-|------|------|
-| GitHub认证 | 保留，市场发布功能需要 |
-| 市场统计API | 保留，市场功能需要 |
-| 计费模式 | 保留，Token统计需要 |
-| 免费额度管理 | 保留但简化 |
-| 技能可见性 | 保留，通过 `/tools` 命令管理 |
-| 环境变量 | 保留，终端和脚本执行需要 |
-| 用户协议 | 保留，法律合规 |
-| 聊天格式导入 | 保留ChatGPT和Markdown，移除ChatBox和GenericJson |
-| 聊天格式导出 | 保留Markdown和纯文本，移除HTML |
-| 模型定价数据 | **完整保留**，所有模型定价数据不可删减 |
+1. 模型+API配置（4项）
+2. 显示设置（4项：明暗模式、主题选择、用户名、权限级别）
+3. 工具箱（MCP/Skill/包管理合并）
+4. 备份+关于
 
-### 6.4 Compose DSL渲染系统
+### 8.6 终端UI简化
 
-| 组件 | 决策 |
-|------|------|
-| ToolPkgComposeDslGeneratedRenderers | 保留但移除LiquidGlass渲染器 |
-| ToolPkgComposeDslWebView | 保留但增加安全限制 |
-| XmlRenderPluginRegistry | 保留 |
-| ToolPkgComposeDslDebugDumpReceiver | 保留，仅Debug构建 |
+首次使用后台静默安装：Node.js、PNPM、Python环境、Python链接、Python虚拟环境、Pip、uv
 
-### 6.5 性能优化
+### 8.7 备份恢复简化
 
-- 审查 `ChatViewModel.kt` 的状态管理，减少不必要的重组
-- 优化 `ChatArea.kt` 的消息列表渲染性能
-- 审查 `ToolProgressBus.kt` 的事件频率
+一键备份/一键恢复
 
 ---
 
-## 七、文件影响总览
+## 九、P3 - 新功能
 
-### 7.1 删除的文件/目录
+### 9.1 待办功能
 
-```
-core/avatar/                          # 整个目录
-core/tools/agent/VirtualDisplayManager.kt
-core/tools/agent/ShowerBinderRegistry.kt (app层)
-core/tools/agent/ShowerController.kt
-core/tools/climode/CliToolModeSupport.kt
-core/tools/system/RootAuthorizer.kt
-core/tools/system/ShizukuAuthorizer.kt
-data/announcement/                    # 整个目录
-data/preferences/WaifuPreferences.kt
-data/preferences/WakeWordPreferences.kt
-data/preferences/RemoteAnnouncementPreferences.kt
-data/model/DragonBones.kt
-data/model/CustomEmoji.kt
-data/model/CharacterGroupCard.kt
-data/model/SerializableColorScheme.kt
-data/model/SerializableTypography.kt
-data/preferences/ThemePreferenceSnapshot.kt
-data/repository/AvatarRepository.kt
-services/assistant/OperitVoiceInteractionService.kt
-services/assistant/OperitVoiceInteractionSessionService.kt
-ui/features/assistant/                # 整个目录
-ui/features/chat/components/style/bubble/  # 整个目录
-ui/features/chat/components/style/input/classic/  # 整个目录
-ui/floating/ui/pet/                   # 整个目录
-ui/floating/voice/SpeechInteractionManager.kt
-ui/components/ManagedDragonBonesView.kt
-ui/theme/LiquidGlass.kt
-ui/theme/WaterGlass.kt
-ui/features/settings/screens/ThemeSettingsScreen.kt
-ui/features/settings/sections/ThemeSettingsCoreSections.kt
-ui/features/settings/sections/ThemeSettingsColorSection.kt
-ui/features/settings/screens/SpeechServicesSettingsScreen.kt
-ui/features/toolbox/screens/speechtotext/  # 整个目录
-ui/features/toolbox/screens/texttospeech/  # 整个目录
-widget/VoiceAssistantGlanceWidget.kt
-showerclient/                         # 整个Gradle模块
-examples/deepsearching/               # 整个目录
-app/src/main/cpp/dragonbones/         # 整个C++模块
-app/src/main/cpp/fbx/                 # 整个C++模块
-app/src/main/cpp/mmd/                 # 整个C++模块
-app/src/main/assets/emoji/            # 表情资源
-app/src/main/assets/pets/             # 桌宠资源
-app/src/main/assets/dragonbones/      # DragonBones资源
-app/src/main/assets/shower-server.jar
-app/src/main/assets/shizuku.apk
-app/src/main/assets/accessibility.apk  # 内置化后不再需要
-app/src/main/assets/packages/operit_editor.js
-```
+ObjectBox持久化，AI工具调用集成，侧边栏入口
 
-### 7.2 新建的文件/目录
+### 9.2 日程功能
 
-```
-core/task/                            # 长程任务增强
-├── TaskRecord.kt
-├── TaskRepository.kt
-└── TaskCheckpointManager.kt
+ObjectBox持久化，AI工具调用集成，侧边栏入口
 
-core/context/                         # 上下文自动注入
-├── ContextInjectionManager.kt
-├── NotificationInjector.kt
-├── ScreenContentInjector.kt
-├── LocationInjector.kt
-├── ScreenTimeInjector.kt
-├── MemoryAutoInjector.kt
-└── ContextInjectionConfig.kt
+### 9.3 上下文自动注入
 
-data/model/TodoItem.kt                # 待办功能
-data/model/CalendarEvent.kt           # 日程功能
-data/repository/TodoRepository.kt
-data/repository/CalendarRepository.kt
-
-ui/main/components/sidebar/           # 侧边栏重构
-├── AppSidebar.kt
-├── SidebarHeader.kt
-├── SidebarContent.kt
-├── SidebarGroup.kt
-├── SidebarFooter.kt
-└── SidebarRail.kt
-
-ui/features/chat/components/SlashCommandPanel.kt
-ui/features/toolbox/screens/AddonManagerScreen.kt
-ui/features/todo/                     # 待办UI
-ui/features/calendar/                 # 日程UI
-
-ui/theme/Color.kt                     # 主题重构（明快/温暖双主题）
-ui/theme/Typography.kt
-ui/theme/Spacing.kt
-ui/theme/Components.kt
-```
-
-### 7.3 重大修改的文件
-
-| 文件 | 修改内容 |
-|------|---------|
-| `OperitApplication.kt` | 移除虚拟形象/语音唤醒/Shower/公告初始化，新增任务/上下文注入初始化 |
-| `AIForegroundService.kt` | 移除桌宠/语音唤醒/Shower逻辑，增强任务进度通知 |
-| `ChatServiceCore.kt` | 增加任务持久化和断点恢复 |
-| `ChatViewModel.kt` | 移除语音朗读按钮状态，增加上下文注入 |
-| `AIMessageManager.kt` | 移除语音朗读逻辑，增加自动注入上下文拼接 |
-| `ToolRegistration.kt` | 移除CliToolMode工具注册，新增AutoGLM/待办/日程工具 |
-| `SystemToolPrompts.kt` | 移除CliToolMode提示词，新增AutoGLM/待办/日程提示词 |
-| `SystemPromptConfig.kt` | 增加AutoGLM指南和上下文注入说明 |
-| `EnhancedAIService.kt` | 移除FLOATING槽位，简化为单槽位 |
-| `ChatRuntimeHolder.kt` | 移除FLOATING支持 |
-| `AIToolHandler.kt` | 增加超时重试机制 |
-| `ToolProgressBus.kt` | 增加任务级别进度 |
-| `Theme.kt` | 重构为明快/温暖双主题 |
-| `OperitScreens.kt` | 侧边栏重构、移除助手配置/语音设置/公告页面、新增待办/日程页面 |
-| `AIChatScreen.kt` | 移除朗读按钮、Tune按钮、角色卡选择器，增加斜杠命令、工具调用状态展示 |
-| `ModelConfigManager.kt` | 简化配置项暴露 |
-| `AndroidPermissionPreferences.kt` | 简化为两级权限 |
-| `AccessibilityProviderInstaller.kt` | 改为内置无障碍服务，移除APK安装逻辑 |
-| `AppDatabase.kt` | 新增迁移脚本 |
-| `settings.gradle.kts` | 移除 `:showerclient` |
-| `CMakeLists.txt` | 移除dragonbones/fbx/mmd |
-| `AndroidManifest.xml` | 新增主程序AccessibilityService声明，移除语音唤醒Service声明 |
-| `ToolPkgCommonBridgePlugin.kt` | 虚拟形象相关API改为返回空值/默认值 |
+通知/屏幕内容/位置/使用时间/记忆自动注入，Token上限500，优先级：记忆>通知>屏幕>位置>使用时间
 
 ---
 
-## 八、风险与注意事项
+## 十、P4 - 收尾打磨
 
-1. **沙箱包兼容性**：虚拟形象API保留方法签名返回空值、角色卡系统后端完整保留、语音API保留调用能力，确保第三方沙箱包不崩溃。
+- 字符串资源清理
+- 模型定价数据完整保留
+- 聊天格式导入保留ChatGPT+Markdown，导出保留Markdown+纯文本
+- Compose DSL渲染器移除LiquidGlass组件
+- 性能优化
 
-2. **数据库迁移**：每次数据模型变更都需要Room迁移脚本，需确保升级路径完整。
+---
 
-3. **无障碍服务内置化**：从辅助APK迁移到主程序时，需确保无障碍服务声明正确、权限配置完整、事件回调机制从AIDL改为直接调用。
+## 十一、风险与注意事项
 
-4. **长程任务持久化**：检查点序列化格式需要向前兼容，避免版本升级后无法恢复旧任务。
-
-5. **上下文自动注入的Token消耗**：需要严格的Token预算控制，避免自动注入挤占用户对话空间。
-
-6. **C++模块编译**：移除dragonbones/fbx/mmd后需确保CMakeLists.txt正确，不影响streamnative/mnn/quickjs模块编译。
-
-7. **模型定价数据**：必须完整保留，不可删减任何模型定价信息。
+1. **沙箱包兼容性**：虚拟形象API保留签名返回空值、角色卡后端完整保留、语音API保留调用能力
+2. **数据库迁移**：每次数据模型变更需Room迁移脚本
+3. **无障碍服务内置化**：从辅助APK迁移到主程序，需确保服务声明和权限配置正确
+4. **长程任务持久化**：检查点序列化格式需向前兼容
+5. **上下文注入Token消耗**：严格预算控制
+6. **C++模块编译**：移除dragonbones/fbx/mmd后确保CMakeLists.txt正确
+7. **模型定价数据**：完整保留，不可删减
+8. **权限系统简化**：移除ROOT/ADMIN/SHIZUKU/DEBUGGER后，需要这些权限的工具将不可用，需在工具提示词中说明
