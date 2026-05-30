@@ -1645,6 +1645,753 @@ ChatFormatDetector 自动检测聊天记录格式。简化后是否保留？
 
 ---
 
+## 模块十六：长程任务执行能力增强
+
+> 涉及文件：AIForegroundService.kt, ChatServiceCore.kt, FloatingChatService.kt, WorkflowWorker.kt, WorkflowScheduler.kt, AIMessageManager.kt, ChatRuntimeHolder.kt
+
+#### L1: 长程任务的定义与边界 [待确认]
+
+"长程任务"在本项目中的具体定义是什么？需要明确哪些场景属于长程任务：
+- A: 多轮工具调用链（AI连续调用多个工具完成复杂任务）
+- B: 工作流定时执行（WorkflowScheduler触发的后台任务）
+- C: 用户发起的长时间对话（持续数小时的对话会话）
+- D: 以上全部
+
+#### L2: 长程任务的状态持久化 [待确认]
+
+当前AI任务的状态（工具调用链进度、中间结果等）是否持久化？应用被系统杀死后能否恢复？
+- A: 不持久化，应用重启后任务丢失
+- B: 部分持久化（对话历史保留，但工具调用链中断）
+- C: 完全持久化，应用重启后可从断点继续
+
+#### L3: 多轮工具调用链的超时与重试 [待确认]
+
+当前多轮工具调用是否有总超时限制？单次工具调用失败后的重试策略是什么？
+- A: 无总超时，单次失败后AI决定是否重试
+- B: 有总超时（如10分钟），单次失败自动重试3次
+- C: 有总超时，单次失败不重试，由AI决定替代方案
+
+#### L4: 后台保活与长程任务的关系 [待确认]
+
+后台保活默认开启后，长程任务在应用退到后台时的行为：
+- A: 继续执行，通过前台服务保持进程存活
+- B: 继续执行但降低优先级，可能被系统杀死
+- C: 暂停执行，应用回到前台后继续
+
+#### L5: 长程任务的进度反馈机制 [待确认]
+
+长程任务执行过程中，用户如何感知进度？
+- A: 悬浮窗黑色气泡显示进度百分比
+- B: 通知栏显示进度
+- C: 两者结合（悬浮窗+通知栏）
+
+#### L6: 长程任务的取消机制 [待确认]
+
+用户如何取消正在执行的长程任务？
+- A: 通知栏点击取消
+- B: 悬浮窗气泡点击取消
+- C: 回到应用内点击取消按钮
+- D: 以上全部
+
+#### L7: ChatServiceCore 的任务队列管理 [待确认]
+
+ChatServiceCore 是否支持任务队列？多个长程任务能否并行执行？
+- A: 不支持队列，一次只能执行一个任务
+- B: 支持队列但串行执行
+- C: 支持并行执行多个任务
+
+#### L8: 长程任务的网络中断恢复 [待确认]
+
+长程任务执行过程中网络中断如何处理？
+- A: 立即失败，通知用户
+- B: 自动重连并继续
+- C: 暂停等待网络恢复后继续
+
+#### L9: FloatingChatService 在长程任务中的角色 [待确认]
+
+FloatingChatService 依赖 ChatServiceCore 处理聊天逻辑。简化后悬浮窗仅保留进度气泡，FloatingChatService 是否还需要保留？
+- A: 完全移除，长程任务通过 AIForegroundService 管理
+- B: 保留但简化，仅用于后台任务状态追踪
+- C: 保留不变
+
+#### L10: 长程任务的资源管理 [待确认]
+
+长程任务可能消耗大量内存和CPU。是否有资源限制机制？
+- A: 无限制，依赖系统管理
+- B: 设置内存和CPU使用上限
+- C: 根据设备性能动态调整资源限制
+
+#### L11: 工作流长程任务的执行保障 [待确认]
+
+WorkflowWorker 通过 WorkManager 执行后台任务。WorkManager 有执行时间限制（通常10分钟）。长时间工作流如何处理？
+- A: 将工作流拆分为多个Worker链式执行
+- B: 通过前台服务延长执行时间
+- C: 限制工作流单次执行时间
+
+#### L12: 长程任务与记忆库的协同 [待确认]
+
+长程任务执行过程中是否自动保存关键信息到记忆库？
+- A: 不自动保存，由AI决定何时保存
+- B: 每个关键节点自动保存摘要
+- C: 任务完成后自动保存完整结果
+
+---
+
+## 模块十七：AutoGLM GUI操作能力内置化
+
+> 涉及文件：AutoGlmViewModel.kt, AutoGlmToolScreen.kt, AutoGlmOneClickToolScreen.kt, PhoneAgent.kt, StandardUITools.kt, automatic_ui_base.js, automatic_ui_subagent.js, operit_editor.js, ShowerController.kt, VirtualDisplayManager.kt
+
+#### G1: AutoGLM与原有GUI操作能力的架构区别 [待确认]
+
+当前存在两种GUI操作能力：AutoGLM（基于智谱AI的视觉语言模型）和原有简单GUI操作（PhoneAgent + StandardUITools + ADB/无障碍）。仅保留AutoGLM后：
+- A: 完全移除PhoneAgent和StandardUITools，AutoGLM独立提供所有GUI操作能力
+- B: 保留PhoneAgent底层能力（截图、点击等），AutoGLM作为上层决策引擎
+- C: 将PhoneAgent的核心能力合并到AutoGLM中，形成统一的GUI操作模块
+
+#### G2: AutoGLM内置化后的代码位置 [待确认]
+
+AutoGLM当前作为工具箱子页面（AutoGlmToolScreen/AutoGlmOneClickToolScreen）和JS插件包（automatic_ui_base.js, automatic_ui_subagent.js）存在。内置化后代码放在哪里？
+- A: 移至 core/tools/autoglm/ 目录，作为核心工具模块
+- B: 移至 core/tools/agent/ 目录，替换PhoneAgent
+- C: 新建 core/gui/ 目录，作为独立的GUI操作模块
+
+#### G3: AutoGLM的JS插件包处理 [待确认]
+
+automatic_ui_base.js 和 automatic_ui_subagent.js 当前作为 assets/packages/ 中的内置插件包。内置化后这些JS文件如何处理？
+- A: 保留为JS插件包，但标记为系统内置不可卸载
+- B: 将JS逻辑迁移为Kotlin原生实现
+- C: 保留JS包但将其从包管理列表中隐藏
+
+#### G4: operit_editor.js 的去留 [待确认]
+
+operit_editor.js 提供编辑器功能，与AutoGLM的UI操作有关。仅保留AutoGLM后，operit_editor是否保留？
+- A: 保留，AutoGLM需要编辑器能力
+- B: 移除，编辑器功能不属于核心GUI操作
+- C: 保留但简化
+
+#### G5: AutoGLM的配置项 [待确认]
+
+AutoGLM需要配置API Key等参数。内置化后配置如何管理？
+- A: 使用全局模型配置（复用API Key和模型设置）
+- B: 独立配置AutoGLM的API参数
+- C: 自动使用智谱AI的免费额度，无需用户配置
+
+#### G6: AutoGLM与权限系统的关系 [待确认]
+
+AutoGLM执行GUI操作需要无障碍权限。内置化后权限检查如何处理？
+- A: 仅在"高级"权限级别下可用
+- B: 基本和高级权限级别下都可用
+- C: 独立的GUI操作权限级别
+
+#### G7: PhoneAgent的完整移除范围 [待确认]
+
+移除PhoneAgent后，需要清理哪些关联代码？
+- A: 仅移除PhoneAgent.kt和PhoneAgentJobRegistry.kt
+- B: 移除PhoneAgent + ShowerController + VirtualDisplayManager + ShowerBinderRegistry
+- C: 移除PhoneAgent相关代码但保留ShowerController和VirtualDisplayManager（AutoGLM可能需要）
+
+#### G8: StandardUITools 的处理 [待确认]
+
+StandardUITools 提供标准UI操作工具（点击、滑动、输入等）。AutoGLM是否还需要这些底层工具？
+- A: 完全移除，AutoGLM通过自己的方式执行操作
+- B: 保留，AutoGLM依赖这些底层工具执行操作
+- C: 保留核心操作（点击、滑动、输入），移除高级操作
+
+#### G9: AutoGLM的虚拟显示依赖 [待确认]
+
+AutoGLM是否依赖VirtualDisplayManager进行屏幕感知？
+- A: 是，AutoGLM需要虚拟显示获取屏幕内容
+- B: 否，AutoGLM使用截图方式获取屏幕内容
+- C: 两种方式都支持
+
+#### G10: AutoGLM内置化后对沙箱包的影响 [待确认]
+
+沙箱包可能依赖automatic_ui_base.js或automatic_ui_subagent.js。内置化后如何确保兼容？
+- A: 保留JS包供沙箱包使用，内置AutoGLM使用Kotlin实现
+- B: 沙箱包改为调用内置AutoGLM的API
+- C: 内置化和沙箱包各自独立，不互相影响
+
+#### G11: AutoGLM的操作确认机制 [待确认]
+
+AutoGLM执行GUI操作前是否需要用户确认？
+- A: 每次操作都需要确认
+- B: 仅敏感操作需要确认（如删除、支付等）
+- C: 不需要确认，自动执行
+
+#### G12: AutoGLM的错误恢复 [待确认]
+
+AutoGLM操作失败后如何处理？
+- A: 自动重试（最多3次）
+- B: 报告失败原因，由用户决定下一步
+- C: AI自动调整策略并重试
+
+---
+
+## 模块十八：待办功能（新增）
+
+> 这是全新功能，需要从零设计
+
+#### TD1: 待办功能的数据模型 [待确认]
+
+待办条目需要包含哪些字段？
+- A: 基础字段（标题、描述、完成状态、创建时间、截止时间）
+- B: 基础字段 + 优先级 + 标签
+- C: 基础字段 + 优先级 + 标签 + 子任务 + 关联记忆
+
+#### TD2: 待办功能的存储方式 [待确认]
+
+待办数据存储在哪里？
+- A: Room数据库（与聊天记录同库）
+- B: ObjectBox（与记忆库同库）
+- C: 独立的SQLite数据库
+
+#### TD3: 待办功能的UI入口 [待确认]
+
+待办功能的入口在哪里？
+- A: 侧边栏预留按钮区（与工作流同级）
+- B: 聊天界面内的斜杠命令（/todo）
+- C: 两者都有（侧边栏为主入口，斜杠命令为快捷入口）
+
+#### TD4: 待办与AI的交互方式 [待确认]
+
+AI如何与待办功能交互？
+- A: AI可以创建/完成/删除待办条目（通过工具调用）
+- B: AI仅可查看待办列表，不能修改
+- C: AI可创建和完成，但不能删除
+
+#### TD5: 待办与工作流的集成 [待确认]
+
+待办是否可以触发工作流？
+- A: 不集成，待办和工作流独立
+- B: 待办截止时间到达时触发工作流
+- C: 待办完成时触发工作流
+
+#### TD6: 待办与记忆库的关联 [待确认]
+
+待办条目是否关联记忆库？
+- A: 不关联
+- B: 待办条目可关联记忆条目（双向引用）
+- C: 完成的待办自动转为记忆
+
+#### TD7: 待办的通知提醒 [待确认]
+
+待办截止时间到达时如何提醒？
+- A: 系统通知
+- B: AI对话中提醒
+- C: 两者结合
+
+#### TD8: 待办的重复规则 [待确认]
+
+待办是否支持重复规则（如每天、每周）？
+- A: 不支持，每条待办独立
+- B: 支持简单重复（每天/每周/每月）
+- C: 支持cron表达式级别的重复规则
+
+#### TD9: 待办的分组与筛选 [待确认]
+
+待办是否支持分组和筛选？
+- A: 不支持，平铺展示
+- B: 支持按标签筛选
+- C: 支持按标签、优先级、状态筛选
+
+#### TD10: 待办与日历的集成 [待确认]
+
+待办是否与日历功能集成？
+- A: 不集成
+- B: 待办截止时间显示在日历上
+- C: 待办和日历共享数据模型
+
+---
+
+## 模块十九：日程功能（新增）
+
+> 这是全新功能，需要从零设计
+
+#### CA1: 日程功能的数据模型 [待确认]
+
+日程条目需要包含哪些字段？
+- A: 基础字段（标题、描述、开始时间、结束时间、地点）
+- B: 基础字段 + 重复规则 + 提醒设置
+- C: 基础字段 + 重复规则 + 提醒设置 + 参与者 + 关联待办
+
+#### CA2: 日程功能的存储方式 [待确认]
+
+日程数据存储在哪里？
+- A: Room数据库
+- B: ObjectBox
+- C: 与系统日历同步
+
+#### CA3: 日程功能的UI入口 [待确认]
+
+日程功能的入口在哪里？
+- A: 侧边栏预留按钮区（与工作流、待办同级）
+- B: 聊天界面内的斜杠命令（/calendar）
+- C: 两者都有
+
+#### CA4: 日程与AI的交互方式 [待确认]
+
+AI如何与日程功能交互？
+- A: AI可以创建/修改/删除日程（通过工具调用）
+- B: AI仅可查看日程，不能修改
+- C: AI可创建和查看，但不能删除
+
+#### CA5: 日程的视图模式 [待确认]
+
+日程的展示方式：
+- A: 列表视图（按时间排列）
+- B: 日历视图（月/周/日视图）
+- C: 两者都支持
+
+#### CA6: 日程与系统日历的同步 [待确认]
+
+是否与Android系统日历同步？
+- A: 不同步，独立管理
+- B: 单向同步（读取系统日历）
+- C: 双向同步
+
+#### CA7: 日程的提醒方式 [待确认]
+
+日程提醒如何实现？
+- A: 应用内通知
+- B: 系统通知（AlarmManager）
+- C: AI对话中提醒
+
+#### CA8: 日程与工作流的集成 [待确认]
+
+日程是否可以触发工作流？
+- A: 不集成
+- B: 日程开始时触发工作流
+- C: 日程开始前N分钟触发工作流
+
+#### CA9: 日程与记忆库的关联 [待确认]
+
+日程是否关联记忆库？
+- A: 不关联
+- B: 过去的日程自动转为记忆
+- C: 日程可手动关联记忆条目
+
+#### CA10: 日程的冲突检测 [待确认]
+
+是否检测日程时间冲突？
+- A: 不检测
+- B: 检测并提示冲突
+- C: 检测并自动调整时间
+
+---
+
+## 模块二十：终端系统
+
+> 涉及文件：Terminal.kt, OperitTerminalManager.kt, StandardTerminalCommandExecutor.kt, TerminalSetup, TerminalAutoConfig
+
+#### TE1: 终端的核心定位 [待确认]
+
+简化后终端的核心定位是什么？
+- A: 仅供AI调用的命令执行环境（用户不直接交互）
+- B: AI和用户共用的命令执行环境
+- C: 完整的终端模拟器
+
+#### TE2: 终端自动配置的范围 [待确认]
+
+OperitTerminalManager 有自动配置和依赖安装逻辑。首次使用时自动安装哪些依赖？
+- A: 仅安装核心依赖（如Node.js运行时）
+- B: 安装核心依赖 + 常用工具（如Python运行时）
+- C: 根据已安装的工具包动态安装依赖
+
+#### TE3: 终端UI的简化范围 [待确认]
+
+已确认终端UI简化为命令输入+执行+结果展示。是否保留终端历史记录？
+- A: 不保留，每次打开终端都是全新会话
+- B: 保留当前会话的历史，关闭后清除
+- C: 保留持久化的历史记录
+
+#### TE4: 终端的Shell环境选择 [待确认]
+
+终端使用哪种Shell环境？
+- A: 系统默认Shell（/bin/sh）
+- B: Bash（如果可用）
+- C: 应用内置Shell（独立于系统）
+
+#### TE5: 终端与AI工具调用的关系 [待确认]
+
+AI通过工具调用执行终端命令时，是否与用户手动输入共享同一个终端会话？
+- A: 共享，AI和用户在同一个会话中
+- B: 独立，AI使用后台会话，用户使用前台会话
+- C: 可配置
+
+#### TE6: 终端的安全限制 [待确认]
+
+终端命令执行是否有安全限制？
+- A: 无限制，可执行任何命令
+- B: 禁止危险命令（如rm -rf /）
+- C: 根据权限级别限制可执行的命令范围
+
+#### TE7: 终端配置项的移除 [待确认]
+
+已确认移除终端配置项。哪些配置由系统自动管理？
+- A: Shell类型、环境变量、PATH设置全部自动管理
+- B: 仅Shell类型自动管理，环境变量保留用户配置
+- C: 全部自动管理但提供斜杠命令 /terminal 供高级用户调整
+
+#### TE8: 终端的长程任务支持 [待确认]
+
+终端是否支持长时间运行的命令（如服务器进程）？
+- A: 不支持，命令执行有超时限制
+- B: 支持，通过后台保活维持长程命令
+- C: 支持但需要用户手动确认
+
+#### TE9: 终端的Root执行模式 [待确认]
+
+当前有Root执行模式的配置。简化后是否保留？
+- A: 完全移除，仅支持普通用户权限执行
+- B: 保留但简化为自动检测，有Root权限时自动使用
+- C: 保留但移到高级设置中
+
+#### TE10: 终端与工作区的交互 [待确认]
+
+终端和工作区是否需要交互（如在终端中执行工作区项目的命令）？
+- A: 不需要，终端和工作区独立
+- B: 需要，终端可在工作区目录下执行命令
+- C: 需要，工作区项目可直接调用终端
+
+---
+
+## 模块二十一：工作区系统
+
+> 涉及文件：WorkspaceScreen.kt, WorkspaceManager.kt, ToolPkgTemplateModels.kt
+
+#### WS1: 工作区功能的核心定位 [待确认]
+
+简化后工作区功能是否保留？
+- A: 保留，工作区是沙箱包开发的核心环境
+- B: 保留但简化，移除部分开发功能
+- C: 移除，工作区功能过于复杂
+
+#### WS2: 工作区的入口位置 [待确认]
+
+工作区当前在聊天界面内。简化后入口在哪里？
+- A: 保留在聊天界面内
+- B: 移至侧边栏预留按钮区
+- C: 移至工具箱
+
+#### WS3: 工作区的模板系统 [待确认]
+
+ToolPkgTemplateModels 定义了工作区模板。简化后模板系统是否保留？
+- A: 保留，模板帮助用户快速创建项目
+- B: 保留但减少模板数量
+- C: 移除模板系统
+
+#### WS4: 工作区的代码编辑能力 [待确认]
+
+工作区当前支持代码编辑。简化后是否保留？
+- A: 保留完整的代码编辑能力
+- B: 保留但简化为仅查看代码
+- C: 移除代码编辑，改为外部编辑器
+
+#### WS5: 工作区的打包导出 [待确认]
+
+工作区支持将项目打包为工具包。简化后是否保留？
+- A: 保留，打包导出是核心功能
+- B: 保留但简化打包流程
+- C: 移除，改为命令行打包
+
+#### WS6: 工作区与终端的集成 [待确认]
+
+工作区是否需要集成终端？
+- A: 需要，开发环境需要终端
+- B: 不需要，工作区仅做文件管理
+- C: 可选集成
+
+#### WS7: 工作区的文件管理范围 [待确认]
+
+工作区管理哪些文件？
+- A: 仅管理工具包项目文件
+- B: 管理应用内所有用户文件
+- C: 管理工具包项目文件 + 沙箱包数据
+
+#### WS8: 工作区的WebView实现 [待确认]
+
+WorkspaceScreen 基于WebView实现。简化后是否改为原生Compose实现？
+- A: 保持WebView实现
+- B: 改为原生Compose实现
+- C: 混合实现（文件管理用Compose，代码编辑用WebView）
+
+#### WS9: 工作区与AI的交互 [待确认]
+
+AI是否可以直接操作工作区文件？
+- A: 可以，AI通过工具调用读写工作区文件
+- B: 不可以，工作区文件仅用户手动操作
+- C: 可以读取但不能修改
+
+#### WS10: 工作区模板的Android/Flutter等类型 [待确认]
+
+当前工作区模板支持Android、Flutter、Go、Java、Node、Python、TypeScript、Web等多种类型。简化后保留哪些？
+- A: 全部保留
+- B: 仅保留TypeScript和Web模板（与沙箱包开发相关）
+- C: 仅保留TypeScript模板
+
+---
+
+## 模块二十二：虚拟形象系统完整移除
+
+> 涉及文件：core/avatar/ 整个目录, ui/features/assistant/ 整个目录, ui/floating/ui/pet/, ui/components/ManagedDragonBonesView.kt, data/model/DragonBones.kt, data/model/CustomEmoji.kt, data/preferences/WaifuPreferences.kt, data/repository/AvatarRepository.kt, dragonbones/ 模块, fbx/ 模块, mmd/ 模块, assets/emoji/, assets/pets/, assets/dragonbones/
+
+#### V1: core/avatar/ 目录的完整移除 [待确认]
+
+core/avatar/ 目录包含完整的虚拟形象框架（common/model, common/control, common/view, common/state, impl/dragonbones, impl/fbx, impl/mmd, impl/gltf, impl/factory）。移除范围：
+- A: 完全移除整个 core/avatar/ 目录
+- B: 保留 common/ 接口定义，移除 impl/ 实现
+- C: 完全移除，但保留 AvatarType 枚举供数据库迁移使用
+
+#### V2: ui/features/assistant/ 目录的完整移除 [待确认]
+
+ui/features/assistant/ 包含助手配置页面（AvatarConfigSection, AvatarPreviewSection, AssistantConfigViewModel等）。移除范围：
+- A: 完全移除整个目录
+- B: 保留目录但清空内容，保留Screen路由供重定向
+- C: 完全移除，同时移除OperitScreens中的AssistantConfig Screen
+
+#### V3: ui/floating/ui/pet/ 目录的移除 [待确认]
+
+ui/floating/ui/pet/ 包含桌宠相关的浮动窗口UI（AvatarEmotionManager等）。移除范围：
+- A: 完全移除整个目录
+- B: 保留目录结构但移除桌宠相关代码
+
+#### V4: dragonbones/ 原生模块的完整移除 [待确认]
+
+dragonbones/ 是独立的Gradle模块，包含C++代码（JniBridge.cpp, OpenGLFactory等）和rapidjson库。移除范围：
+- A: 完全移除dragonbones/目录，从settings.gradle.kts中移除模块引用，从app/build.gradle.kts中移除依赖
+- B: 仅移除C++代码，保留模块结构
+- C: 完全移除并清理所有相关构建配置
+
+#### V5: fbx/ 原生模块的完整移除 [待确认]
+
+fbx/ 是独立的Gradle模块，包含C++代码（fbx_jni.cpp）和Kotlin封装（FbxInspector, FbxGlSurfaceView, FbxNative）。移除范围：
+- A: 完全移除fbx/目录及所有构建配置
+- B: 仅移除C++代码
+- C: 完全移除并清理构建配置
+
+#### V6: mmd/ 原生模块的完整移除 [待确认]
+
+mmd/ 是独立的Gradle模块，包含C++代码和SABA查看器映射。移除范围：
+- A: 完全移除mmd/目录及所有构建配置
+- B: 仅移除C++代码
+- C: 完全移除并清理构建配置
+
+#### V7: assets/emoji/ 目录的清理 [待确认]
+
+assets/emoji/ 包含大量表情图片（angry, confused, crying, happy, like_you, miss_you, sad, speechless, surprised等分类）。移除范围：
+- A: 完全移除assets/emoji/目录
+- B: 保留目录但清空内容
+- C: 保留部分通用表情
+
+#### V8: assets/pets/ 和 assets/dragonbones/ 的清理 [待确认]
+
+assets/pets/ 和 assets/dragonbones/models/ 包含桌宠和DragonBones模型资源。移除范围：
+- A: 完全移除两个目录
+- B: 保留目录但清空内容
+- C: 保留空目录（.keep文件）
+
+#### V9: data/model/DragonBones.kt 的移除 [待确认]
+
+DragonBones.kt 定义了DragonBonesModel和DragonBonesConfig数据类。移除后是否需要数据库迁移？
+- A: 完全移除，不需要迁移（该表可能为空）
+- B: 完全移除，需要迁移删除相关表
+- C: 保留数据类但标记为deprecated
+
+#### V10: data/model/CustomEmoji.kt 的移除 [待确认]
+
+CustomEmoji.kt 定义了自定义表情数据模型。移除后是否需要数据库迁移？
+- A: 完全移除，需要迁移删除相关表
+- B: 完全移除，不需要迁移
+- C: 保留数据类但标记为deprecated
+
+#### V11: data/preferences/WaifuPreferences.kt 的移除 [待确认]
+
+WaifuPreferences.kt 管理桌宠偏好设置。移除后是否需要清理SharedPreferences？
+- A: 完全移除代码和SharedPreferences数据
+- B: 仅移除代码，SharedPreferences数据自然失效
+- C: 移除代码并在下次启动时清理SharedPreferences
+
+#### V12: data/repository/AvatarRepository.kt 的移除 [待确认]
+
+AvatarRepository.kt 管理虚拟形象数据持久化。移除范围：
+- A: 完全移除
+- B: 保留但清空实现
+
+#### V13: ui/components/ManagedDragonBonesView.kt 的移除 [待确认]
+
+ManagedDragonBonesView.kt 是DragonBones视图组件。移除后需要清理哪些引用？
+- A: 完全移除，清理所有引用
+- B: 保留空组件避免编译错误
+
+#### V14: AIForegroundService中的桌宠相关逻辑 [待确认]
+
+AIForegroundService中是否有桌宠/虚拟形象相关的逻辑需要清理？
+- A: 有，需要清理桌宠状态管理和情绪更新逻辑
+- B: 没有，AIForegroundService不涉及虚拟形象
+- C: 需要审查确认
+
+#### V15: FloatingWindowManager中的桌宠模式 [待确认]
+
+FloatingWindowManager 中的桌宠模式（pet mode）需要移除。移除范围：
+- A: 完全移除桌宠模式相关代码
+- B: 保留模式定义但移除实现
+- C: 保留但标记为deprecated
+
+---
+
+## 模块二十三：插件能力内置化
+
+> 涉及文件：assets/packages/ 所有内置JS包, PackageManager.kt, JsEngine.kt, JsToolManager.kt, ToolPkgCommonBridgePlugin.kt, ToolPkgToolLifecycleBridge.kt, ToolPkgMainRegistrationScriptParser.kt
+
+#### PK1: 需要内置化的插件能力清单 [待确认]
+
+当前assets/packages/中的内置JS包包括：12306, automatic_ui_base, automatic_ui_subagent, browser, code_runner, crossref, daily_life, duckduckgo, extended_chat, extended_file_tools, extended_http_tools, extended_memory_tools, ffmpeg, file_converter, github, google_search, minimax_draw, nanobanana_draw, openai_draw, operit_editor, qwen_draw, siliconflow_draw, super_admin, system_tools, tavily, time, various_search, workflow, xai_draw, zhipu_draw, zhipu_search。哪些需要从插件变为内置能力？
+- A: 仅AutoGLM GUI操作能力（automatic_ui_base + automatic_ui_subagent）内置化
+- B: AutoGLM + 系统工具（system_tools）+ 工作流（workflow）内置化
+- C: 所有核心能力（AutoGLM + 系统工具 + 工作流 + 浏览器 + 代码执行器 + 搜索）内置化
+- D: 全部内置化，移除JS插件系统
+
+#### PK2: 内置化的实现方式 [待确认]
+
+将插件能力变为内置能力的实现方式：
+- A: 保留JS包但标记为系统内置（不可卸载/不可禁用），从包管理UI中隐藏
+- B: 将JS逻辑迁移为Kotlin原生实现，完全移除JS包
+- C: 混合方式：核心逻辑用Kotlin实现，扩展逻辑保留JS包
+
+#### PK3: 内置化后JsEngine的保留 [待确认]
+
+如果部分能力内置化为Kotlin实现，JsEngine是否还需要保留？
+- A: 保留，第三方沙箱包仍需要JsEngine
+- B: 保留但仅用于第三方沙箱包，内置能力不再使用JsEngine
+- C: 完全移除JsEngine
+
+#### PK4: 内置化对PackageManager的影响 [待确认]
+
+PackageManager 当前统一管理内置包和外部包。内置化后包管理逻辑是否调整？
+- A: 保持不变，内置包仍通过PackageManager加载
+- B: 内置能力绕过PackageManager直接注册，PackageManager仅管理第三方包
+- C: 重构PackageManager，区分系统内置能力和第三方扩展
+
+#### PK5: 内置化后包管理UI的调整 [待确认]
+
+MCP/Skill/包管理合并后，内置化的能力在包管理UI中如何展示？
+- A: 不展示，内置能力对用户不可见
+- B: 展示但标注为"内置"，不可卸载
+- C: 展示在独立区域（"内置能力" vs "已安装扩展"）
+
+#### PK6: 搜索能力（DuckDuckGo/Google/Tavily/智谱搜索）的内置化 [待确认]
+
+多个搜索插件提供类似功能。是否合并为统一的内置搜索能力？
+- A: 合并为统一搜索，用户选择搜索引擎
+- B: 保留多个搜索插件，不合并
+- C: 仅保留一个默认搜索引擎，移除其他
+
+#### PK7: 绘图能力（Minimax/Nanobanana/OpenAI/Qwen/SiliconFlow/XAI/智谱绘图）的内置化 [待确认]
+
+多个绘图插件提供类似功能。是否合并为统一的内置绘图能力？
+- A: 合并为统一绘图，用户选择绘图引擎
+- B: 保留多个绘图插件，不合并
+- C: 仅保留一个默认绘图引擎，移除其他
+
+#### PK8: 内置化后工具提示词的调整 [待确认]
+
+内置化后工具提示词（SystemToolPrompts）是否需要调整？
+- A: 需要调整，内置工具的描述应更详细
+- B: 不需要调整，工具描述与实现方式无关
+- C: 需要调整，移除插件包相关说明
+
+#### PK9: 内置化后的版本更新机制 [待确认]
+
+内置化后这些能力如何更新？
+- A: 随应用版本一起更新
+- B: 支持独立更新（类似系统应用更新）
+- C: 随应用更新但可通过市场获取增强版本
+
+#### PK10: 内置化对ToolPkgCommonBridgePlugin的影响 [待确认]
+
+内置化后桥接接口是否调整？
+- A: 保持不变，确保第三方沙箱包兼容
+- B: 增加内置能力专用的桥接接口
+- C: 重构桥接接口，区分内置和外部调用
+
+---
+
+## 模块二十四：原有简单GUI操作能力移除
+
+> 涉及文件：PhoneAgent.kt, PhoneAgentJobRegistry.kt, StandardUITools.kt, ShowerController.kt, VirtualDisplayManager.kt, ShowerBinderRegistry.kt, ShowerBinderReceiver.kt, CliToolModeSupport.kt, automatic_ui_base.js, automatic_ui_subagent.js, operit_editor.js
+
+#### OG1: PhoneAgent的完整移除 [待确认]
+
+PhoneAgent.kt 约760行代码，是原有简单GUI操作的核心。移除范围：
+- A: 完全移除PhoneAgent.kt和PhoneAgentJobRegistry.kt
+- B: 移除但保留接口定义供AutoGLM复用
+- C: 将PhoneAgent的核心能力合并到AutoGLM模块后移除
+
+#### OG2: StandardUITools的移除 [待确认]
+
+StandardUITools 提供标准UI操作工具。AutoGLM是否复用这些底层操作？
+- A: 完全移除，AutoGLM有独立的操作实现
+- B: 保留核心操作方法，移除高级操作
+- C: 保留全部，AutoGLM依赖这些工具
+
+#### OG3: CliToolModeSupport的移除 [待确认]
+
+CliToolModeSupport 约688行代码，提供CLI工具模式。移除范围：
+- A: 完全移除，AutoGLM不需要CLI工具模式
+- B: 保留，CLI工具模式与GUI操作无关
+- C: 保留但简化
+
+#### OG4: ShowerController和Shower服务的依赖 [待确认]
+
+ShowerController封装了对Shower服务的调用。AutoGLM是否需要Shower服务？
+- A: 不需要，AutoGLM使用无障碍服务执行操作
+- B: 需要，AutoGLM需要Shower的虚拟显示能力
+- C: 部分需要，仅截图功能
+
+#### OG5: VirtualDisplayManager的移除 [待确认]
+
+VirtualDisplayManager管理虚拟显示。如果AutoGLM不需要虚拟显示：
+- A: 完全移除VirtualDisplayManager
+- B: 保留但简化为仅截图功能
+- C: 保留，其他功能可能需要
+
+#### OG6: ShowerBinderRegistry和ShowerBinderReceiver的移除 [待确认]
+
+这两个文件管理与Shower服务的Binder通信。如果移除Shower依赖：
+- A: 完全移除
+- B: 保留但简化
+- C: 保留，其他模块可能使用Binder通信
+
+#### OG7: automatic_ui_base.js和automatic_ui_subagent.js的处理 [待确认]
+
+这两个JS包当前与AutoGLM相关。仅保留AutoGLM后：
+- A: 保留这两个包，AutoGLM内置化后仍需要它们
+- B: 将逻辑迁移到Kotlin后移除JS包
+- C: 保留JS包但标记为系统内置
+
+#### OG8: operit_editor.js的移除 [待确认]
+
+operit_editor.js提供编辑器功能。移除原有GUI操作后：
+- A: 完全移除
+- B: 保留，编辑器功能独立于GUI操作
+- C: 保留但简化
+
+#### OG9: 移除后FunctionalPrompts中UI自动化提示词的处理 [待确认]
+
+FunctionalPrompts包含uiAutomationAgentPrompt。移除原有GUI操作后：
+- A: 保留，AutoGLM仍需要UI自动化提示词
+- B: 移除，AutoGLM有自己的提示词
+- C: 修改为AutoGLM专用的提示词
+
+#### OG10: 移除后ToolRegistration中UI工具的清理 [待确认]
+
+ToolRegistration中注册了UI操作相关工具。移除范围：
+- A: 仅移除原有简单GUI操作工具，保留AutoGLM工具
+- B: 移除所有GUI操作工具，AutoGLM内置后重新注册
+- C: 保留所有工具注册，仅调整实现
+
+---
+
 ## 项目核心架构分析
 
 ### AI对话生命周期
