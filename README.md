@@ -27,18 +27,26 @@
 | web-chat模块 | 保留暴露的API（后续可能基于此进一步开发），移除Web UI |
 | 工作流 | 完整保留，UI重构。功能入口级别与日历、待办等新功能同级 |
 | 工具箱 | 全部保留，但弱化工具箱相关入口 |
+| AutoGLM GUI操作能力 | 从插件变为内置能力，移除原有简单GUI操作能力（PhoneAgent等），仅保留AutoGLM |
+| 长程任务执行能力 | 全面增强，包括任务持久化、断点恢复、超时重试、进度反馈等 |
+| 待办功能（新增） | 全新功能，从零设计，与AI深度集成 |
+| 日程功能（新增） | 全新功能，从零设计，与AI深度集成 |
+| 上下文自动注入 | 通知、屏幕内容、位置、屏幕使用时间、记忆自动注入到对话上下文 |
+| 终端环境 | 首次使用时后台静默安装必要依赖，简化UI，完全移除配置项 |
 
 ### 二、砍掉的功能
 
 | 功能模块 | 说明 |
 |---------|------|
 | 角色卡系统 | 移除角色卡群聊、互聊、导入导出、二维码分享等全部角色卡相关功能 |
-| 桌宠 + 虚拟形象 | 移除DragonBones/FBX/MMD虚拟形象、桌宠功能、液态玻璃主题 |
+| 桌宠 + 虚拟形象 | 完全移除DragonBones/FBX/MMD/GLTF虚拟形象、桌宠功能、自定义表情、情绪系统及所有C++原生模块 |
 | 语音交互 | 移除语音对话、TTS、STT、语音唤醒等全部语音功能 |
 | 深度搜索 | 完全移除 |
 | 对话框样式 (Bubble) | 聊天样式仅保留"命令框"(Cursor)，移除"对话框"(Bubble) |
 | 经典输入模式 (Classic) | 输入框样式仅保留"智能体模式"(Agent)，移除"经典模式"(Classic) |
 | 命令框样式配置 | 完全移除液态玻璃、水玻璃、自定义颜色等所有命令框样式配置项 |
+| 原有简单GUI操作能力 | 移除PhoneAgent、StandardUITools、CliToolModeSupport、ShowerController、VirtualDisplayManager等，仅保留AutoGLM |
+| 液态玻璃主题 | 完全移除LiquidGlass和WaterGlass效果及所有相关配置项 |
 
 ### 三、UI风格指引
 
@@ -2389,6 +2397,545 @@ ToolRegistration中注册了UI操作相关工具。移除范围：
 - A: 仅移除原有简单GUI操作工具，保留AutoGLM工具
 - B: 移除所有GUI操作工具，AutoGLM内置后重新注册
 - C: 保留所有工具注册，仅调整实现
+
+---
+
+## 模块二十五：C++原生流解析与本地模型
+
+> 涉及文件：streamnative/ (Stream.h, StreamBuilders, StreamOperators, StreamJsonPlugin, StreamXmlPlugin, StreamMarkdownPlugin, StreamPureJsonPlugin, HotStream, native_xml_splitter, native_markdown_splitter), mnn/ (MNNModule, MNNLlmSession, MNNLlmNative, MNNNetInstance, MNNImageProcess, MNNForwardType), llama/ (LlamaSession, LlamaNative), quickjs/ (quickjs_jni.cpp)
+
+#### N1: C++流解析层的简化影响 [待确认]
+
+streamnative/ 提供了AI响应的XML/Markdown/JSON流式解析能力，是AI对话的核心基础设施。简化后是否需要调整？
+- A: 保持不变，流解析与UI简化无关
+- B: 移除StreamXmlPlugin（工具调用XML解析可能需要保留）
+- C: 优化流解析性能，减少内存占用
+
+#### N2: MNN本地模型推理的保留 [待确认]
+
+MNN模块支持本地LLM推理和图像处理。简化后是否保留？
+- A: 保留，本地模型是长程任务离线执行的基础
+- B: 保留但简化，仅保留LLM推理能力
+- C: 移除，本地模型推理过于复杂
+
+#### N3: MNN本地模型与云端模型的切换策略 [待确认]
+
+MNN本地模型和云端API如何协同？简化后切换策略是否调整？
+- A: 保持当前策略（用户手动选择）
+- B: 自动切换（网络不可用时自动使用本地模型）
+- C: 仅保留云端模型，移除本地模型选项
+
+#### N4: Llama模块的去留 [待确认]
+
+llama/ 模块当前只有JNI stub实现（llama_jni_stub.cpp）。是否保留？
+- A: 保留，作为备选本地推理引擎
+- B: 移除，MNN已覆盖本地推理需求
+- C: 保留但标记为实验性功能
+
+#### N5: QuickJS引擎的去留 [待确认]
+
+quickjs/ 模块提供JavaScript执行引擎。简化后是否保留？
+- A: 保留，沙箱包依赖QuickJS执行JS脚本
+- B: 保留但仅用于第三方沙箱包，内置能力迁移到Kotlin
+- C: 移除，改用V8或其他引擎
+
+#### N6: MNN模型下载管理 [待确认]
+
+MnnModelDownloadManager 管理MNN模型的下载。简化后下载流程是否调整？
+- A: 保持不变
+- B: 简化为首次使用时自动下载推荐模型
+- C: 移除下载管理，用户手动放置模型文件
+
+#### N7: MNN图像处理能力 [待确认]
+
+MNNImageProcess 提供图像处理能力（如OCR、图像分类）。简化后是否保留？
+- A: 保留，图像处理对AutoGLM和记忆库有用
+- B: 保留但简化
+- C: 移除
+
+#### N8: C++流解析的KMP匹配算法 [待确认]
+
+StreamKmpGraph 实现了KMP算法用于流式匹配XML/Markdown标签。简化后是否优化？
+- A: 保持不变，KMP算法性能已足够
+- B: 优化为更高效的匹配算法
+- C: 简化匹配规则，减少支持的标签类型
+
+#### N9: native_xml_splitter和native_markdown_splitter的保留 [待确认]
+
+这两个C++文件负责XML和Markdown的分割。简化后是否保留？
+- A: 保留，AI响应解析依赖它们
+- B: 保留但优化分割逻辑
+- C: 迁移为Kotlin实现
+
+#### N10: MNN的嵌入模型支持 [待确认]
+
+MNN是否支持本地嵌入模型推理？与记忆库的向量嵌入功能如何配合？
+- A: 支持，MNN可运行嵌入模型用于本地向量计算
+- B: 不支持，嵌入模型需要云端API
+- C: 部分支持，需要确认具体模型兼容性
+
+---
+
+## 模块二十六：无障碍服务与权限系统
+
+> 涉及文件：AccessibilityUITools.kt, AccessibilityActionListener.kt, AccessibilityShellExecutor.kt, ShizukuAuthorizer.kt, RootAuthorizer.kt, ScreenCaptureService.kt, MediaProjectionCaptureManager.kt, OperitNotificationListenerService.kt, ToolPermissionSystem.kt, AndroidPermissionPreferences.kt, IAccessibilityEventCallback.aidl, IAccessibilityProvider.aidl
+
+#### AC1: 无障碍服务的核心定位 [待确认]
+
+无障碍服务是AutoGLM GUI操作和通知读取的基础。简化后无障碍服务的角色是否调整？
+- A: 保持不变，AutoGLM和无障碍工具仍依赖它
+- B: 增强，AutoGLM内置化后无障碍服务成为核心能力
+- C: 简化，仅保留AutoGLM需要的无障碍功能
+
+#### AC2: Shizuku权限的保留 [待确认]
+
+ShizukuAuthorizer 提供Shizuku权限授权。简化后权限级别重命名为"基本/高级"，Shizuku是否保留？
+- A: 保留，高级权限仍需要Shizuku
+- B: 移除，仅使用无障碍服务和ADB
+- C: 保留但简化授权流程
+
+#### AC3: Root权限的移除 [待确认]
+
+已确认移除Root权限级别。RootAuthorizer 是否完全移除？
+- A: 完全移除RootAuthorizer及所有Root相关代码
+- B: 保留代码但移除UI入口
+- C: 保留但标记为deprecated
+
+#### AC4: 屏幕捕获服务的保留 [待确认]
+
+ScreenCaptureService 和 MediaProjectionCaptureManager 提供屏幕截图能力。AutoGLM和上下文自动注入都需要截图。简化后是否调整？
+- A: 保持不变
+- B: 增强，支持更高频率的屏幕捕获
+- C: 简化，移除MediaProjection方式仅保留无障碍截图
+
+#### AC5: 通知监听服务的保留 [待确认]
+
+OperitNotificationListenerService 监听系统通知。上下文自动注入需要通知信息。简化后是否调整？
+- A: 保持不变
+- B: 增强，支持通知内容的结构化解析
+- C: 简化，仅读取通知标题和文本
+
+#### AC6: AIDL接口的清理 [待确认]
+
+IAccessibilityEventCallback.aidl 和 IAccessibilityProvider.aidl 定义了跨进程通信接口。简化后是否清理？
+- A: 保留，无障碍服务跨进程通信仍需要
+- B: 简化AIDL接口
+- C: 移除AIDL改用BroadcastReceiver
+
+#### AC7: AccessibilityShellExecutor的保留 [待确认]
+
+AccessibilityShellExecutor 在无障碍权限下执行Shell命令。简化后是否保留？
+- A: 保留，高级权限下的Shell执行仍需要
+- B: 移除，Shell执行改用其他方式
+- C: 保留但限制可执行的命令
+
+#### AC8: ToolPermissionSystem的简化 [待确认]
+
+ToolPermissionSystem 管理工具权限。简化后权限系统是否调整？
+- A: 保持不变
+- B: 简化为仅两级（基本/高级）
+- C: 增加细粒度权限控制（如按工具类型授权）
+
+#### AC9: AndroidPermissionPreferences的清理 [待确认]
+
+AndroidPermissionPreferences 管理权限级别设置。移除Root和ADB级别后需要清理哪些字段？
+- A: 移除ROOT和ADB相关字段，保留BASIC和ACCESSIBILITY
+- B: 移除所有权限级别字段，改为简单的开关
+- C: 保留字段但重命名
+
+#### AC10: 无障碍服务的自动启动 [待确认]
+
+应用启动时是否自动检测并引导用户开启无障碍服务？
+- A: 是，首次使用时引导
+- B: 是，每次启动时检测并提示
+- C: 否，用户需要手动在系统设置中开启
+
+---
+
+## 模块二十七：Compose DSL渲染系统
+
+> 涉及文件：ToolPkgComposeDslGeneratedRenderers.kt, ToolPkgComposeDslScreen.kt, ToolPkgComposeDslParser.kt, ToolPkgComposeDslWebView.kt, XmlRenderPluginRegistry.kt
+
+#### CD1: Compose DSL渲染器的保留 [待确认]
+
+ToolPkgComposeDslGeneratedRenderers 提供了沙箱包UI的渲染能力。简化后是否保留？
+- A: 保留，沙箱包的UI渲染依赖它
+- B: 保留但移除液态玻璃相关渲染器
+- C: 简化渲染器，减少支持的组件类型
+
+#### CD2: Compose DSL WebView组件的保留 [待确认]
+
+ToolPkgComposeDslWebView 允许在DSL中嵌入WebView。简化后是否保留？
+- A: 保留，沙箱包可能需要WebView
+- B: 移除，WebView增加安全风险
+- C: 保留但增加安全限制
+
+#### CD3: XmlRenderPluginRegistry的保留 [待确认]
+
+XmlRenderPluginRegistry 管理XML渲染插件。简化后是否保留？
+- A: 保留，沙箱包的XML渲染依赖它
+- B: 简化，减少内置渲染插件
+- C: 移除，改用JSON渲染
+
+#### CD4: Compose DSL自动生成代码的更新 [待确认]
+
+ToolPkgComposeDslGeneratedRenderers.kt 是自动生成的代码。简化后是否需要重新生成？
+- A: 需要重新生成，移除液态玻璃相关组件
+- B: 不需要，自动生成代码与简化无关
+- C: 需要重新生成，增加新组件类型
+
+#### CD5: Compose DSL与shadcn/ui风格的对齐 [待确认]
+
+简化后UI参考shadcn/ui风格。Compose DSL渲染器是否需要调整以支持shadcn/ui风格？
+- A: 需要，新增shadcn/ui风格的渲染器
+- B: 不需要，DSL渲染器与UI风格无关
+- C: 需要，修改现有渲染器以支持新风格
+
+#### CD6: Compose DSL的安全沙箱 [待确认]
+
+沙箱包通过Compose DSL渲染UI。是否有安全限制防止恶意UI？
+- A: 有，DSL解析器限制了可用的组件和属性
+- B: 没有，DSL可以渲染任何内容
+- C: 需要审查确认
+
+#### CD7: Compose DSL的性能优化 [待确认]
+
+Compose DSL渲染是否有性能问题？简化后是否需要优化？
+- A: 性能良好，不需要优化
+- B: 需要优化，复杂DSL页面渲染较慢
+- C: 需要优化，减少DSL解析时间
+
+#### CD8: Compose DSL的调试工具 [待确认]
+
+ToolPkgComposeDslDebugDumpReceiver 提供DSL调试能力。简化后是否保留？
+- A: 保留，仅Debug构建可用
+- B: 移除
+- C: 保留但增加权限控制
+
+---
+
+## 模块二十八：主题系统与国际化
+
+> 涉及文件：Theme.kt, LiquidGlass.kt, WaterGlass.kt, ThemeSettingsScreen.kt, ThemeSettingsCoreSections.kt, ThemeSettingsColorSection.kt, UserPreferencesManager.kt, ThemePreferenceSnapshot.kt, SerializableColorScheme.kt, SerializableTypography.kt, strings.xml (多语言)
+
+#### TH1: LiquidGlass和WaterGlass的移除 [待确认]
+
+LiquidGlass.kt 和 WaterGlass.kt 实现了液态玻璃和水玻璃效果。简化后是否完全移除？
+- A: 完全移除两个文件及所有引用
+- B: 移除LiquidGlass但保留WaterGlass作为简化效果
+- C: 保留但不再作为用户可选项
+
+#### TH2: Theme.kt的简化 [待确认]
+
+Theme.kt 定义了全局主题配置。简化后是否需要调整？
+- A: 保持不变
+- B: 移除对Glass效果的支持
+- C: 重构为shadcn/ui风格的主题系统
+
+#### TH3: SerializableColorScheme的简化 [待确认]
+
+SerializableColorScheme 定义了可序列化的色彩方案（107行）。简化后是否保留自定义色彩方案？
+- A: 完全移除，使用系统默认色彩方案
+- B: 保留但简化为仅支持明暗模式切换
+- C: 保留但移除用户自定义色彩
+
+#### TH4: SerializableTypography的简化 [待确认]
+
+SerializableTypography 定义了可序列化的排版样式（95行）。简化后是否保留自定义排版？
+- A: 完全移除，使用4种字号+2种字重的固定排版
+- B: 保留但简化
+- C: 保留但移除用户自定义排版
+
+#### TH5: ThemeSettingsScreen的简化范围 [待确认]
+
+已确认主题设置只保留明暗模式。ThemeSettingsCoreSections和ThemeSettingsColorSection如何处理？
+- A: 完全移除，仅保留明暗模式切换
+- B: 保留框架但移除大部分配置项
+- C: 移除独立页面，明暗模式合并到显示设置中
+
+#### TH6: UserPreferencesManager中的主题相关字段清理 [待确认]
+
+UserPreferencesManager 包含大量主题相关偏好字段。简化后需要清理哪些？
+- A: 移除所有Glass、色彩、排版相关字段
+- B: 仅移除Glass相关字段
+- C: 移除所有主题字段，仅保留明暗模式
+
+#### TH7: 多语言支持的保留 [待确认]
+
+当前支持中文、英文、日文。简化后是否保留所有语言？
+- A: 保留所有语言
+- B: 仅保留中文和英文
+- C: 保留所有语言但移除砍除功能相关的字符串
+
+#### TH8: 字符串资源的清理策略 [待确认]
+
+砍除功能后strings.xml中有大量无用字符串。清理策略：
+- A: 逐语言清理所有无用字符串
+- B: 先清理中英文，其他语言后续处理
+- C: 通过工具自动检测未使用的字符串
+
+#### TH9: NavigationDrawerAppearance的简化 [待确认]
+
+NavigationDrawerAppearance 定义了导航抽屉外观。侧边栏重构后是否调整？
+- A: 需要调整，侧边栏结构已改变
+- B: 不需要调整，外观定义与结构无关
+- C: 需要重写，参考shadcn/ui Sidebar风格
+
+#### TH10: ThemePreferenceSnapshot的保留 [待确认]
+
+ThemePreferenceSnapshot 保存主题偏好快照。简化后是否保留？
+- A: 移除，主题偏好简化后不需要快照
+- B: 保留，用于主题切换时的状态保存
+- C: 简化，仅保存明暗模式状态
+
+---
+
+## 模块二十九：聊天格式导入导出与辅助系统
+
+> 涉及文件：ChatFormat.kt, ChatFormatConverter.kt, ChatFormatDetector.kt, ChatGPTConverter.kt, MarkdownConverter.kt, ChatBoxConverter.kt, GenericJsonConverter.kt, HtmlExporter.kt, MarkdownExporter.kt, TextExporter.kt, RemoteAnnouncementRepository.kt, MarketStatsApiService.kt, GitHubApiService.kt, BillingMode.kt, FreeUsagePreferences.kt, AgreementPreferences.kt, GitHubAuthPreferences.kt, SkillVisibilityPreferences.kt, EnvPreferences.kt
+
+#### IM1: 聊天格式导入的支持范围 [待确认]
+
+当前支持ChatGPT、ChatBox、Markdown、GenericJson等格式导入。简化后保留哪些？
+- A: 全部保留
+- B: 仅保留ChatGPT和Markdown格式
+- C: 仅保留Markdown格式
+
+#### IM2: ChatBoxConverter的去留 [待确认]
+
+ChatBoxConverter 支持ChatBox格式导入。简化后是否移除？
+- A: 移除，ChatBox格式不常用
+- B: 保留，部分用户可能需要
+- C: 保留但标记为deprecated
+
+#### IM3: 聊天导出格式的简化 [待确认]
+
+当前支持HTML、Markdown、纯文本导出。简化后保留哪些？
+- A: 全部保留
+- B: 仅保留Markdown和纯文本
+- C: 仅保留Markdown
+
+#### IM4: 公告系统的保留 [待确认]
+
+RemoteAnnouncementRepository 和 RemoteAnnouncementPreferences 管理远程公告。简化后是否保留？
+- A: 保留，公告系统用于通知用户重要更新
+- B: 移除，简化应用
+- C: 保留但简化为仅显示关键公告
+
+#### IM5: 市场统计API的保留 [待确认]
+
+MarketStatsApiService 提供市场统计信息。简化后是否保留？
+- A: 保留，市场功能需要统计数据
+- B: 移除，简化API层
+- C: 保留但简化统计项
+
+#### IM6: GitHub认证的保留 [待确认]
+
+GitHubAuthPreferences 管理GitHub OAuth认证（301行）。简化后是否保留？
+- A: 保留，GitHub集成需要认证
+- B: 移除，GitHub功能非核心
+- C: 保留但简化认证流程
+
+#### IM7: GitHub API服务的保留 [待确认]
+
+GitHubApiService 提供GitHub API交互。简化后是否保留？
+- A: 保留，市场发布功能需要
+- B: 移除
+- C: 保留但简化API范围
+
+#### IM8: 计费模式的简化 [待确认]
+
+BillingMode 定义了AI模型的计费模式。简化后是否保留？
+- A: 保留，Token使用统计需要计费信息
+- B: 移除，简化为不区分计费模式
+- C: 保留但简化计费模式类型
+
+#### IM9: FreeUsagePreferences的保留 [待确认]
+
+FreeUsagePreferences 管理免费API使用限制（183行）。简化后是否保留？
+- A: 保留，免费额度管理对用户有价值
+- B: 移除，简化使用限制
+- C: 保留但简化限制逻辑
+
+#### IM10: SkillVisibilityPreferences的保留 [待确认]
+
+SkillVisibilityPreferences 管理技能对AI的可见性。简化后是否保留？
+- A: 保留，用户可能需要控制哪些工具对AI可见
+- B: 移除，所有工具默认可见
+- C: 保留但通过斜杠命令 /tools 管理
+
+#### IM11: EnvPreferences的保留 [待确认]
+
+EnvPreferences 管理环境变量配置（86行）。简化后是否保留？
+- A: 保留，环境变量对终端和脚本执行有用
+- B: 移除，环境变量由系统自动管理
+- C: 保留但简化为仅支持PATH配置
+
+#### IM12: AgreementPreferences的保留 [待确认]
+
+AgreementPreferences 管理用户协议签署状态。简化后是否保留？
+- A: 保留，法律合规需要
+- B: 移除
+- C: 保留但简化
+
+#### IM13: 聊天格式自动检测的保留 [待确认]
+
+ChatFormatDetector 自动检测导入文件的格式。简化后是否保留？
+- A: 保留，导入功能需要
+- B: 移除，用户手动选择格式
+- C: 保留但简化检测逻辑
+
+#### IM14: GenericJsonConverter的保留 [待确认]
+
+GenericJsonConverter 支持通用JSON格式导入。简化后是否保留？
+- A: 保留，JSON是最通用的格式
+- B: 移除，仅支持特定格式
+- C: 保留但简化
+
+#### IM15: 模型定价数据的保留 [待确认]
+
+ModelPricingDefaultsCollect 和 ScrapedModelPricingRowsCollect 管理模型定价数据。简化后是否保留？
+- A: 保留，Token使用统计需要定价信息
+- B: 移除，定价信息由用户自行管理
+- C: 保留但简化为仅存储关键模型的定价
+
+---
+
+## 模块三十：ShowerClient与Shower服务
+
+> 涉及文件：ShowerBinderRegistry.kt (showerclient), ShowerServerManager.kt (showerclient), ShowerController.kt (showerclient), ShowerVideoRenderer.kt (showerclient), ShellEnvironment.kt (showerclient), ShowerSurfaceView.kt (showerclient), IShowerService.java, IShowerVideoSink.java, ShowerBinderContainer.java, shower-server.jar
+
+#### SC1: ShowerClient模块的去留 [待确认]
+
+showerclient/ 是独立的Gradle模块，提供与Shower服务通信的客户端。AutoGLM内置化后是否保留？
+- A: 保留，AutoGLM可能需要Shower的虚拟显示能力
+- B: 移除，AutoGLM使用无障碍服务不需要Shower
+- C: 保留但简化为仅截图功能
+
+#### SC2: shower-server.jar的处理 [待确认]
+
+assets/shower-server.jar 是Shower服务的服务端APK。移除Shower依赖后是否清理？
+- A: 移除，减小APK体积
+- B: 保留，其他功能可能需要
+- C: 移除但保留安装逻辑供高级用户使用
+
+#### SC3: ShowerVideoRenderer的保留 [待确认]
+
+ShowerVideoRenderer 渲染Shower服务的视频帧。移除Shower后是否保留？
+- A: 移除
+- B: 保留，可能用于其他视频渲染场景
+- C: 保留但简化
+
+#### SC4: IShowerService AIDL接口的保留 [待确认]
+
+IShowerService.java 和 IShowerVideoSink.java 定义了Shower服务的AIDL接口。移除Shower后是否清理？
+- A: 完全移除
+- B: 保留接口定义
+- C: 保留但标记为deprecated
+
+#### SC5: ShowerSurfaceView的保留 [待确认]
+
+ShowerSurfaceView 是Shower视频的Surface视图。移除Shower后是否保留？
+- A: 移除
+- B: 保留，可能用于其他场景
+- C: 移除并清理所有引用
+
+#### SC6: ShellEnvironment的保留 [待确认]
+
+ShellEnvironment.kt 配置Shower客户端的运行环境。移除Shower后是否保留？
+- A: 移除
+- B: 保留，Shell环境配置可能被其他模块使用
+- C: 保留但简化
+
+#### SC7: accessibility.apk和desktop.apk的处理 [待确认]
+
+assets/ 中有 accessibility.apk 和 desktop.apk。简化后这些APK如何处理？
+- A: 保留，AutoGLM可能需要accessibility.apk
+- B: 移除desktop.apk，保留accessibility.apk
+- C: 保留两者
+
+#### SC8: shizuku.apk的处理 [待确认]
+
+assets/shizuku.apk 是Shizuku服务的APK。移除Shizuku权限后是否清理？
+- A: 保留，高级权限仍可能需要Shizuku
+- B: 移除
+- C: 保留但不再自动安装
+
+---
+
+## 模块三十一：上下文自动注入实现细节
+
+> 这是简化方案的核心新增功能，需要详细设计
+
+#### CT1: 通知自动注入的数据格式 [待确认]
+
+通知自动注入到上下文时，使用什么格式？
+- A: 纯文本（应用名+通知标题+通知内容）
+- B: 结构化JSON（包含应用包名、时间、分类等）
+- C: AI友好的自然语言描述
+
+#### CT2: 屏幕内容自动注入的获取方式 [待确认]
+
+屏幕内容如何获取和注入？
+- A: 通过无障碍服务获取AccessibilityNodeInfo树
+- B: 通过截图+OCR提取文字
+- C: 两者结合（无障碍获取文字，截图获取视觉信息）
+
+#### CT3: 位置信息的获取方式 [待确认]
+
+位置信息如何获取？
+- A: GPS定位
+- B: 网络定位
+- C: 两者结合，优先GPS
+
+#### CT4: 屏幕使用时间的获取方式 [待确认]
+
+屏幕使用时间如何获取？
+- A: UsageStatsManager API
+- B: 无障碍服务监听应用切换
+- C: 两者结合
+
+#### CT5: 自动注入的频率控制 [待确认]
+
+自动注入的上下文信息多久更新一次？
+- A: 每次用户发送消息时获取最新值
+- B: 定时刷新（如每分钟）
+- C: 事件驱动（通知到达时、屏幕切换时触发）
+
+#### CT6: 自动注入的Token消耗控制 [待确认]
+
+自动注入会消耗上下文窗口的Token。如何控制消耗？
+- A: 固定上限（如自动注入总计不超过500 Token）
+- B: 动态调整（根据剩余上下文空间计算）
+- C: 用户可配置上限
+
+#### CT7: 自动注入的隐私保护 [待确认]
+
+自动注入可能包含敏感信息（如通知内容、位置）。如何保护隐私？
+- A: 不做特殊处理，全部注入
+- B: 过滤敏感应用的通知（如银行、社交应用）
+- C: 用户可配置哪些应用的通知可注入
+
+#### CT8: 自动注入与权限的关系 [待确认]
+
+自动注入需要多种权限（通知、位置、无障碍、使用时间）。权限不足时如何处理？
+- A: 静默跳过，仅注入有权限的信息
+- B: 提示用户授权
+- C: 仅注入无需特殊权限的信息
+
+#### CT9: 自动注入的缓存策略 [待确认]
+
+自动注入的信息是否缓存？避免每次请求都重新获取？
+- A: 不缓存，每次实时获取
+- B: 短期缓存（如30秒内复用）
+- C: 智能缓存（通知变化时更新，位置定时更新）
+
+#### CT10: 自动注入对AI行为的影响 [待确认]
+
+自动注入的上下文信息如何影响AI的响应？
+- A: AI自动感知并利用，无需特殊提示词
+- B: 通过系统提示词指导AI如何利用注入信息
+- C: 用户可通过斜杠命令控制AI是否使用注入信息
 
 ---
 
