@@ -338,8 +338,8 @@ Memory 实体包含的评分相关字段：
 | 1 | AI自我介绍，简单说明能力 | AI自动发送消息 | 否 |
 | 2 | GitHub登录 | 卡片：登录按钮 + 跳过按钮 | 是 |
 | 3 | 主题选择（明快/温暖） | 卡片：两个选项，选择时页面实时更新主题 | 否 |
-| 4 | DeepSeek API配置 | 文字说明 + 卡片：跳转链接按钮 + API Key输入框 | 是 |
-| 5 | 智谱API配置 | 文字说明 + 卡片：跳转链接按钮 + API Key输入框 | 是 |
+| 4 | DeepSeek API配置 | 文字说明 + 卡片：跳转链接按钮 + API Key输入框 + 跳过按钮 | 是 |
+| 5 | 智谱API配置（必配） | 文字说明 + 卡片：跳转链接按钮 + API Key输入框（无跳过按钮） | 否 |
 | 6 | 权限授权（存储/悬浮窗/电池优化/位置/通知/无障碍） | 卡片：授权按钮 | 部分可跳过 |
 | 7 | 引导完成通知 | AI自动发送完成消息 | - |
 
@@ -348,17 +348,22 @@ Memory 实体包含的评分相关字段：
 - 卡片按钮跳转到 `https://platform.deepseek.com/api_keys`
 - 建议用户先少充点，只充值1块钱
 - DeepSeek定价参考：deepseek-chat 输入1元/百万Token，输出2元/百万Token
+- DeepSeek为日常对话主力模型，性价比高；当DeepSeek不可用时，智谱API可作为降级备选
+- 可跳过：智谱免费语言模型（GLM-4.7-Flash）可覆盖基本对话需求
 
 **步骤5 智谱API配置要点**：
-- 文字说明如何获取API Key
+- 文字说明如何获取API Key，强调此步为必配
 - 卡片按钮跳转到 `https://open.bigmodel.cn/usercenter/apikeys`
 - 告知用户不用充值，智谱有免费模型
 - 智谱免费模型：GLM-4.7-Flash（语言模型，200K上下文）、GLM-4.6V-Flash（多模态视觉推理）、GLM-4V-Flash（图像理解）、CogView-3-Flash（文生图）、CogVideoX-Flash（文生视频）
-- 智谱主要用途：多模态免费模型（图片理解/屏幕分析）+ 手机屏幕操作模型（AutoGLM，限时免费）
+- 智谱主要用途1：GUI自动化操作（AutoGLM），依赖智谱视觉模型理解手机屏幕内容并执行操作，不配置则无法使用手机操作功能
+- 智谱主要用途2：DeepSeek API不可用时的降级备选
+- 必配原因：AutoGLM手机操作功能完全依赖智谱API，无替代方案
 
 **步骤7完成消息**：
-- 终端依赖安装完成 + 至少配置了一个API Key："其他项目我已经帮你配置完成了，现在可以直接和我对话，使用我的全部能力了！"
-- 否则："我的一些能力还没有完成配置，但是大部分功能已经可以稳定使用了。可以先开始和我对话体验一下！"
+- 终端依赖安装完成 + 智谱API已配置 + DeepSeek已配置："其他项目我已经帮你配置完成了，现在可以直接和我对话，使用我的全部能力了！"
+- 终端依赖安装完成 + 智谱API已配置 + DeepSeek未配置："基本配置已经完成了！目前你使用的是智谱的免费模型。如果后续需要更强大的对话能力，可以在设置中配置DeepSeek API。现在就可以开始和我对话了！"
+- 终端依赖安装未完成，或智谱API未配置："我的一些能力还没有完成配置，但是大部分功能已经可以稳定使用了。可以先开始和我对话体验一下！"
 
 **技术实现**：
 - 新建 `ui/features/onboarding/OnboardingChatScreen.kt` - 引导聊天页面
@@ -3448,18 +3453,22 @@ FloatingWindowManager 当前支持以下模式：
 - [ ] 弱化工具箱入口
 - [ ] 工作流UI重构
 - [ ] 实现首次使用引导（聊天式引导页面）
-  - [ ] 新建OnboardingChatScreen和OnboardingViewModel
-  - [ ] 实现引导卡片组件（GitHub登录/主题选择/API配置/权限授权）
-  - [ ] 实现AI自我介绍消息自动发送
-  - [ ] 实现GitHub OAuth登录卡片（可跳过）
-  - [ ] 实现主题选择卡片（明快/温暖，实时预览）
-  - [ ] 实现DeepSeek API配置卡片（含跳转链接和充值建议）
-  - [ ] 实现智谱API配置卡片（含免费模型说明）
-  - [ ] 实现权限授权卡片（存储/悬浮窗/电池优化/位置/通知/无障碍）
-  - [ ] 实现引导完成消息（根据配置状态显示不同文案）
-  - [ ] 引导状态持久化（支持中断后恢复）
-  - [ ] MainActivity首次启动检测和引导跳转
-  - [ ] 移除现有PermissionGuideScreen独立引导页面
+  - [ ] 新建OnboardingChatScreen（复用聊天界面框架，隐藏侧边栏和高级控件）
+  - [ ] 新建OnboardingViewModel（引导流程状态机，管理步骤切换和状态持久化）
+  - [ ] 新建OnboardingStep枚举（定义7个步骤的状态）
+  - [ ] 实现AI自我介绍消息自动发送（步骤1，定时延迟发送模拟对话感）
+  - [ ] 实现GitHubLoginCard卡片（步骤2，登录按钮+跳过按钮，复用GitHubOAuthCoordinator）
+  - [ ] 实现ThemeSelectionCard卡片（步骤3，明快/温暖两个选项，点击实时切换整个页面主题）
+  - [ ] 实现ApiKeyConfigCard通用卡片组件（步骤4/5复用，支持跳转链接+输入框+保存+可选跳过按钮）
+  - [ ] DeepSeek API配置卡片实例化（步骤4，可跳过，含充值1元建议文字，跳转platform.deepseek.com）
+  - [ ] 智谱API配置卡片实例化（步骤5，必配，无跳过按钮，含免费模型说明和AutoGLM依赖说明，跳转open.bigmodel.cn）
+  - [ ] 实现PermissionGrantCard卡片（步骤6，存储/悬浮窗/电池优化/位置/通知/无障碍逐项授权）
+  - [ ] 实现引导完成消息逻辑（步骤7，三种文案：全部完成/仅智谱/部分完成）
+  - [ ] 引导状态持久化到SharedPreferences（当前步骤、各步骤完成状态，支持中断后恢复）
+  - [ ] MainActivity首次启动检测（未完成引导跳转OnboardingChatScreen，已完成跳转主界面）
+  - [ ] 引导完成标记写入（引导结束后设置标记，后续启动不再显示）
+  - [ ] 后台终端依赖安装与引导流程并行执行（步骤0，复用OperitTerminalManager）
+  - [ ] 移除现有PermissionGuideScreen独立引导页面，权限逻辑迁移到OnboardingChatScreen
 
 ### 阶段四：系统规则自动化
 
