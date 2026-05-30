@@ -320,128 +320,1328 @@ Memory 实体包含的评分相关字段：
 
 ### 五、待进一步确认的提问清单
 
-以下每个问题都提供了具体选项，请逐一确认：
-
-#### Q1: 图谱可视化简化方案 [已确认: B]
-
-只读展示+缩放/平移，移除节点拖拽和图谱编辑。
-
-#### Q2: 记忆自动检索匹配的触发时机 [已确认: A+B]
-
-每次用户发送消息时自动检索 + AI判断需要记忆时也触发。
-
-#### Q3: 记忆检索匹配策略权重配置 [已确认]
-
-- 权重配置：A（语义优先）keywordWeight=5.0, tagWeight=2.0, vectorWeight=8.0, edgeWeight=1.0
-- importance/credibility：B（纳入，低权重）importance=1.0, credibility=0.5
-- 时间衰减：D（作为一项权重因子，而非必须遵循的规则）
-
-#### Q4: 自动注入的记忆条数上限 [已确认: C]
-
-最多5条。
-
-#### Q5: 砍掉功能后的数据迁移方案 [待重新提问]
-
-此问题需要更具体的描述后重新提问。
-
-#### Q6: 设置页面中工具箱的展示方式 [已确认: A]
-
-作为设置页面的一个子页面"工具"，点击后展示工具列表。
-
-#### Q7: 侧边栏历史对话列表的展示方式 [已确认: A+B结合]
-
-按日期分组展示（今天/昨天/更早），每组内按时间倒序，长按弹出删除/编辑菜单。
-
-#### Q8: 侧边栏预留按钮区的展示方式 [已确认: B，需修正理解]
-
-垂直排列的列表项（带图标+文字）。参考主流AI应用程序，新建对话下方会有模式选择等快捷入口，我们的预留按钮区就是这类功能入口（工作流、日历、待办等）。
-
-#### Q9: 斜杠命令面板的展示方式 [已确认: A]
-
-参考shadcn/ui Command组件，在输入框上方弹出下拉列表，显示命令名称+描述，支持模糊搜索。
-
-#### Q10: MCP/Skill/包管理合并页面的市场展示 [待重新提问]
-
-此问题需要更具体的描述后重新提问。
-
-#### Q11: 后台保活默认开启后的行为 [待重新提问]
-
-此问题需要更具体的描述后重新提问。
-
-#### Q12: 系统默认值调整确认 [待重新提问]
-
-此问题需要更具体的描述后重新提问。
-
-#### Q13: 记忆检索评分模式选择 [待重新提问]
-
-此问题需要更具体的描述后重新提问。
-
-#### Q14: 向量嵌入配置 [已确认: C]
-
-优先本地嵌入模型，本地不可用时回退到云端嵌入API。
-
-#### Q15: 外部HTTP聊天设置是否保留 [已确认: A]
-
-保留，与web-chat API保留策略一致。
+> 以下问题按模块分组，每个模块覆盖其核心文件的关键决策点。标注 [已确认] 的问题保留原有结论，标注 [待确认] 的问题需要逐一回复。
 
 ---
 
-## 深层功能确认清单
+## 模块一：聊天核心系统
 
-以下问题涉及核心架构层面的简化决策：
+> 涉及文件：EnhancedAIService.kt, ChatRuntimeHolder.kt, ChatRuntimeSlot.kt, ChatViewModel.kt, AIMessageManager.kt, AIChatScreen.kt
 
-#### D1: 系统提示词自我介绍Section [已确认]
+#### C1: FLOATING运行时槽位的去留 [待确认]
 
-保留部分角色/人格功能，但对用户不可见。内置多智能体团队协作人格（Axiom/Atlas/Vigil/Flux/Aura）。
+ChatRuntimeSlot 定义了 MAIN 和 FLOATING 两种运行时槽位，ChatRuntimeHolder 为每种槽位维护独立的 ChatServiceCore 实例。悬浮窗简化为黑色进度气泡后，不再需要完整的浮动聊天运行时。
+- A: 移除 FLOATING 槽位，只保留 MAIN，悬浮窗仅做进度展示不承载聊天逻辑
+- B: 保留 FLOATING 槽位但简化其能力，仅用于后台任务状态追踪
+- C: 保留双槽位不变，悬浮窗简化只影响UI层
 
-#### D2: 子任务代理(SUBTASK_AGENT) [已确认：由沙箱包提供]
+#### C2: EnhancedAIService 中的跨会话同步逻辑 [待确认]
 
-子任务代理功能不是内置的，而是由沙箱包（如 examples/subagent/）通过 JavaScript 调用 EnhancedAIService 时设置 `isSubTask = true` 来实现。内置的 `SUBTASK_AGENT_PROMPT_TEMPLATE` 是为沙箱包调用子任务模式时提供的提示词模板。
+EnhancedAIService.syncMainChatSelectionToFloating() 在主聊天和浮动聊天之间同步选择状态。简化后是否需要保留此同步机制？
+- A: 完全移除，浮动聊天不再存在
+- B: 保留但改为单向（主→浮），仅同步关键状态
+- C: 保留双向同步
 
-简化后：保留 `SUBTASK_AGENT_PROMPT_TEMPLATE` 和 `isSubTask` 参数，确保沙箱包兼容性。
+#### C3: ChatViewModel 中的角色卡相关状态 [待确认]
 
-#### D3: 工作流触发机制 [待确认]
+ChatViewModel 中存在角色卡选择、角色卡绑定、角色卡记忆绑定等状态管理逻辑。砍掉角色卡后：
+- A: 完全移除所有角色卡相关状态和方法
+- B: 保留内部数据结构但移除UI暴露，确保沙箱包兼容
+
+#### C4: AIMessageManager 中的语音朗读逻辑 [待确认]
+
+AIMessageManager 包含语音朗读（TTS）相关的消息处理逻辑。砍掉语音后：
+- A: 完全移除TTS相关逻辑
+- B: 移除TTS逻辑但保留消息类型的扩展点，以备未来可能恢复
+
+#### C5: AIMessageManager 中的流式输出与工具调用循环 [待确认]
+
+当前 AIMessageManager 的流式输出逻辑与工具调用循环紧密耦合。简化后工具调用展示改为灰/绿/红文字，流式输出逻辑是否需要调整？
+- A: 流式输出逻辑不变，仅UI层调整展示方式
+- B: 流式输出需要增加工具调用状态的中间标记（灰→绿/红），以便UI层感知状态变化
+
+#### C6: ChatViewModel 中的附件处理逻辑 [待确认]
+
+当前附件处理支持手动选择（截图、拍照、文件、工具包）。简化后需要增加自动注入（通知、屏幕内容、位置、屏幕使用时间、记忆）。自动注入的附件是否在UI上对用户可见？
+- A: 完全不可见，用户不知道有自动注入的内容
+- B: 可见但标注为"自动注入"，用户可手动移除
+- C: 在消息发送前显示自动注入的摘要，用户确认后发送
+
+#### C7: AIChatScreen 中的角色选择器面板 [待确认]
+
+AIChatScreen 中集成了 CharacterSelectorPanel。砍掉角色卡后，该面板需要移除。但面板的位置是否需要替换为其他功能入口？
+- A: 完全移除，不替换
+- B: 替换为斜杠命令的快捷入口面板
+- C: 替换为模型/智能体模式切换面板
+
+#### C8: ChatViewModel 中的对话摘要触发机制 [待确认]
+
+当前对话摘要有多种触发方式（手动、自动阈值触发）。简化后摘要配置项被移除，摘要行为由系统自动管理。系统自动管理的策略是什么？
+- A: 固定阈值（如上下文超过一定token数时自动摘要）
+- B: 动态阈值（根据模型上下文长度自动计算）
+- C: 完全不摘要，依赖模型的上下文窗口
+
+#### C9: ChatRuntimeHolder 中多实例的内存管理 [待确认]
+
+ChatRuntimeHolder 使用 ConcurrentHashMap 缓存多个 ChatServiceCore 实例。简化后如果移除 FLOATING 槽位，是否需要优化内存管理策略？
+- A: 简化为单实例，移除缓存机制
+- B: 保留缓存机制但限制最大实例数为1
+- C: 保持不变
+
+#### C10: AIMessageManager 中的消息历史限制 [待确认]
+
+AIMessageManager 在构建AI请求时有消息历史限制逻辑。简化后上下文长度由系统自动管理，具体的限制策略是什么？
+- A: 根据当前模型的maxTokens自动计算，保留最近N条消息
+- B: 固定保留最近50条消息
+- C: 保留全部消息，由模型端自行截断
+
+#### C11: ChatViewModel 中的待发送队列 [待确认]
+
+当前有待发送队列功能，用户可以在AI回复期间排队发送多条消息。简化后此功能的行为是否调整？
+- A: 保持不变
+- B: 简化为只允许排队1条消息
+- C: 移除排队功能，AI回复期间禁止发送
+
+#### C12: AIChatScreen 中的消息编辑功能 [待确认]
+
+当前支持编辑已发送的消息。简化后是否保留？
+- A: 保留，功能不变
+- B: 保留但简化UI（移除编辑弹窗的某些选项）
+- C: 移除
+
+#### C13: ChatScreenContent 中的多选模式 [待确认]
+
+当前支持多选消息进行删除/分享/导出。简化后是否保留？
+- A: 保留，功能不变
+- B: 保留但仅支持删除，移除分享和导出
+- C: 移除多选模式
+
+#### C14: AIMessageManager 中的插件处理逻辑 [待确认]
+
+AIMessageManager 在处理AI响应时涉及插件（ToolPkgHook）的回调。简化后插件系统是否保持不变？
+- A: 保持不变，沙箱包兼容性优先
+- B: 简化插件回调机制，移除部分钩子类型
+
+#### C15: ChatViewModel 中的回复引用功能 [待确认]
+
+当前支持引用某条消息进行回复。简化后此功能的具体行为？
+- A: 保持不变
+- B: 保留但简化UI展示
+
+---
+
+## 模块二：系统提示词与工具提示词
+
+> 涉及文件：SystemPromptConfig.kt, SystemToolPrompts.kt, SystemToolPromptsInternal.kt, FunctionalPrompts.kt
+
+#### P1: SystemPromptConfig 中的自我介绍Section与内置人格 [待确认]
+
+已确认保留多智能体协作人格（Axiom/Atlas/Vigil/Flux/Aura）和单智能体模式。具体问题：多智能体协作人格的提示词是硬编码在SystemPromptConfig中，还是通过PromptTag系统动态注入？
+- A: 硬编码在SystemPromptConfig中，作为内置常量
+- B: 通过PromptTag系统注入，CHARACTER类型标签
+- C: 混合方式：基础人格硬编码，扩展人格通过标签注入
+
+#### P2: SystemPromptConfig 中的自定义提示词应用方式 [待确认]
+
+applyCustomPrompts 方法允许用户自定义提示词覆盖系统默认。简化后用户是否还能自定义提示词？
+- A: 完全移除自定义提示词功能
+- B: 保留但仅通过斜杠命令间接配置（如/think影响思考模式提示词）
+- C: 保留完整的自定义提示词功能
+
+#### P3: SystemToolPrompts 中的语音工具提示词清理范围 [待确认]
+
+SystemToolPrompts 中包含TTS/STT等语音工具的提示词描述。砍掉语音后需要移除这些描述。具体需要确认：移除的是哪些工具名称？
+- A: 仅移除TTS和STT工具
+- B: 移除TTS、STT、语音唤醒、语音球相关所有工具
+- C: 移除所有语音相关工具，包括语音自动绑定组件的工具描述
+
+#### P4: SystemToolPrompts 中的工具分类结构 [待确认]
+
+当前工具分为basicTools、fileSystemTools、httpTools、memoryTools等分类。简化后是否调整分类？
+- A: 保持当前分类不变
+- B: 合并部分分类（如fileSystemTools和httpTools合并为"数据工具"）
+- C: 重新设计分类体系
+
+#### P5: SystemToolPromptsInternal 中的内部工具 [待确认]
+
+SystemToolPromptsInternal 定义了内部使用的工具提示词。简化后这些内部工具是否保留？
+- A: 全部保留，内部工具对用户不可见不影响简化
+- B: 审查并移除不再需要的内部工具
+
+#### P6: FunctionalPrompts 中的群聊角色响应排序提示词 [待确认]
+
+FunctionalPrompts 包含群聊角色响应排序的提示词模板。砍掉角色卡后群聊功能也移除，该提示词是否清理？
+- A: 完全移除
+- B: 保留但标记为deprecated，确保沙箱包兼容
+
+#### P7: FunctionalPrompts 中的UI自动化提示词 [待确认]
+
+FunctionalPrompts 包含UI控制器提示词（uiAutomationAgentPrompt）。该提示词与PhoneAgent配合使用。简化后PhoneAgent是否保留？
+- A: 保留PhoneAgent和UI自动化提示词
+- B: 移除PhoneAgent但保留提示词模板（沙箱包可能使用）
+- C: 全部移除
+
+#### P8: FunctionalPrompts 中的摘要提示词 [待确认]
+
+FunctionalPrompts 包含对话摘要提示词（SUMMARY_PROMPT）。简化后摘要由系统自动管理，摘要提示词是否需要调整？
+- A: 保持不变
+- B: 简化摘要提示词，减少输出格式要求
+- C: 根据自动管理策略重新设计摘要提示词
+
+#### P9: SystemPromptConfig 中的包系统指南Section [待确认]
+
+PACKAGE_SYSTEM_GUIDELINES_SECTION 向AI说明如何使用沙箱包系统。MCP/Skill/包管理合并后，该Section的描述是否需要更新？
+- A: 需要更新，反映合并后的统一管理方式
+- B: 不需要更新，包系统内部逻辑未变，只是UI合并
+
+#### P10: SystemPromptConfig 中的工作区规则Section [待确认]
+
+WORKSPACE_GUIDELINES_SECTION 向AI说明工作区规则。简化后工作区功能是否保留？
+- A: 保留工作区功能，Section不变
+- B: 保留但简化Section内容
+- C: 移除工作区功能
+
+#### P11: SystemToolPrompts 中的工具可见性控制 [待确认]
+
+SystemToolPrompts 通过 toolVisibility 参数控制工具显示。简化后是否需要调整工具可见性策略？
+- A: 保持当前策略不变
+- B: 默认隐藏更多工具，只显示核心工具
+- C: 根据权限级别动态调整可见性
+
+#### P12: FunctionalPrompts 中的知识图谱处理提示词 [待确认]
+
+FunctionalPrompts 包含知识图谱处理的提示词。记忆库简化后图谱可视化只读，知识图谱处理提示词是否调整？
+- A: 保持不变，图谱处理逻辑不受UI简化影响
+- B: 简化提示词，移除图谱编辑相关的指导
+
+---
+
+## 模块三：工具系统
+
+> 涉及文件：ToolRegistration.kt, AIToolHandler.kt, AIToolHook.kt, ToolExecutionLimits.kt, ToolProgressBus.kt, MCPToolExecutor.kt, SkillManager.kt, PackageManagerToolPkgFacade.kt, ToolPkgParser.kt, ToolPkgComposeDslParser.kt
+
+#### T1: ToolRegistration 中的语音工具注册 [待确认]
+
+ToolRegistration 注册了所有可用工具，包括语音相关工具。砍掉语音后需要移除哪些工具的注册？
+- A: 仅移除TTS/STT工具注册
+- B: 移除所有语音相关工具（TTS/STT/语音唤醒/语音球）
+- C: 移除语音工具注册但保留工具名称常量，确保沙箱包兼容
+
+#### T2: ToolRegistration 中的角色卡管理工具 [待确认]
+
+StandardChatManagerTool 中包含角色卡相关的聊天管理功能（切换角色卡、群聊管理等）。砍掉角色卡后：
+- A: 完全移除角色卡相关工具方法
+- B: 移除UI暴露但保留工具注册，确保沙箱包兼容
+- C: 保留但标记为deprecated
+
+#### T3: AIToolHandler 中的工具权限系统 [待确认]
+
+AIToolHandler 通过 ToolGetter 根据权限级别过滤可用工具。权限级别重命名为"基本/高级"后，工具过滤逻辑是否需要调整？
+- A: 仅重命名，逻辑不变
+- B: 调整过滤规则，高级权限下也隐藏部分敏感工具
+- C: 重新设计权限过滤策略
+
+#### T4: AIToolHandler 中的工具钩子机制 [待确认]
+
+AIToolHandler 支持 AIToolHook 钩子机制，用于监听工具执行过程。简化后钩子机制是否保留？
+- A: 完全保留，沙箱包依赖此机制
+- B: 简化钩子类型，移除不常用的钩子事件
+
+#### T5: ToolExecutionLimits 中的限制值调整 [待确认]
+
+ToolExecutionLimits 定义了工具执行的限制（最大文件读取字节数、最大文本结果长度等）。简化后是否需要调整这些限制值？
+- A: 保持不变
+- B: 适当放宽限制，提升用户体验
+- C: 收紧限制，减少资源消耗
+
+#### T6: ToolProgressBus 中的进度广播机制 [待确认]
+
+ToolProgressBus 用于广播工具执行进度。简化后工具调用展示为一行文字，进度广播机制是否还需要？
+- A: 保留，进度信息用于悬浮窗气泡展示
+- B: 简化，只广播开始/完成/失败三种状态
+- C: 移除，工具调用展示不需要进度
+
+#### T7: MCPToolExecutor 的错误处理策略 [待确认]
+
+MCPToolExecutor 处理MCP工具调用时的错误处理。简化后错误信息如何展示给用户？
+- A: 工具调用行变红，用户可点击查看详细错误
+- B: 工具调用行变红，不提供详细错误信息
+- C: 工具调用行变红后自动变回灰色，错误信息记录到日志
+
+#### T8: SkillManager 中的技能扫描与加载 [待确认]
+
+SkillManager 负责技能的扫描、加载和导入。MCP/Skill/包管理合并后，SkillManager 的内部逻辑是否需要调整？
+- A: 保持不变，合并只影响UI层
+- B: 调整技能加载流程，与MCP和包管理统一入口
+
+#### T9: PackageManagerToolPkgFacade 中的UI路由查询 [待确认]
+
+PackageManagerToolPkgFacade 提供工具包的UI路由和导航入口查询。合并后原来的独立路由需要重定向：
+- A: 保持原有路由不变，新增统一页面路由
+- B: 原有路由重定向到统一页面
+- C: 移除原有路由，只保留统一页面路由
+
+#### T10: ToolPkgParser 中的manifest解析 [待确认]
+
+ToolPkgParser 解析工具包的manifest文件。简化后manifest格式是否需要调整？
+- A: 保持不变，确保向后兼容
+- B: 支持新格式但兼容旧格式
+
+#### T11: ToolPkgComposeDslParser 的DSL能力范围 [待确认]
+
+ToolPkgComposeDslParser 解析Compose DSL UI定义。简化后DSL支持的能力是否需要限制？
+- A: 保持不变，沙箱包需要完整的DSL能力
+- B: 限制部分DSL能力（如移除液态玻璃相关DSL）
+
+#### T12: AIToolHandler 中的工具调用计数与限制 [待确认]
+
+当前有工具调用次数限制（每轮对话最大工具调用次数）。简化后限制策略是否调整？
+- A: 保持不变
+- B: 放宽限制，允许更多工具调用
+- C: 收紧限制，减少资源消耗
+
+#### T13: ToolRegistration 中的终端工具 [待确认]
+
+ToolRegistration 注册了终端相关工具。终端UI简化后，终端工具的注册和能力是否调整？
+- A: 工具注册不变，仅UI简化
+- B: 移除终端配置相关工具，保留基本执行能力
+
+#### T14: MCPToolExecutor 与MCPBridge的通信方式 [待确认]
+
+MCPToolExecutor 通过MCPBridge与外部MCP服务通信。简化后通信方式是否调整？
+- A: 保持不变
+- B: 优化通信协议，减少延迟
+
+---
+
+## 模块四：记忆库系统
+
+> 涉及文件：MemoryLibrary.kt, MemoryRepository.kt, Memory.kt, MemorySearchConfig.kt, MemorySearchSettingsPreferences.kt, Embedding.kt, EmbeddingConverter.kt
+
+#### M1: MemoryLibrary 中的自动分类功能 [待确认]
+
+MemoryLibrary 有 autoCategorizeMemories() 自动分类记忆到文件夹的功能。简化后移除了文件夹导航UI，自动分类功能是否保留？
+- A: 保留自动分类逻辑，虽然UI不展示文件夹但数据层保留分类信息
+- B: 移除自动分类逻辑，所有记忆平铺存储
+- C: 保留分类但简化为自动标签，不使用文件夹层级
+
+#### M2: Memory 实体中的文档节点功能 [待确认]
+
+Memory 支持 documentPath/isDocumentNode/documentChunks，这是文档嵌入功能。是否保留？
+- A: 保留，文档嵌入是有用功能
+- B: 移除，简化记忆库
+- C: 保留数据模型但移除UI入口
+
+#### M3: Memory 实体中的文件夹路径字段 [待确认]
+
+Memory 有 folderPath 字段用于文件夹分类。移除文件夹导航UI后，该字段是否保留？
+- A: 保留字段，数据层不变
+- B: 移除字段，所有记忆不再有文件夹归属
+
+#### M4: MemoryLibrary 中的自动保存触发时机 [待确认]
+
+当前 MemoryLibrary 有自动保存功能。简化后自动保存的触发时机是否调整？
+- A: 保持不变（AI判断需要保存时触发 + 定时自动保存）
+- B: 仅保留AI判断触发，移除定时自动保存
+- C: 仅保留定时自动保存，移除AI判断触发
+
+#### M5: 记忆检索评分模式 [待重新提问]
+
+已确认权重配置为语义优先（keywordWeight=5.0, tagWeight=2.0, vectorWeight=8.0, edgeWeight=1.0）。评分模式选择哪种？
+- A: BALANCED（平衡模式）
+- B: KEYWORD_FIRST（关键词优先）
+- C: SEMANTIC_FIRST（语义优先）
+- D: 新增混合模式（根据查询类型自动切换）
+
+#### M6: 记忆自动注入的最大条数动态调整 [待确认]
+
+已确认最多5条。是否需要根据上下文剩余空间动态调整注入条数？
+- A: 固定5条，不动态调整
+- B: 动态调整，上下文空间不足时减少注入条数
+- C: 固定5条，但如果检索到的记忆相关性都很低则不注入
+
+#### M7: Embedding 向量嵌入的维度管理 [待确认]
+
+Embedding 实体包含嵌入维度和向量值。不同嵌入模型产生不同维度的向量。简化后如何处理维度不一致的问题？
+- A: 固定使用一种嵌入模型，确保维度一致
+- B: 支持多维度，检索时只比较同维度的向量
+- C: 切换嵌入模型时重新计算所有向量
+
+#### M8: MemorySearchSettingsPreferences 中的配置项 [待确认]
+
+MemorySearchSettingsPreferences 管理记忆检索的参数配置。简化后这些配置是否对用户可见？
+- A: 完全隐藏，系统自动管理
+- B: 通过斜杠命令 /memory 暴露部分配置
+- C: 保留在设置页面但简化
+
+#### M9: 记忆库的图谱关联（links/backlinks） [待确认]
+
+Memory 实体有 links 和 backlinks 关联。图谱可视化简化为只读后，关联的创建方式是否调整？
+- A: 保留AI自动创建关联，用户不可手动创建
+- B: 保留AI自动创建，同时保留API供沙箱包使用
+- C: 移除关联创建功能
+
+#### M10: 记忆库的标签系统 [待确认]
+
+Memory 有 tags 关联（MemoryTag）。简化后标签系统是否保留？
+- A: 保留，标签用于检索评分
+- B: 保留但移除用户手动管理标签的UI
+- C: 移除标签系统
+
+#### M11: Memory 实体中的 properties 扩展属性 [待确认]
+
+Memory 有 properties 扩展属性（MemoryProperty）。简化后是否保留？
+- A: 保留，扩展属性对沙箱包有用
+- B: 移除，简化数据模型
+
+#### M12: 记忆库的导入导出格式 [待确认]
+
+当前记忆库支持导入导出。简化后导入导出格式是否调整？
+- A: 保持不变
+- B: 简化为一键导出JSON，一键导入JSON
+- C: 合并到全局一键备份/恢复中，不再单独提供
+
+#### M13: 记忆库的 credibility 和 importance 字段 [待确认]
+
+已确认纳入评分但低权重（importance=1.0, credibility=0.5）。这两个字段的值由谁设置？
+- A: 完全由AI在保存记忆时自动设置
+- B: AI设置默认值，用户可手动调整
+- C: 系统根据记忆来源和使用频率自动计算
+
+#### M14: 记忆检索的时间衰减因子 [待确认]
+
+已确认时间衰减作为一项权重因子。具体的衰减公式是什么？
+- A: 线性衰减（距离现在越久分数越低）
+- B: 指数衰减（近期记忆权重远高于远期）
+- C: 阶梯衰减（今天/本周/本月/更早，不同阶梯不同权重）
+
+#### M15: 记忆库的搜索功能 [待确认]
+
+简化后保留搜索栏。搜索是仅搜索标题和内容，还是也搜索标签和属性？
+- A: 仅搜索标题和内容
+- B: 搜索标题、内容和标签
+- C: 全文搜索（包括属性和关联信息）
+
+---
+
+## 模块五：工作流系统
+
+> 涉及文件：Workflow.kt, WorkflowExecutor.kt, WorkflowScheduler.kt, WorkflowWorker.kt
+
+#### W1: 工作流触发机制 [待确认]
 
 当前工作流支持定时触发(cron)和语音唤醒触发。语音砍掉后：
 - A: 只保留定时触发
-- B: 保留定时触发 + 其他触发方式（如应用启动时、特定事件等）
+- B: 保留定时触发 + 事件触发（如应用启动时、收到通知时等）
+- C: 保留定时触发 + 事件触发 + 意图触发（如外部Intent）
 
-#### D4: 工具提示词中的语音工具 [待确认]
+#### W2: WorkflowExecutor 中的节点类型 [待确认]
 
-SystemToolPrompts 中包含了语音相关工具的提示词（TTS/STT等），砍掉语音后需要从工具提示词中移除这些描述。确认？
+Workflow 支持触发、执行、条件、逻辑和提取等节点类型。简化后是否需要调整节点类型？
+- A: 保持不变
+- B: 移除语音相关节点类型
+- C: 新增自动注入相关节点类型
 
-#### D5: 角色卡对聊天管理工具的影响 [待确认]
+#### W3: WorkflowScheduler 的调度方式 [待确认]
 
-StandardChatManagerTool 中可能包含角色卡相关的聊天管理功能（如切换角色卡、群聊管理等），砍掉角色卡后需要清理这些功能。确认？
+WorkflowScheduler 使用 WorkManager 管理定时调度。简化后调度方式是否调整？
+- A: 保持不变
+- B: 增加更灵活的调度选项（如仅WiFi下执行、仅充电时执行）
 
-#### D6: 记忆自动保存 [待确认]
+#### W4: 工作流UI重构的范围 [待确认]
 
-当前 MemoryLibrary 有自动保存功能（autoCategorizeMemories + 定时自动保存），简化后是否保持自动保存行为不变？
+工作流UI需要重构。重构的范围是什么？
+- A: 仅调整入口位置（移至侧边栏预留按钮区），内部UI不变
+- B: 调整入口 + 简化工作流编辑器UI
+- C: 全面重构工作流UI，参考shadcn/ui风格
 
-#### D7: 记忆库的文档节点功能 [待确认]
+#### W5: 工作流的执行日志 [待确认]
 
-Memory 实体支持 documentPath/isDocumentNode/documentChunks，这是文档嵌入功能。是否保留？
-- A: 保留，文档嵌入是有用功能
-- B: 移除，简化记忆库
+Workflow 有 executionLog（WorkflowExecutionLog）。简化后执行日志是否保留？
+- A: 保留，用户可查看历史执行记录
+- B: 保留但简化，只记录成功/失败状态
+- C: 移除执行日志
 
-#### D8: MCP/Skill/包管理的API重定向 [待确认]
+#### W6: 工作流与记忆库的交互 [待确认]
 
-合并这三个页面后，原来的独立导航路由需要重定向到新的统一页面。沙箱包通过 ToolPkgCommonBridgePlugin 访问包管理功能，这些桥接接口是否需要保持不变？
-- A: 保持桥接接口不变，只改UI路由
-- B: 桥接接口也需要调整
+工作流执行过程中是否可以读写记忆库？
+- A: 保留完整的记忆库读写能力
+- B: 仅保留读取能力
+- C: 移除工作流与记忆库的交互
 
-#### D9: 上下文自动注入的实现方式 [待确认]
+#### W7: 工作流的错误处理策略 [待确认]
 
-通知、屏幕内容等自动注入到上下文中，是通过什么方式注入？
-- A: 系统提示词注入（在SYSTEM_PROMPT中添加上下文信息section）
-- B: 作为用户消息的隐藏附件注入
-- C: 两者结合
+WorkflowExecutor 执行工作流时遇到错误如何处理？
+- A: 停止执行并通知用户
+- B: 跳过错误节点继续执行
+- C: 根据节点类型决定（条件节点跳过，执行节点停止）
 
-#### D10: 工具调用展示简化后的交互 [待确认]
+#### W8: 工作流模板系统 [待确认]
 
-工具调用展示简化为一行灰/绿/红文字后，用户是否还能点击展开查看工具调用的详细参数和结果？
-- A: 可以点击展开查看详情
-- B: 不可以，只显示一行状态文字
+ToolPkgTemplateModels 定义了工作流模板。简化后模板系统是否保留？
+- A: 保留，用户可从模板创建工作流
+- B: 保留但移除模板市场UI
+- C: 移除模板系统
+
+#### W9: 工作流的后台执行限制 [待确认]
+
+后台保活默认开启后，工作流在后台执行是否有时间限制？
+- A: 无限制，依赖后台保活持续执行
+- B: 设置最大执行时间（如30分钟）
+- C: 根据工作流复杂度动态设置限制
+
+#### W10: 工作流与沙箱包的集成 [待确认]
+
+工作流是否可以通过沙箱包扩展？
+- A: 保留完整的沙箱包集成能力
+- B: 保留但限制沙箱包可调用的工作流操作
+- C: 移除沙箱包与工作流的集成
+
+---
+
+## 模块六：数据模型与偏好管理
+
+> 涉及文件：CharacterCardManager.kt, ModelConfigManager.kt, ApiPreferences.kt, DisplayPreferencesManager.kt, PromptTagManager.kt, ActivePromptManager.kt, PromptVersionManager.kt, FunctionalConfigManager.kt, ExternalHttpApiPreferences.kt
+
+#### D1: CharacterCardManager 的清理策略 [待确认]
+
+CharacterCardManager 是角色卡系统的核心管理器，涉及1360行代码。砍掉角色卡后的清理策略：
+- A: 完全删除文件及所有引用
+- B: 保留数据模型但移除管理逻辑，确保数据库迁移兼容
+- C: 保留最小化的管理器，仅用于数据迁移
+
+#### D2: 角色卡数据迁移方案 [待重新提问]
+
+已有用户可能保存了角色卡数据。砍掉角色卡后这些数据如何处理？
+- A: 静默丢弃，不提供迁移
+- B: 将角色卡的设定文本提取为PromptTag（CHARACTER类型），保留用户数据
+- C: 提供一次性迁移提示，让用户选择保留哪些设定
+
+#### D3: ModelConfigManager 中的配置项简化 [待确认]
+
+已确认模型配置只保留4项（API URL、API Key、模型名称、温度）。ModelConfigManager 中其他配置项（Top P、最大token数、上下文长度等）如何处理？
+- A: 完全移除字段和逻辑，由系统自动计算
+- B: 保留字段但移除UI入口，使用智能默认值
+- C: 保留字段和逻辑，通过斜杠命令可访问
+
+#### D4: ApiPreferences 中的多API Key管理 [待确认]
+
+ApiKeyInfo 支持多API Key管理。简化后是否保留多Key功能？
+- A: 保留，多Key有助于负载均衡和容错
+- B: 简化为单Key
+- C: 保留多Key但简化UI
+
+#### D5: DisplayPreferencesManager 中的配置项清理 [待确认]
+
+DisplayPreferencesManager 管理FPS显示、通知开关、截图设置等。简化后哪些配置项需要移除？
+- A: 仅移除与砍掉功能相关的配置（如液态玻璃、虚拟形象相关）
+- B: 移除所有用户可配置的显示偏好，全部由系统自动管理
+- C: 保留核心配置（明暗模式、通知开关），移除其他
+
+#### D6: PromptTagManager 中的CHARACTER类型标签 [待确认]
+
+已确认CHARACTER类型标签保留但对用户不可见。具体行为：
+- A: 保留标签类型，用户不可创建/编辑CHARACTER标签，但系统内置标签仍注入提示词
+- B: 移除CHARACTER标签类型，角色设定完全通过硬编码人格实现
+- C: 将CHARACTER标签转换为FUNCTION类型，统一管理
+
+#### D7: ActivePromptManager 的简化 [待确认]
+
+ActivePromptManager 管理当前激活的提示词（角色卡或角色组）。砍掉角色卡后：
+- A: 完全移除，激活提示词改为固定使用内置人格
+- B: 简化为仅管理智能体模式（多智能体/单智能体）的切换
+- C: 保留但仅用于沙箱包的提示词管理
+
+#### D8: PromptVersionManager 的保留 [待确认]
+
+PromptVersionManager 管理提示词版本控制。简化后是否保留版本管理？
+- A: 保留，版本管理有助于系统升级时自动更新提示词
+- B: 移除，简化提示词管理逻辑
+
+#### D9: FunctionalConfigManager 中的功能-模型映射 [待确认]
+
+FunctionalConfigManager 管理不同功能类型与模型配置的映射。简化后是否保留？
+- A: 保留，不同功能可能需要不同模型配置
+- B: 移除，所有功能使用同一模型配置
+- C: 保留但简化为仅支持搜索功能使用不同模型
+
+#### D10: ExternalHttpApiPreferences 中的安全配置 [待确认]
+
+ExternalHttpApiPreferences 管理外部HTTP API的启用状态、端口和访问令牌。简化后安全配置是否调整？
+- A: 保持不变
+- B: 默认启用访问令牌，增强安全性
+- C: 移除端口配置，使用固定端口
+
+#### D11: CharacterGroupCardManager 的清理 [待确认]
+
+CharacterGroupCardManager 管理角色组卡。砍掉角色卡后是否与CharacterCardManager一起清理？
+- A: 是，一起完全删除
+- B: 保留数据模型用于数据库迁移兼容
+
+#### D12: PersonaCardChatHistoryManager 的清理 [待确认]
+
+PersonaCardChatHistoryManager 管理角色卡聊天历史。砍掉角色卡后聊天历史如何处理？
+- A: 完全删除，角色卡绑定的聊天历史转为普通聊天
+- B: 保留历史数据但移除角色卡关联
+
+#### D13: CharacterCardToolAccessResolver 的清理 [待确认]
+
+CharacterCardToolAccessResolver 解析角色卡的工具访问配置。砍掉角色卡后工具访问如何控制？
+- A: 完全移除，工具访问仅由权限级别控制
+- B: 保留工具访问控制逻辑但改为全局配置
+
+#### D14: ModelConfigData 中的 providerType [待确认]
+
+ModelConfigData 包含 providerType 字段标识API提供商。简化后是否保留多提供商支持？
+- A: 保留，用户可能使用不同提供商
+- B: 简化为仅支持OpenAI兼容API
+- C: 保留但简化提供商列表
+
+#### D15: CloudEmbeddingConfig 的保留 [待确认]
+
+CloudEmbeddingConfig 管理云端嵌入API配置。已确认优先本地嵌入。云端嵌入配置是否保留？
+- A: 保留作为回退方案
+- B: 移除，仅支持本地嵌入
+- C: 保留但隐藏配置UI
+
+---
+
+## 模块七：UI系统
+
+> 涉及文件：OperitScreens.kt, DrawerContent.kt, AgentChatInputSection.kt, SettingsScreen.kt, FloatingWindowDelegate.kt, ChatHistorySelector.kt, AttachmentSelector.kt, NavItem.kt, AppRouteCatalog.kt
+
+#### U1: OperitScreens 中的Screen路由清理 [待确认]
+
+OperitScreens 定义了所有Screen路由。砍掉功能后需要移除的Screen路由如何处理？
+- A: 完全移除路由定义和对应的Composable
+- B: 保留路由定义但重定向到主页面
+- C: 移除路由定义但保留Composable供沙箱包使用
+
+#### U2: DrawerContent 的侧边栏重构细节 [待确认]
+
+侧边栏重构为新建对话+预留按钮区+历史列表+底部设置。历史列表的加载策略是什么？
+- A: 一次性加载全部历史对话
+- B: 分页加载，滚动到底部时加载更多
+- C: 仅加载最近20条，搜索时加载更多
+
+#### U3: AgentChatInputSection 中的语音按钮移除 [待确认]
+
+AgentChatInputSection 中有语音输入按钮。砍掉语音后该按钮位置如何处理？
+- A: 完全移除，不替换
+- B: 替换为斜杠命令按钮
+- C: 替换为附件按钮
+
+#### U4: AgentChatInputSection 中的Tune按钮移除 [待确认]
+
+已确认移除Tune按钮，改为斜杠命令触发。Tune按钮的位置是否替换？
+- A: 完全移除，不替换
+- B: 替换为斜杠命令快捷按钮
+- C: 替换为模型切换按钮
+
+#### U5: 斜杠命令面板的实现方式 [待确认]
+
+已确认参考shadcn/ui Command组件。斜杠命令面板是独立组件还是嵌入输入框？
+- A: 独立弹出面板（类似VS Code命令面板）
+- B: 嵌入输入框上方（类似shadcn/ui Command）
+- C: 底部弹出Sheet
+
+#### U6: SettingsScreen 的分组重构 [待确认]
+
+已确认设置页面简化为4个子页面。设置页面的导航方式是什么？
+- A: 列表式（点击进入子页面）
+- B: Tab式（顶部标签切换）
+- C: 折叠式（同一页面内折叠展开）
+
+#### U7: FloatingWindowDelegate 的简化 [待确认]
+
+悬浮窗简化为黑色进度气泡后，FloatingWindowDelegate 的逻辑如何调整？
+- A: 完全重写，仅保留进度展示逻辑
+- B: 保留框架但移除输入和交互逻辑
+- C: 移除FloatingWindowDelegate，新建简单的进度气泡组件
+
+#### U8: ChatHistorySelector 中的分组功能 [待确认]
+
+已确认分组保留API移除UI。ChatHistorySelector 中分组相关的UI代码如何处理？
+- A: 完全移除分组UI代码
+- B: 隐藏分组UI但保留代码，确保沙箱包兼容
+- C: 保留分组UI但简化为仅显示分组名称
+
+#### U9: AttachmentSelector 中的自动注入UI [待确认]
+
+自动注入的附件（通知、屏幕内容等）在AttachmentSelector中如何体现？
+- A: 不在AttachmentSelector中体现，完全透明注入
+- B: 在AttachmentSelector中显示自动注入项的开关
+- C: 在AttachmentSelector中显示自动注入项的状态（已注入/未注入）
+
+#### U10: NavItem 的清理 [待确认]
+
+砍掉功能后需要移除的NavItem（如AssistantConfig、Help等）如何处理？
+- A: 完全移除NavItem定义
+- B: 保留但标记为deprecated
+- C: 移除UI暴露但保留枚举值
+
+#### U11: 工具调用展示的点击交互 [待确认]
+
+已提出工具调用展示简化为一行灰/绿/红文字。用户点击该文字后的行为：
+- A: 可点击展开查看工具调用的详细参数和结果
+- B: 不可点击，只显示一行状态文字
+- C: 长按可查看详情，短按无反应
+
+#### U12: 模型选择的弱化展示 [待确认]
+
+已确认弱化模型选择为灰色小字。点击该灰色小字后的行为：
+- A: 打开模型选择面板
+- B: 打开斜杠命令 /model
+- C: 打开模型配置设置页面
+
+#### U13: 帮助页面的去留 [待确认]
+
+当前有Help页面。简化后是否保留？
+- A: 保留，帮助信息对用户有价值
+- B: 移除，帮助信息整合到设置页面的关于部分
+- C: 移除独立页面，改为首次使用引导
+
+#### U14: 市场页面的统一 [待确认]
+
+MCP市场、Skill市场、提示词市场合并为一个市场入口。市场页面的展示方式：
+- A: Tab切换（MCP/Skill/提示词三个Tab）
+- B: 瀑布流混合展示，标签区分类型
+- C: 搜索优先，首页展示推荐，搜索结果按类型过滤
+
+#### U15: 标签市场的去留 [待确认]
+
+TagMarket 提供预设标签的浏览和安装。简化后是否保留？
+- A: 保留但简化UI
+- B: 移除，标签由系统自动管理
+- C: 保留但合并到统一市场中
+
+---
+
+## 模块八：后台服务系统
+
+> 涉及文件：AIForegroundService.kt, ForegroundServiceCompat.kt, ActivityLifecycleManager.kt, OperitApplication.kt
+
+#### S1: 后台保活默认开启后的通知行为 [待重新提问]
+
+后台保活默认开启后，前台服务通知如何展示？
+- A: 常驻通知栏，显示"Operit AI正在运行"
+- B: 常驻通知栏，显示当前AI任务进度
+- C: 仅在有活跃AI任务时显示通知，空闲时隐藏
+
+#### S2: AIForegroundService 中的唤醒监听清理 [待确认]
+
+AIForegroundService 包含 startWakeListeningLocked() 和 startPersonalWakeListening() 唤醒监听。砍掉语音后：
+- A: 完全移除唤醒监听逻辑
+- B: 保留唤醒监听框架但移除语音唤醒实现
+- C: 保留但改为其他触发方式（如蓝牙耳机按键）
+
+#### S3: AIForegroundService 中的外部HTTP服务管理 [待确认]
+
+AIForegroundService 管理外部HTTP聊天服务的启停。简化后是否调整？
+- A: 保持不变
+- B: 将HTTP服务管理移至独立组件
+- C: 默认不启动HTTP服务，用户手动启用
+
+#### S4: ForegroundServiceCompat 的兼容性 [待确认]
+
+ForegroundServiceCompat 处理不同Android版本的前台服务启动。简化后是否需要更新兼容逻辑？
+- A: 保持不变
+- B: 更新以适配Android 14+的前台服务类型限制
+- C: 简化，移除旧版本兼容代码
+
+#### S5: ActivityLifecycleManager 中的虚拟屏幕状态清理 [待确认]
+
+ActivityLifecycleManager 在应用前后台切换时管理虚拟屏幕和Shower状态。简化后虚拟屏幕相关逻辑是否保留？
+- A: 保留，PhoneAgent依赖虚拟屏幕
+- B: 移除，虚拟屏幕功能不再需要
+- C: 保留但简化状态管理
+
+#### S6: OperitApplication 中的初始化顺序 [待确认]
+
+OperitApplication 在启动时初始化多个组件。简化后是否需要调整初始化顺序或移除部分初始化？
+- A: 移除角色卡、语音、虚拟形象相关的初始化
+- B: 仅移除初始化，保留延迟加载机制
+- C: 全面优化初始化流程，提升启动速度
+
+#### S7: 后台保活与电池优化的冲突 [待确认]
+
+后台保活默认开启可能与系统电池优化冲突。如何处理？
+- A: 引导用户将应用加入电池优化白名单
+- B: 自动请求忽略电池优化
+- C: 不处理，由用户自行管理
+
+#### S8: AIForegroundService 中的悬浮窗控制 [待确认]
+
+AIForegroundService 控制悬浮窗的显示。悬浮窗简化后控制逻辑如何调整？
+- A: 简化为仅控制进度气泡的显示/隐藏
+- B: 完全重写悬浮窗控制逻辑
+- C: 保留控制框架但移除模式切换逻辑
+
+#### S9: 前台服务的停止条件 [待确认]
+
+当前前台服务在什么条件下停止？简化后停止条件是否调整？
+- A: AI任务完成后自动停止
+- B: 用户手动停止
+- C: AI任务完成后延迟一段时间（如5分钟）再停止，避免频繁启停
+
+#### S10: OperitApplication 中的全局异常处理 [待确认]
+
+OperitApplication 是否有全局异常处理机制？简化后是否需要增强？
+- A: 保持当前异常处理不变
+- B: 增加全局异常捕获和日志记录
+- C: 增加用户友好的错误提示
+
+---
+
+## 模块九：Web-Chat与外部API
+
+> 涉及文件：ExternalChatHttpServer.kt, WebChatHttpBridge.kt, ExternalHttpApiPreferences.kt, web-chat/前端模块
+
+#### E1: WebChatHttpBridge 中的角色选择器API [待确认]
+
+已确认移除 /character-selector API。移除后该端点是返回404还是重定向？
+- A: 返回404
+- B: 返回空响应（200 OK，空数据）
+- C: 重定向到模型选择器API
+
+#### E2: WebChatHttpBridge 中的聊天组管理API [待确认]
+
+已确认聊天分组保留API移除UI。/api/web/chat-groups API是否保留？
+- A: 保留，沙箱包可能依赖
+- B: 移除，聊天分组功能完全废弃
+- C: 保留但标记为deprecated
+
+#### E3: ExternalChatHttpServer 的认证机制 [待确认]
+
+ExternalChatHttpServer 支持访问令牌认证。简化后认证机制是否调整？
+- A: 保持不变
+- B: 默认启用认证，增强安全性
+- C: 增加IP白名单功能
+
+#### E4: web-chat前端模块的移除范围 [待确认]
+
+已确认移除Web UI保留API。web-chat目录下的React组件是否完全删除？
+- A: 完全删除web-chat/src/下的所有React组件
+- B: 保留chatApi.ts等API封装，移除UI组件
+- C: 保留最小化的健康检查页面
+
+#### E5: WebChatHttpBridge 中的流式响应 [待确认]
+
+WebChatHttpBridge 支持流式响应。简化后流式响应是否保留？
+- A: 保留，外部调用者依赖流式响应
+- B: 移除，改为轮询方式
+- C: 保留但优化流式响应的性能
+
+#### E6: ExternalChatHttpServer 的端口配置 [待确认]
+
+当前端口通过ExternalHttpApiPreferences配置。简化后是否固定端口？
+- A: 保持可配置
+- B: 固定使用某个端口（如8080）
+- C: 自动选择可用端口
+
+#### E7: WebChatHttpBridge 中的文件上传API [待确认]
+
+/api/web/uploads API支持文件上传。简化后是否保留？
+- A: 保留，外部调用者可能需要上传文件
+- B: 移除，简化API
+- C: 保留但限制上传大小
+
+#### E8: WebChatHttpBridge 中的记忆操作API [待确认]
+
+/api/web/actions 支持记忆更新和对话摘要。简化后是否保留？
+- A: 保留
+- B: 移除记忆更新，保留对话摘要
+- C: 全部保留但简化参数
+
+---
+
+## 模块十：备份系统
+
+> 涉及文件：RoomDatabaseBackupManager.kt, RawSnapshotBackupManager.kt, RoomDatabaseBackupPreferences.kt, RoomDatabaseBackupRestoreLock.kt, RoomDatabaseBackupScheduler.kt, RoomDatabaseBackupWorker.kt, RoomDatabaseRestoreManager.kt, OperitBackupDirs.kt
+
+#### B1: 备份系统的简化范围 [待确认]
+
+已确认简化为一键备份/恢复。当前的两种备份方式（Room数据库备份和Raw快照备份）如何合并？
+- A: 仅保留Room数据库备份，移除Raw快照备份
+- B: 合并为统一的备份流程，内部仍使用两种方式
+- C: 保留两种方式但UI只暴露一个按钮
+
+#### B2: RawSnapshotBackupManager 的去留 [待确认]
+
+RawSnapshotBackupManager 实现Raw快照备份。简化后是否完全移除？
+- A: 完全移除
+- B: 保留但标记为deprecated
+- C: 保留作为内部备份机制
+
+#### B3: RoomDatabaseBackupScheduler 的自动备份 [待确认]
+
+RoomDatabaseBackupScheduler 管理自动备份调度。简化后是否保留自动备份？
+- A: 保留自动备份，用户无感知
+- B: 移除自动备份，仅支持手动一键备份
+- C: 保留自动备份但频率降低
+
+#### B4: 备份恢复的冲突处理 [待确认]
+
+恢复备份时如果当前已有数据，如何处理冲突？
+- A: 直接覆盖当前数据
+- B: 合并数据（保留两者）
+- C: 提示用户选择覆盖或合并
+
+#### B5: RoomDatabaseBackupRestoreLock 的作用 [待确认]
+
+RoomDatabaseBackupRestoreLock 防止并发恢复操作。简化后是否保留？
+- A: 保留，防止数据损坏
+- B: 移除，简化恢复流程
+
+#### B6: 备份文件格式 [待确认]
+
+当前备份文件格式是什么？简化后是否需要调整？
+- A: 保持当前格式不变
+- B: 统一为ZIP格式，包含数据库和配置文件
+- C: 使用标准格式（如JSON）以提高兼容性
+
+#### B7: 角色卡数据在备份中的处理 [待确认]
+
+砍掉角色卡后，旧版备份中可能包含角色卡数据。恢复时如何处理？
+- A: 忽略角色卡数据，恢复其他数据
+- B: 将角色卡设定转换为PromptTag后恢复
+- C: 提示用户角色卡数据不可恢复
+
+#### B8: 备份的存储位置 [待确认]
+
+OperitBackupDirs 定义了备份目录。简化后备份存储位置是否调整？
+- A: 保持不变
+- B: 使用系统标准的Downloads目录
+- C: 使用应用私有目录，通过Share Intent导出
+
+#### B9: 大数据量备份的性能 [待确认]
+
+数据量较大时备份可能耗时较长。是否需要进度提示？
+- A: 需要进度提示，显示百分比
+- B: 需要进度提示，仅显示"备份中..."
+- C: 不需要，后台静默完成
+
+#### B10: 备份的加密 [待确认]
+
+当前备份是否加密？简化后是否需要增加加密？
+- A: 保持当前状态（不加密）
+- B: 增加可选的密码加密
+- C: 默认加密，使用设备凭据
+
+---
+
+## 模块十一：代理系统
+
+> 涉及文件：PhoneAgent.kt, VirtualDisplayManager.kt, ShowerController.kt, ShowerBinderRegistry.kt, ShowerBinderReceiver.kt, CliToolModeSupport.kt
+
+#### A1: PhoneAgent 的保留 [待确认]
+
+PhoneAgent 是基于AI的手机自动化代理。简化后是否保留？
+- A: 保留，手机自动化是核心功能
+- B: 保留但简化，移除部分自动化能力
+- C: 移除，手机自动化过于复杂
+
+#### A2: VirtualDisplayManager 的保留 [待确认]
+
+VirtualDisplayManager 管理虚拟显示。PhoneAgent依赖虚拟显示进行屏幕感知。简化后是否保留？
+- A: 保留，PhoneAgent需要虚拟显示
+- B: 保留但简化，仅支持截图功能
+- C: 移除，改用无障碍服务的屏幕捕获
+
+#### A3: ShowerController 与Shower服务的交互 [待确认]
+
+ShowerController 封装了对Shower服务的调用。简化后Shower服务的依赖是否保留？
+- A: 保留，Shower服务提供虚拟显示能力
+- B: 移除Shower依赖，改用系统无障碍服务
+- C: 保留但简化交互接口
+
+#### A4: CliToolModeSupport 中的隐藏工具目录 [待确认]
+
+CliToolModeSupport 构建隐藏工具目录，提供安全的工具调用方式。简化后是否保留？
+- A: 保留，CLI工具模式对高级用户有价值
+- B: 移除，简化工具调用机制
+- C: 保留但简化隐藏工具的构建逻辑
+
+#### A5: PhoneAgent 的Vision-Language模型依赖 [待确认]
+
+PhoneAgent 依赖Vision-Language模型解析屏幕内容。该模型的配置是否简化？
+- A: 保持当前配置方式
+- B: 简化为自动选择可用模型
+- C: 移除VLM依赖，改用纯文本屏幕解析
+
+#### A6: ShowerBinderRegistry 的Binder通信 [待确认]
+
+ShowerBinderRegistry 管理与Shower服务的Binder通信。简化后是否保留？
+- A: 保留，Binder通信是跨进程交互的基础
+- B: 移除，改用其他IPC方式
+- C: 保留但简化注册逻辑
+
+#### A7: PhoneAgent 的操作执行确认 [待确认]
+
+PhoneAgent 执行操作前是否需要用户确认？
+- A: 保持当前确认策略
+- B: 增加确认频率，提升安全性
+- C: 减少确认频率，提升自动化效率
+
+#### A8: CliToolModeSupport 中的代理调用规则 [待确认]
+
+CliToolModeSupport 定义了代理调用规则。简化后规则是否调整？
+- A: 保持不变
+- B: 简化规则，移除复杂的调用链
+- C: 重新设计规则体系
+
+#### A9: PhoneAgentJobRegistry 的任务注册 [待确认]
+
+PhoneAgentJobRegistry 管理PhoneAgent的任务注册。简化后是否保留？
+- A: 保留，任务注册是PhoneAgent的核心机制
+- B: 简化任务注册流程
+- C: 移除，改用直接调用方式
+
+#### A10: 代理系统与权限级别的关联 [待确认]
+
+PhoneAgent 的操作受权限级别控制。权限重命名为"基本/高级"后，代理系统的权限检查是否调整？
+- A: 仅重命名，逻辑不变
+- B: 高级权限下PhoneAgent才能使用
+- C: 基本权限下也可使用部分PhoneAgent功能
+
+---
+
+## 模块十二：MCP系统
+
+> 涉及文件：MCPBridge.kt, MCPRepository.kt, MCPLocalServer.kt, MCPJson.kt, MCPPackage.kt, MCPServerConfig.kt, MCPTool.kt, MCPToolParameter.kt
+
+#### M1: MCPBridge 的服务注册机制 [待确认]
+
+MCPBridge 实现MCP服务注册和工具调用。合并后MCPBridge的接口是否调整？
+- A: 保持不变，合并只影响UI
+- B: 调整注册接口，统一MCP/Skill/包管理的注册流程
+- C: 保持接口不变但优化内部实现
+
+#### M2: MCPLocalServer 的本地服务管理 [待确认]
+
+MCPLocalServer 管理本地MCP服务器的启停。简化后本地MCP服务是否保留？
+- A: 保留，本地MCP服务对沙箱包有用
+- B: 移除，简化MCP架构
+- C: 保留但优化启动流程
+
+#### M3: MCPRepository 的配置持久化 [待确认]
+
+MCPRepository 管理MCP配置的持久化。合并后配置存储是否调整？
+- A: 保持不变
+- B: 合并MCP/Skill/包管理的配置存储
+- C: 迁移到统一的配置管理器
+
+#### M4: MCPServerConfig 的配置项 [待确认]
+
+MCPServerConfig 定义MCP服务器配置。简化后配置项是否调整？
+- A: 保持不变
+- B: 简化配置项，移除高级选项
+- C: 增加配置验证和错误提示
+
+#### M5: MCPTool 的工具描述格式 [待确认]
+
+MCPTool 定义MCP工具的描述格式。简化后是否需要调整工具描述的详细程度？
+- A: 保持不变
+- B: 简化描述，减少token消耗
+- C: 根据权限级别动态调整描述详细程度
+
+#### M6: MCP与Skill的统一管理 [待确认]
+
+合并后MCP和Skill在数据层是否统一管理？
+- A: 保持独立管理，仅UI层合并
+- B: 统一为扩展管理器，内部区分类型
+- C: 完全统一，不再区分MCP和Skill
+
+#### M7: MCPBridge 的错误恢复机制 [待确认]
+
+MCPBridge 与外部MCP服务通信时可能断连。错误恢复策略是什么？
+- A: 自动重连
+- B: 标记为不可用，等待用户手动重连
+- C: 自动重连有限次数，超过后标记不可用
+
+#### M8: MCP工具的权限控制 [待确认]
+
+MCP工具是否受权限级别控制？
+- A: 是，与系统工具一样受权限级别过滤
+- B: 否，MCP工具一旦安装即可使用
+- C: 部分受控，敏感操作需要权限
+
+#### M9: MCP服务器的健康检查 [待确认]
+
+MCP服务器是否有健康检查机制？
+- A: 有，定期检查服务器可用性
+- B: 没有，仅在调用时检测
+- C: 有，在应用启动和工具调用前检查
+
+#### M10: MCP配置的导入导出 [待确认]
+
+MCP配置是否支持导入导出？
+- A: 支持，通过全局备份恢复
+- B: 不支持，用户需手动配置
+- C: 支持独立的MCP配置导入导出
+
+---
+
+## 模块十三：沙箱包系统
+
+> 涉及文件：ToolPkgParser.kt, ToolPkgComposeDslParser.kt, ToolPkgHookModels.kt, ToolPkgMainRegistrationScriptParser.kt, ToolPkgTemplateModels.kt, PackageDebugRefreshReceiver.kt, ToolPkgDebugInstallReceiver.kt, ToolPkgComposeDslDebugDumpReceiver.kt
+
+#### P1: ToolPkgParser 的manifest版本兼容 [待确认]
+
+ToolPkgParser 解析不同版本的manifest。简化后是否需要更新manifest版本号？
+- A: 保持当前版本号，确保向后兼容
+- B: 新增版本号但兼容旧版本
+- C: 强制升级manifest版本
+
+#### P2: ToolPkgHookModels 中的钩子类型 [待确认]
+
+ToolPkgHookModels 定义了多种钩子类型（XML渲染、生命周期、提示词轮次等）。简化后是否需要移除部分钩子类型？
+- A: 保持不变，沙箱包可能依赖各种钩子
+- B: 移除与砍掉功能相关的钩子（如语音相关钩子）
+- C: 审查并移除不常用的钩子类型
+
+#### P3: ToolPkgMainRegistrationScriptParser 中的UI模块注册 [待确认]
+
+ToolPkgMainRegistrationScriptParser 解析UI模块注册。合并后UI模块的路由如何处理？
+- A: 保持原有路由，新增统一入口
+- B: 原有路由重定向到统一页面下的子路由
+- C: 完全重新设计路由体系
+
+#### P4: ToolPkgMainRegistrationScriptParser 中的导航条目注册 [待确认]
+
+沙箱包可以注册导航条目。合并后导航条目的展示位置如何调整？
+- A: 保持原有位置
+- B: 统一展示在合并页面的对应区域
+- C: 移除导航条目注册能力
+
+#### P5: PackageDebugRefreshReceiver 的调试功能 [待确认]
+
+PackageDebugRefreshReceiver 用于调试时刷新包。简化后调试功能是否保留？
+- A: 保留，开发者需要调试功能
+- B: 移除，减少攻击面
+- C: 保留但仅在Debug构建中可用
+
+#### P6: ToolPkgComposeDslDebugDumpReceiver 的调试功能 [待确认]
+
+ToolPkgComposeDslDebugDumpReceiver 用于调试时Dump DSL。同上，是否保留？
+- A: 保留，仅Debug构建可用
+- B: 移除
+- C: 保留但增加权限控制
+
+#### P7: ToolPkgTemplateModels 中的工作区模板 [待确认]
+
+ToolPkgTemplateModels 定义了工作区模板。简化后工作区模板是否保留？
+- A: 保留，用户可从模板创建工作区
+- B: 移除，简化模板系统
+- C: 保留但移除模板市场UI
+
+#### P8: 沙箱包的JavaScript引擎 [待确认]
+
+沙箱包通过JsEngine执行JavaScript代码。简化后JsEngine的能力是否限制？
+- A: 保持不变，沙箱包需要完整的JS能力
+- B: 限制部分API访问（如移除语音相关API）
+- C: 增加沙箱安全限制
+
+#### P9: 沙箱包与系统工具的交互 [待确认]
+
+沙箱包通过ToolPkgCommonBridgePlugin与系统交互。合并后桥接接口是否调整？
+- A: 保持不变，确保兼容性
+- B: 调整部分接口，增加统一管理相关接口
+- C: 完全重新设计桥接接口
+
+#### P10: 沙箱包的生命周期管理 [待确认]
+
+ToolPkgToolLifecycleBridge 管理包的生命周期。简化后生命周期管理是否调整？
+- A: 保持不变
+- B: 简化生命周期状态（如移除暂停状态）
+- C: 增加自动清理不活跃包的机制
+
+---
+
+## 模块十四：砍除模块清理
+
+> 涉及角色卡、虚拟形象、语音、Bubble样式、Classic输入、液态玻璃主题、深度搜索
+
+#### R1: 角色卡系统的引用清理范围 [待确认]
+
+角色卡系统被多个模块引用（ChatViewModel、AIMessageManager、WebChatHttpBridge、ChatDao等）。清理策略：
+- A: 逐一清理所有引用，确保编译通过
+- B: 先移除核心管理器，再逐步清理引用
+- C: 保留接口定义，移除实现
+
+#### R2: 虚拟形象模块的C++原生库清理 [待确认]
+
+dragonbones/、fbx/、mmd/ 是C++原生模块。移除后是否需要清理CMakeLists.txt和gradle配置？
+- A: 完全清理，包括CMakeLists.txt和build.gradle.kts
+- B: 仅清理app层的引用，保留原生模块目录
+- C: 完全清理并从settings.gradle.kts中移除模块
+
+#### R3: 语音服务的Provider清理 [待确认]
+
+语音服务有多个Provider（OpenAI、Doubao、SiliconFlow、MiniMax等）。清理范围：
+- A: 完全移除所有Provider实现
+- B: 移除Provider实现但保留接口定义
+- C: 移除Provider实现和接口定义
+
+#### R4: Bubble样式的资源清理 [待确认]
+
+Bubble样式有专属的drawable资源和字符串资源。清理范围：
+- A: 完全清理所有Bubble相关资源
+- B: 仅清理Kotlin代码，资源后续统一清理
+- C: 清理代码和资源但保留字符串供翻译参考
+
+#### R5: Classic输入模式的设置栏清理 [待确认]
+
+ClassicChatSettingsBar 有独立的偏好设置。清理时是否需要重置用户偏好？
+- A: 清理代码并重置相关偏好为默认值
+- B: 仅清理代码，偏好自然失效
+- C: 清理代码并在下次启动时迁移偏好
+
+#### R6: 液态玻璃主题的清理范围 [待确认]
+
+液态玻璃主题在多个UI组件中使用（DrawerContent、命令框样式等）。清理策略：
+- A: 完全移除liquidGlass目录和所有引用
+- B: 移除liquidGlass目录但保留基础模糊效果
+- C: 逐步替换为Material 3默认效果
+
+#### R7: 深度搜索插件的清理 [待确认]
+
+examples/deepsearching/ 是深度搜索插件。清理范围：
+- A: 完全移除目录
+- B: 移除但保留文档说明
+- C: 保留目录但标记为deprecated
+
+#### R8: 自定义表情资源的清理 [待确认]
+
+assets/emoji/ 目录包含大量表情图片。砍掉桌宠后这些资源是否清理？
+- A: 完全清理
+- B: 保留，其他功能可能使用
+- C: 清理但保留目录结构
+
+#### R9: 砍除功能后的数据库迁移 [待确认]
+
+砍除功能涉及多个数据表（角色卡、群聊、自定义表情等）。数据库迁移策略：
+- A: 新增迁移版本，删除相关表
+- B: 新增迁移版本，保留表但清空数据
+- C: 不做迁移，旧数据自然失效
+
+#### R10: 砍除功能后的字符串资源清理 [待确认]
+
+strings.xml中有大量与砍除功能相关的字符串。清理策略：
+- A: 逐一清理所有相关字符串
+- B: 批量清理，后续通过lint检查遗漏
+- C: 暂不清理，最后统一清理
+
+#### R11: 砍除功能对ObjectBox的影响 [待确认]
+
+项目同时使用Room和ObjectBox。砍除功能后ObjectBox的模型是否需要调整？
+- A: 需要调整，移除相关Entity
+- B: 不需要，ObjectBox模型与砍除功能无关
+- C: 需要审查确认
+
+#### R12: 砍除功能对proguard规则的影响 [待确认]
+
+proguard-rules.pro 可能包含砍除功能相关的keep规则。是否需要清理？
+- A: 需要清理，移除不再需要的keep规则
+- B: 不需要，多余的keep规则不影响运行
+- C: 需要审查确认
+
+#### R13: 砍除功能后的依赖库清理 [待确认]
+
+砍除功能可能引入了特定的依赖库（如DragonBones SDK、语音SDK等）。是否需要从build.gradle.kts中移除？
+- A: 完全移除相关依赖
+- B: 保留但标记为deprecated
+- C: 逐步移除，先确认无其他模块依赖
+
+#### R14: 砍除功能对AndroidManifest的影响 [待确认]
+
+AndroidManifest.xml 中可能声明了砍除功能相关的Service、Activity、权限。是否需要清理？
+- A: 完全清理相关声明
+- B: 保留权限声明（可能被沙箱包使用）
+- C: 逐一审查后决定
+
+#### R15: 砍除功能的AIDL文件清理 [待确认]
+
+aidl/ 目录下有AccessibilityEvent.aidl等文件。砍除语音后AIDL文件是否需要清理？
+- A: 保留，无障碍功能仍在使用
+- B: 清理语音相关的AIDL文件
+- C: 全部保留，AIDL文件不影响包大小
+
+---
+
+## 模块十五：数据库与数据转换
+
+> 涉及文件：AppDatabase.kt, ChatDao.kt, MessageDao.kt, ChatFormatConverter.kt, ChatBoxConverter.kt, ChatGPTConverter.kt, MarkdownConverter.kt, HtmlExporter.kt, MarkdownExporter.kt
+
+#### DB1: AppDatabase 的迁移策略 [待确认]
+
+AppDatabase 定义了数据库版本和迁移策略。砍除功能后需要新增迁移版本。迁移的优先级：
+- A: 高优先级，砍除功能时同步完成迁移
+- B: 中优先级，砍除功能后单独处理迁移
+- C: 低优先级，先确保功能正常再处理迁移
+
+#### DB2: ChatDao 中的角色卡相关查询 [待确认]
+
+ChatDao 包含角色卡绑定的聊天查询。砍掉角色卡后这些查询如何处理？
+- A: 移除角色卡相关查询方法
+- B: 保留查询方法但返回空结果
+- C: 保留查询方法供沙箱包使用
+
+#### DB3: ChatDao 中的聊天分组查询 [待确认]
+
+已确认聊天分组保留API移除UI。ChatDao中的分组查询是否保留？
+- A: 保留，API层需要
+- B: 移除，分组功能完全废弃
+- C: 保留但标记为deprecated
+
+#### DB4: ChatFormatConverter 的格式支持 [待确认]
+
+ChatFormatConverter 支持多种聊天记录格式转换。简化后是否减少支持的格式？
+- A: 保持不变
+- B: 移除不常用的格式（如ChatBox格式）
+- C: 仅保留JSON格式
+
+#### DB5: 导出功能的保留 [待确认]
+
+HtmlExporter、MarkdownExporter、TextExporter 提供多种导出格式。简化后是否保留？
+- A: 全部保留
+- B: 仅保留Markdown和纯文本导出
+- C: 仅保留Markdown导出
+
+#### DB6: MessageDao 中的消息变体 [待确认]
+
+MessageVariantDao 管理消息变体（如编辑前的原始消息）。简化后消息变体功能是否保留？
+- A: 保留
+- B: 移除，简化消息存储
+- C: 保留但限制变体数量
+
+#### DB7: AppDatabase 中的数据自动清理 [待确认]
+
+AppDatabase 是否有自动清理旧数据的机制？简化后是否需要增加？
+- A: 无自动清理，保持不变
+- B: 增加自动清理超过一定时间的聊天记录
+- C: 增加自动清理但仅清理摘要数据，保留元数据
+
+#### DB8: ChatDao 中的批量操作性能 [待确认]
+
+ChatDao 有批量更新和删除操作。简化后是否需要优化性能？
+- A: 保持不变
+- B: 优化批量操作的事务管理
+- C: 增加分页查询支持
+
+#### DB9: 数据库的加密 [待确认]
+
+当前数据库是否加密？简化后是否需要增加加密？
+- A: 不加密，保持不变
+- B: 增加SQLCipher加密
+- C: 仅加密敏感表（如API Key表）
+
+#### DB10: ChatFormatDetector 的自动检测 [待确认]
+
+ChatFormatDetector 自动检测聊天记录格式。简化后是否保留？
+- A: 保留，导入功能需要
+- B: 移除，仅支持一种格式
+- C: 保留但简化检测逻辑
 
 ---
 
