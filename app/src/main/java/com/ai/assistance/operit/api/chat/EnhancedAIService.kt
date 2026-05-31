@@ -39,7 +39,7 @@ import com.ai.assistance.operit.data.model.ModelConfigData
 import com.ai.assistance.operit.data.model.AITool
 import com.ai.assistance.operit.data.preferences.ApiPreferences
 import com.ai.assistance.operit.data.preferences.ExternalHttpApiPreferences
-import com.ai.assistance.operit.data.preferences.WakeWordPreferences
+
 import com.ai.assistance.operit.util.stream.MutableSharedStream
 import com.ai.assistance.operit.util.stream.Stream
 import com.ai.assistance.operit.util.stream.StreamCollector
@@ -76,7 +76,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import com.ai.assistance.operit.data.repository.CustomEmojiRepository
+
 import com.ai.assistance.operit.data.preferences.CharacterCardManager
 import com.ai.assistance.operit.data.preferences.CharacterCardToolAccessResolver
 import com.ai.assistance.operit.data.preferences.UserPreferencesManager
@@ -360,7 +360,7 @@ class EnhancedAIService private constructor(private val context: Context) {
     @Volatile private var isServiceManagerInitialized = false
 
     // 添加ConversationService实例
-    private val conversationService = ConversationService(context, CustomEmojiRepository.getInstance(context))
+    private val conversationService = ConversationService(context)
 
     // 添加FileBindingService实例
     private val fileBindingService = FileBindingService(context)
@@ -2920,7 +2920,7 @@ class EnhancedAIService private constructor(private val context: Context) {
         val refCount = FOREGROUND_REF_COUNT.incrementAndGet()
         val appInForeground = ActivityLifecycleManager.getCurrentActivity() != null
         val alwaysListeningEnabled = runCatching {
-            runBlocking { WakeWordPreferences(context).alwaysListeningEnabledFlow.first() }
+            runBlocking { false }
         }.getOrDefault(false)
         val externalHttpEnabled = runCatching {
             runBlocking { ExternalHttpApiPreferences.getInstance(context).enabledFlow.first() }

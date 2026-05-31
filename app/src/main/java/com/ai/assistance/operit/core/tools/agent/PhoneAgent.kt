@@ -17,7 +17,7 @@ import com.ai.assistance.operit.core.tools.AIToolHandler
 import com.ai.assistance.operit.core.tools.AppListData
 import com.ai.assistance.operit.core.tools.defaultTool.standard.StandardUITools
 import com.ai.assistance.operit.core.tools.system.AndroidPermissionLevel
-import com.ai.assistance.operit.core.tools.system.ShizukuAuthorizer
+
 import com.ai.assistance.operit.data.model.AITool
 import com.ai.assistance.operit.data.model.ToolParameter
 import com.ai.assistance.operit.data.model.ToolResult
@@ -97,9 +97,7 @@ private fun resolvePrivilegedExecutionState(
         isAdbOrHigher &&
         preferredLevel == AndroidPermissionLevel.DEBUGGER
     ) {
-        val isShizukuRunning = ShizukuAuthorizer.isShizukuServiceRunning()
-        val hasShizukuPermission = if (isShizukuRunning) ShizukuAuthorizer.hasShizukuPermission() else false
-        isShizukuRunning && hasShizukuPermission
+        false
     } else {
         true
     }

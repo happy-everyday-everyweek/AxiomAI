@@ -30,6 +30,10 @@ android {
         debug {
             isMinifyEnabled = false
         }
+        create("nightly") {
+            isMinifyEnabled = false
+            matchingFallbacks += listOf("release")
+        }
     }
 
     externalNativeBuild {

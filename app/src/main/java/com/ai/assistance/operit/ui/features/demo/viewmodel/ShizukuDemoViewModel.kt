@@ -9,7 +9,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.ai.assistance.operit.core.tools.AIToolHandler
-import com.ai.assistance.operit.core.tools.system.RootAuthorizer
+
 import com.ai.assistance.operit.R
 import com.ai.assistance.operit.ui.features.demo.state.DemoStateManager
 import kotlinx.coroutines.Dispatchers
@@ -39,8 +39,6 @@ class ShizukuDemoViewModel(application: Application) : AndroidViewModel(applicat
 
     /** Initialize the ViewModel with context data */
     fun initialize(context: Context) {
-        // 初始化Root授权器
-        RootAuthorizer.initialize(context)
         // 只需要调用stateManager的initialize方法
         stateManager.initialize()
     }
@@ -54,24 +52,12 @@ class ShizukuDemoViewModel(application: Application) : AndroidViewModel(applicat
     fun initializeAsync(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // 初始化Root授权器 - 在IO线程进行初始化
-                RootAuthorizer.initialize(context)
+                stateManager.updateRootStatus(false, false)
 
-                // 直接从RootAuthorizer获取当前状态
-                val isDeviceRooted = RootAuthorizer.isRooted.value
-                val hasRootAccess = RootAuthorizer.hasRootAccess.value
-
-                // 更新状态
-                withContext(Dispatchers.Main) {
-                    stateManager.updateRootStatus(isDeviceRooted, hasRootAccess)
-                }
-
-                // 调用stateManager的异步初始化方法
                 stateManager.initializeAsync()
             } catch (e: Exception) {
                 AppLogger.e("ShizukuDemoViewModel", "初始化时出错: ${e.message}", e)
             } finally {
-                // 完成后关闭加载指示器
                 withContext(Dispatchers.Main) { setLoading(false) }
             }
         }
@@ -87,55 +73,25 @@ class ShizukuDemoViewModel(application: Application) : AndroidViewModel(applicat
     /** Check root status */
     fun checkRootStatus(context: Context) {
         viewModelScope.launch {
-            val isDeviceRooted = RootAuthorizer.isDeviceRooted()
-            val hasRootAccess = RootAuthorizer.checkRootStatus(context)
+            val isDeviceRooted = false
+            val hasRootAccess = false
             stateManager.updateRootStatus(isDeviceRooted, hasRootAccess)
-            AppLogger.d(
-                    "ShizukuDemoViewModel",
-                    "Root状态更新: 设备已Root=$isDeviceRooted, 应用有Root权限=$hasRootAccess"
-            )
         }
     }
 
     /** Request root permission */
     fun requestRootPermission(context: Context) {
         viewModelScope.launch {
-            // 如果已有Root权限，则直接执行测试命令
-            if (RootAuthorizer.hasRootAccess.value) {
-                executeRootCommand("id", context)
-                return@launch
-            }
-
-            // 如果没有Root权限，则先请求权限
-            Toast.makeText(context, context.getString(R.string.requesting_root_permission), Toast.LENGTH_SHORT).show()
-
-            RootAuthorizer.requestRootPermission { granted ->
-                viewModelScope.launch {
-                    if (granted) {
-                        Toast.makeText(context, context.getString(R.string.root_permission_granted), Toast.LENGTH_SHORT).show()
-                        // 权限授予后执行一个简单的测试命令
-                        executeRootCommand("id", context)
-                    } else {
-                        Toast.makeText(context, context.getString(R.string.root_permission_denied), Toast.LENGTH_SHORT).show()
-                    }
-                    // 刷新状态
-                    checkRootStatus(context)
-                }
-            }
+            Toast.makeText(context, context.getString(R.string.root_permission_denied), Toast.LENGTH_SHORT).show()
+            checkRootStatus(context)
         }
     }
 
     /** Execute root command */
     fun executeRootCommand(command: String, context: Context) {
         viewModelScope.launch {
-            val result = RootAuthorizer.executeRootCommand(command, context)
-            if (result.first) {
-                Toast.makeText(context, context.getString(R.string.command_execution_success), Toast.LENGTH_SHORT).show()
-                stateManager.updateResultText("${context.getString(R.string.command_execution_success)}:\n${result.second}")
-            } else {
-                Toast.makeText(context, context.getString(R.string.command_execution_failed), Toast.LENGTH_SHORT).show()
-                stateManager.updateResultText("${context.getString(R.string.command_execution_failed)}:\n${result.second}")
-            }
+            Toast.makeText(context, context.getString(R.string.command_execution_failed), Toast.LENGTH_SHORT).show()
+            stateManager.updateResultText("${context.getString(R.string.command_execution_failed)}: Root access not available")
         }
     }
 

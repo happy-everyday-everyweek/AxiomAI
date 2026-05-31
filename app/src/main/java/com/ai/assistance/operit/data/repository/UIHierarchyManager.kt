@@ -1,21 +1,16 @@
 package com.ai.assistance.operit.data.repository
 
-import android.content.ComponentName
+import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.GestureDescription
 import android.content.Context
-import android.content.Intent
-import android.content.ServiceConnection
-import android.content.pm.PackageManager
-import android.content.pm.ResolveInfo
-import android.net.Uri
+import android.graphics.Bitmap
+import android.graphics.Path
+import android.graphics.Rect
 import android.os.Build
-import android.os.IBinder
-import android.os.RemoteException
+import android.os.Bundle
+import android.provider.Settings
+import android.view.accessibility.AccessibilityNodeInfo
 import com.ai.assistance.operit.util.AppLogger
-import android.widget.Toast
-import androidx.core.content.FileProvider
-import com.ai.assistance.operit.R
-import com.ai.assistance.operit.core.tools.system.AccessibilityProviderInstaller
-import com.ai.assistance.operit.provider.IAccessibilityProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,303 +23,66 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.StringReader
 import kotlin.coroutines.resume
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
-/**
- * UI层次结构管理器
- * 负责与独立的无障碍服务提供者App进行通信，获取UI层次结构。
- */
 object UIHierarchyManager {
     private const val TAG = "UIHierarchyManager"
-    private const val BIND_SERVICE_TIMEOUT_MS = 3000L // 3秒超时
-
-    // 新的无障碍服务提供者应用的包名
-    private const val PROVIDER_PACKAGE_NAME = "com.ai.assistance.operit.provider"
-    // 无障碍服务提供者APK的文件名
-    private const val PROVIDER_APK_NAME = "accessibility.apk"
-    // 用于绑定的自定义Action，必须与服务提供者应用中的声明一致
-    private const val PROVIDER_ACTION = "com.ai.assistance.operit.provider.IAccessibilityProvider"
-    // TODO: 如果你不在Google Play上发布，可以将其更改为直接下载的URL
-    private const val PROVIDER_MARKET_URL = "market://details?id=$PROVIDER_PACKAGE_NAME"
 
     @Volatile
-    private var accessibilityProvider: IAccessibilityProvider? = null
+    private var accessibilityService: AccessibilityService? = null
+
+    @Volatile
+    private var lastFocusedNode: AccessibilityNodeInfo? = null
 
     private val _isBound = MutableStateFlow(false)
     val isBound = _isBound.asStateFlow()
 
-    private val bindingMutex = Mutex()
-
-    @Volatile
-    private var connectionContinuation: ((Boolean) -> Unit)? = null
-
-    private val serviceConnection = object : ServiceConnection {
-        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-            AppLogger.d(TAG, "无障碍服务提供者已连接")
-            accessibilityProvider = IAccessibilityProvider.Stub.asInterface(service)
-            _isBound.value = true
-            connectionContinuation?.invoke(true)
-            connectionContinuation = null
-        }
-
-        override fun onServiceDisconnected(name: ComponentName?) {
-            AppLogger.d(TAG, "无障碍服务提供者已断开")
-            accessibilityProvider = null
-            _isBound.value = false
-            connectionContinuation?.invoke(false)
-            connectionContinuation = null
+    fun setAccessibilityService(service: AccessibilityService?) {
+        accessibilityService = service
+        _isBound.value = service != null
+        if (service != null) {
+            AppLogger.d(TAG, "AccessibilityService registered")
+        } else {
+            AppLogger.d(TAG, "AccessibilityService unregistered")
         }
     }
 
-    /**
-     * 从应用内assets目录中提取无障碍服务提供者APK文件。
-     * @param context Context
-     * @return 提取出的APK文件，如果失败则返回null。
-     */
-    private fun extractProviderApkFromAssets(context: Context): File? {
-        return try {
-            val apkFile = File(context.cacheDir, PROVIDER_APK_NAME)
-            // 如果文件已存在且大小匹配，可以跳过提取，但为了简单起见，这里总是覆盖
-            context.assets.open(PROVIDER_APK_NAME).use { inputStream ->
-                FileOutputStream(apkFile).use { outputStream ->
-                    inputStream.copyTo(outputStream)
-                }
-            }
-            AppLogger.d(TAG, "无障碍服务APK已提取到: ${apkFile.absolutePath}")
-            apkFile
-        } catch (e: Exception) {
-            AppLogger.e(TAG, "从assets提取无障碍服务APK失败", e)
-            null
-        }
+    fun isAccessibilityServiceEnabled(context: Context): Boolean {
+        if (accessibilityService != null) return true
+        return checkAccessibilityEnabledInSettings(context)
     }
 
-    /**
-     * 启动安装流程来安装提供者应用
-     */
-    fun launchProviderInstall(context: Context) {
-        GlobalScope.launch(Dispatchers.IO) {
-            val apkFile = extractProviderApkFromAssets(context)
-            if (apkFile == null) {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.toast_apk_extract_failed),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-                return@launch
-            }
-
-            val apkUri =
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    FileProvider.getUriForFile(
-                        context,
-                        "${context.packageName}.fileprovider",
-                        apkFile
-                    )
-                } else {
-                    Uri.fromFile(apkFile)
-                }
-
-            val installIntent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(apkUri, "application/vnd.android.package-archive")
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
-            }
-
-            withContext(Dispatchers.Main) {
-                try {
-                    context.startActivity(installIntent)
-                } catch (e: Exception) {
-                    AppLogger.e(TAG, "启动安装界面失败", e)
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.toast_operation_failed, e.message ?: ""),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
-        }
+    private fun checkAccessibilityEnabledInSettings(context: Context): Boolean {
+        val serviceString = context.packageName + "/.accessibility.OperitAccessibilityService"
+        val enabledServices = Settings.Secure.getString(
+            context.contentResolver,
+            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+        ) ?: return false
+        return enabledServices.contains(serviceString)
     }
 
-    /**
-     * 检查无障碍服务提供者是否需要更新
-     */
-    fun isUpdateNeeded(context: Context): Boolean {
-        return AccessibilityProviderInstaller.isUpdateNeeded(context)
-    }
-
-    /**
-     * 确保服务已绑定，如果未绑定则尝试自动重新绑定。
-     * @return a boolean indicating if the service is ready.
-     */
-    private suspend fun ensureBound(context: Context): Boolean {
-        if (!_isBound.value || accessibilityProvider == null) {
-            AppLogger.w(TAG, "服务未绑定或提供者为null，尝试自动重新绑定...")
-            val bound = bindToService(context)
-            if (!bound) {
-                AppLogger.e(TAG, "自动重新绑定失败")
-                return false
-            }
-        }
-        // A final check to protect against race conditions where the service disconnects
-        // right after the check or during the binding process.
-        return _isBound.value && accessibilityProvider != null
-    }
-
-    /**
-     * 检查无障碍服务提供者应用是否已安装
-     */
-    fun isProviderAppInstalled(context: Context): Boolean {
-        return try {
-            context.packageManager.getPackageInfo(PROVIDER_PACKAGE_NAME, 0)
-            true
-        } catch (e: PackageManager.NameNotFoundException) {
-            false
-        }
-    }
-
-    /**
-     * 绑定到外部无障碍服务。
-     * 这是一个挂起函数，它会等待服务连接成功或失败。
-     * @return a boolean indicating if the binding was successful.
-     */
-    suspend fun bindToService(context: Context): Boolean {
-        return bindingMutex.withLock {
-            AppLogger.d(TAG, "bindToService invoked. Thread: ${Thread.currentThread().name}, Context: ${context.javaClass.name}")
-
-            // 只有在已完全绑定（bound且provider不为空）或者应用未安装的情况下才直接返回
-            // 如果 _isBound 为 true 但 provider 为 null，则认为是状态不一致，需要重新绑定
-            if ((_isBound.value && accessibilityProvider != null) || !isProviderAppInstalled(context)) {
-                if (!_isBound.value) AppLogger.w(TAG, "无法绑定：服务已绑定或提供者应用未安装")
-                return@withLock _isBound.value
-            }
-
-            val implicitIntent = Intent(PROVIDER_ACTION).setPackage(PROVIDER_PACKAGE_NAME)
-            val resolveInfo: ResolveInfo? = context.packageManager.resolveService(implicitIntent, PackageManager.MATCH_ALL)
-
-            if (resolveInfo == null) {
-                AppLogger.e(TAG, "无法解析服务: $PROVIDER_ACTION. 请确认提供者应用已正确安装。")
-                return@withLock false
-            }
-
-            AppLogger.d(TAG, "服务解析成功: ${resolveInfo.serviceInfo.packageName}/${resolveInfo.serviceInfo.name}")
-
-            val explicitIntent = Intent(PROVIDER_ACTION).apply {
-                component = ComponentName(resolveInfo.serviceInfo.packageName, resolveInfo.serviceInfo.name)
-                addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES)
-            }
-
-            val result = withTimeoutOrNull(BIND_SERVICE_TIMEOUT_MS) {
-                suspendCancellableCoroutine { continuation ->
-                    connectionContinuation = { success ->
-                        AppLogger.d(TAG, "connectionContinuation called with success=$success")
-                        if (continuation.isActive) {
-                            continuation.resume(success)
-                        }
-                    }
-                    try {
-                        AppLogger.d(TAG, "尝试使用 ApplicationContext 绑定...")
-                        var bound = context.applicationContext.bindService(explicitIntent, serviceConnection, Context.BIND_AUTO_CREATE)
-                        AppLogger.d(TAG, "ApplicationContext 绑定结果: $bound")
-
-                        if (!bound) {
-                            AppLogger.w(TAG, "ApplicationContext绑定失败，尝试使用原始Context (${context.javaClass.simpleName}) ...")
-                            bound = context.bindService(explicitIntent, serviceConnection, Context.BIND_AUTO_CREATE)
-                            AppLogger.d(TAG, "原始 Context 绑定结果: $bound")
-                        }
-
-                        if (!bound) {
-                            AppLogger.e(TAG, "bindService返回false，绑定失败。可能是权限问题或后台启动限制。")
-                            if (continuation.isActive) {
-                                continuation.resume(false)
-                            }
-                            connectionContinuation = null
-                        }
-                    } catch (e: SecurityException) {
-                        AppLogger.e(TAG, "绑定服务时出现安全异常", e)
-                        if (continuation.isActive) {
-                            continuation.resume(false)
-                        }
-                        connectionContinuation = null
-                    } catch (e: Exception) {
-                        AppLogger.e(TAG, "绑定服务时出现未知异常", e)
-                        if (continuation.isActive) {
-                            continuation.resume(false)
-                        }
-                        connectionContinuation = null
-                    }
-                }
-            }
-
-            if (result == null) {
-                AppLogger.e(TAG, "绑定服务超时 (${BIND_SERVICE_TIMEOUT_MS}ms). 无障碍服务提供者可能未响应或崩溃.")
-                connectionContinuation = null
-                _isBound.value = false
-                try {
-                    context.applicationContext.unbindService(serviceConnection)
-                } catch (e: Exception) {
-                    // Ignore
-                }
-                // 尝试解绑原始 context 以防万一
-                try {
-                    if (context != context.applicationContext) {
-                        context.unbindService(serviceConnection)
-                    }
-                } catch (e: Exception) {}
-                return@withLock false
-            }
-
-            AppLogger.d(TAG, "bindToService 成功完成")
-            result
-        }
-    }
-
-    /**
-     * 解绑服务
-     */
-    fun unbindFromService(context: Context) {
-        if (_isBound.value) {
-            try {
-                context.applicationContext.unbindService(serviceConnection)
-            } catch (e: Exception) {
-                AppLogger.e(TAG, "解绑服务失败", e)
-            }
-            _isBound.value = false
-            accessibilityProvider = null
-            AppLogger.d(TAG, "服务已解绑")
-        }
-    }
-
-    /**
-     * 从外部服务获取UI层次结构。
-     * 如果服务未绑定，会尝试自动重新绑定一次。
-     */
     suspend fun getUIHierarchy(context: Context): String {
-        if (!ensureBound(context)) {
-            AppLogger.e(TAG, "绑定失败，无法获取UI层次结构")
+        val service = accessibilityService ?: run {
+            AppLogger.e(TAG, "AccessibilityService not available")
             return ""
         }
-        return try {
-            accessibilityProvider?.uiHierarchy ?: ""
-        } catch (e: RemoteException) {
-            AppLogger.e(TAG, "从提供者获取UI层次结构失败", e)
-            // Consider re-binding or notifying the user
-            ""
+        return withContext(Dispatchers.IO) {
+            try {
+                val rootNode = service.rootInActiveWindow
+                if (rootNode == null) {
+                    AppLogger.e(TAG, "rootInActiveWindow is null")
+                    return@withContext ""
+                }
+                val sb = StringBuilder()
+                serializeNodeToXml(rootNode, sb, 0)
+                rootNode.recycle()
+                sb.toString()
+            } catch (e: Exception) {
+                AppLogger.e(TAG, "Failed to get UI hierarchy", e)
+                ""
+            }
         }
     }
 
-    /**
-     * 从UI层次结构的XML中解析出窗口信息（包名）。
-     * 活动名称现在通过 getCurrentActivityName() 函数单独获取。
-     * @param xmlHierarchy UI层次结构的XML字符串
-     * @return 一个Pair，第一个元素是包名，第二个是null（活动名称需单独获取）。
-     */
     fun extractWindowInfo(xmlHierarchy: String): Pair<String?, String?> {
         if (xmlHierarchy.isEmpty()) {
             return Pair(null, null)
@@ -340,7 +98,6 @@ object UIHierarchyManager {
                 when (eventType) {
                     XmlPullParser.START_TAG -> {
                         if (parser.name == "node") {
-                            // 只获取根节点的包名，活动名称通过单独的函数获取
                             val rootPackage = parser.getAttributeValue(null, "package")
                             return Pair(rootPackage, null)
                         }
@@ -348,7 +105,7 @@ object UIHierarchyManager {
                 }
                 eventType = parser.next()
             }
-            
+
             return Pair(null, null)
 
         } catch (e: Exception) {
@@ -357,147 +114,271 @@ object UIHierarchyManager {
         }
     }
 
-    /**
-     * 请求远程服务在指定坐标执行点击。
-     */
     suspend fun performClick(context: Context, x: Int, y: Int): Boolean {
-        if (!ensureBound(context)) {
-            AppLogger.w(TAG, "绑定失败，无法执行点击")
+        val service = accessibilityService ?: run {
+            AppLogger.w(TAG, "AccessibilityService not available, cannot click")
             return false
         }
         return try {
-            accessibilityProvider?.performClick(x, y) ?: false
-        } catch (e: RemoteException) {
-            AppLogger.e(TAG, "请求点击操作失败", e)
+            val path = Path().apply { moveTo(x.toFloat(), y.toFloat()) }
+            val stroke = GestureDescription.StrokeDescription(path, 0L, 10L)
+            val gesture = GestureDescription.Builder().addStroke(stroke).build()
+            service.dispatchGesture(gesture, null, null)
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Click gesture failed", e)
             false
         }
     }
 
     suspend fun performLongPress(context: Context, x: Int, y: Int): Boolean {
-        if (!ensureBound(context)) {
-            AppLogger.w(TAG, "绑定失败，无法执行长按")
+        val service = accessibilityService ?: run {
+            AppLogger.w(TAG, "AccessibilityService not available, cannot long press")
             return false
         }
         return try {
-            accessibilityProvider?.performLongPress(x, y) ?: false
-        } catch (e: RemoteException) {
-            AppLogger.e(TAG, "长按点击操作失败", e)
-            false
-        }
-    }
-
-    /**
-     * 请求远程服务执行滑动。
-     */
-    suspend fun performSwipe(context: Context, startX: Int, startY: Int, endX: Int, endY: Int, duration: Long): Boolean {
-        if (!ensureBound(context)) {
-            AppLogger.w(TAG, "绑定失败，无法执行滑动")
-                return false
-            }
-        return try {
-            accessibilityProvider?.performSwipe(startX, startY, endX, endY, duration) ?: false
-        } catch (e: RemoteException) {
-            AppLogger.e(TAG, "请求滑动操作失败", e)
-            false
-        }
-    }
-
-    /**
-     * 请求远程服务执行全局操作。
-     */
-    suspend fun performGlobalAction(context: Context, actionId: Int): Boolean {
-        if (!ensureBound(context)) {
-            AppLogger.w(TAG, "绑定失败，无法执行全局操作")
-            return false
-        }
-        return try {
-            accessibilityProvider?.performGlobalAction(actionId) ?: false
-        } catch (e: RemoteException) {
-            AppLogger.e(TAG, "请求全局操作失败", e)
-            false
-        }
-    }
-
-    /**
-     * 请求远程服务查找有焦点的节点的ID。
-     */
-    suspend fun findFocusedNodeId(context: Context): String? {
-        if (!ensureBound(context)) {
-            AppLogger.w(TAG, "绑定失败，无法查找焦点节点")
-            return null
-        }
-        return try {
-            accessibilityProvider?.findFocusedNodeId()
-        } catch (e: RemoteException) {
-            AppLogger.e(TAG, "请求查找焦点节点ID失败", e)
-            null
-        }
-    }
-
-    /**
-     * 请求远程服务在指定ID的节点上设置文本。
-     */
-    suspend fun setTextOnNode(context: Context, nodeId: String, text: String): Boolean {
-        if (!ensureBound(context)) {
-            AppLogger.w(TAG, "绑定失败，无法设置文本")
-            return false
-        }
-        return try {
-            accessibilityProvider?.setTextOnNode(nodeId, text) ?: false
-        } catch (e: RemoteException) {
-            AppLogger.e(TAG, "请求设置文本失败", e)
-            false
+            val path = Path().apply { moveTo(x.toFloat(), y.toFloat()) }
+            val stroke = GestureDescription.StrokeDescription(path, 0L, 500L)
+            val gesture = GestureDescription.Builder().addStroke(stroke).build()
+            service.dispatchGesture(gesture, null, null)
         } catch (e: Exception) {
-            AppLogger.e(TAG, "请求设置文本时远程服务发生异常", e)
+            AppLogger.e(TAG, "Long press gesture failed", e)
             false
         }
     }
 
-    /**
-     * 请求远程服务截取屏幕截图。
-     */
-    suspend fun takeScreenshot(context: Context, path: String, format: String): Boolean {
-        if (!ensureBound(context)) {
-            AppLogger.w(TAG, "绑定失败，无法截取屏幕截图")
+    suspend fun performSwipe(context: Context, startX: Int, startY: Int, endX: Int, endY: Int, duration: Long): Boolean {
+        val service = accessibilityService ?: run {
+            AppLogger.w(TAG, "AccessibilityService not available, cannot swipe")
             return false
         }
         return try {
-            accessibilityProvider?.takeScreenshot(path, format) ?: false
-        } catch (e: RemoteException) {
-            AppLogger.e(TAG, "请求截取屏幕截图失败", e)
+            val path = Path().apply {
+                moveTo(startX.toFloat(), startY.toFloat())
+                lineTo(endX.toFloat(), endY.toFloat())
+            }
+            val stroke = GestureDescription.StrokeDescription(path, 0L, duration)
+            val gesture = GestureDescription.Builder().addStroke(stroke).build()
+            service.dispatchGesture(gesture, null, null)
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Swipe gesture failed", e)
             false
         }
     }
 
-    /**
-     * 检查远程无障碍服务是否已在系统设置中启用。
-     */
-    suspend fun isAccessibilityServiceEnabled(context: Context): Boolean {
-        if (!ensureBound(context)) {
-            AppLogger.w(TAG, "绑定失败，无法检查无障碍服务状态")
+    suspend fun performGlobalAction(context: Context, actionId: Int): Boolean {
+        val service = accessibilityService ?: run {
+            AppLogger.w(TAG, "AccessibilityService not available, cannot perform global action")
             return false
         }
         return try {
-            accessibilityProvider?.isAccessibilityServiceEnabled ?: false
-        } catch (e: RemoteException) {
-            AppLogger.e(TAG, "检查无障碍服务状态失败", e)
+            service.performGlobalAction(actionId)
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Global action failed", e)
             false
         }
     }
 
-    /**
-     * 从远程服务获取当前Activity名称。
-     */
-    suspend fun getCurrentActivityName(context: Context): String? {
-        if (!ensureBound(context)) {
-            AppLogger.w(TAG, "绑定失败，无法获取Activity名称")
+    suspend fun findFocusedNodeId(context: Context): String? {
+        val service = accessibilityService ?: run {
+            AppLogger.w(TAG, "AccessibilityService not available, cannot find focused node")
             return null
         }
-        return try {
-            accessibilityProvider?.currentActivityName
-        } catch (e: RemoteException) {
-            AppLogger.e(TAG, "从提供者获取Activity名称失败", e)
-            null
+        return withContext(Dispatchers.IO) {
+            try {
+                val rootNode = service.rootInActiveWindow ?: return@withContext null
+                val focusedNode = rootNode.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+                rootNode.recycle()
+                if (focusedNode != null) {
+                    lastFocusedNode = focusedNode
+                    focusedNode.viewIdResourceName
+                } else {
+                    null
+                }
+            } catch (e: Exception) {
+                AppLogger.e(TAG, "Find focused node failed", e)
+                null
+            }
         }
+    }
+
+    suspend fun setTextOnNode(context: Context, nodeId: String, text: String): Boolean {
+        val service = accessibilityService ?: return false
+        return withContext(Dispatchers.Main) {
+            try {
+                val focusedNode = lastFocusedNode
+                if (focusedNode != null) {
+                    val args = Bundle().apply {
+                        putCharSequence(
+                            AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
+                            text
+                        )
+                    }
+                    val result = focusedNode.performAction(
+                        AccessibilityNodeInfo.ACTION_SET_TEXT,
+                        args
+                    )
+                    focusedNode.recycle()
+                    lastFocusedNode = null
+                    result
+                } else {
+                    val rootNode = service.rootInActiveWindow ?: return@withContext false
+                    val nodes = rootNode.findAccessibilityNodeInfosByViewId(nodeId)
+                    rootNode.recycle()
+                    if (nodes.isNullOrEmpty()) return@withContext false
+                    val node = nodes[0]
+                    val args = Bundle().apply {
+                        putCharSequence(
+                            AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
+                            text
+                        )
+                    }
+                    val result = node.performAction(
+                        AccessibilityNodeInfo.ACTION_SET_TEXT,
+                        args
+                    )
+                    for (n in nodes) n.recycle()
+                    result
+                }
+            } catch (e: Exception) {
+                AppLogger.e(TAG, "Set text on node failed", e)
+                false
+            }
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    suspend fun takeScreenshot(context: Context, path: String, format: String): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+            AppLogger.w(TAG, "takeScreenshot requires API 28+")
+            return false
+        }
+        val service = accessibilityService ?: return false
+        return withContext(Dispatchers.IO) {
+            try {
+                val screenshotResult = withTimeoutOrNull(5000L) {
+                    suspendCancellableCoroutine<AccessibilityService.Screenshot> { cont ->
+                        val executor = java.util.concurrent.Executor { r ->
+                            android.os.Handler(android.os.Looper.getMainLooper()).post(r)
+                        }
+                        service.takeScreenshot(
+                            android.view.Display.DEFAULT_DISPLAY,
+                            5000L,
+                            executor,
+                            object : AccessibilityService.TakeScreenshotCallback() {
+                                override fun onScreenshot(screenshot: AccessibilityService.Screenshot) {
+                                    if (cont.isActive) cont.resume(screenshot)
+                                }
+                                override fun onError(errorCode: Int) {
+                                    if (cont.isActive) {
+                                        AppLogger.e(TAG, "takeScreenshot error: $errorCode")
+                                        cont.resumeWithException(Exception("Screenshot error code: $errorCode"))
+                                    }
+                                }
+                            }
+                        )
+                    }
+                } ?: run {
+                    AppLogger.e(TAG, "takeScreenshot timed out")
+                    return@withContext false
+                }
+
+                val hardwareBuffer = screenshotResult.hardwareBuffer
+                val bitmap = Bitmap.wrapHardwareBuffer(hardwareBuffer, null)
+                if (bitmap == null) {
+                    hardwareBuffer.close()
+                    screenshotResult.close()
+                    return@withContext false
+                }
+                val softwareBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, false)
+                hardwareBuffer.close()
+                screenshotResult.close()
+
+                if (softwareBitmap == null) return@withContext false
+
+                val file = File(path)
+                file.parentFile?.mkdirs()
+                FileOutputStream(file).use { fos ->
+                    val compressFormat = when (format.lowercase()) {
+                        "jpeg", "jpg" -> Bitmap.CompressFormat.JPEG
+                        "webp" -> Bitmap.CompressFormat.WEBP
+                        else -> Bitmap.CompressFormat.PNG
+                    }
+                    softwareBitmap.compress(compressFormat, 90, fos)
+                }
+                softwareBitmap.recycle()
+                true
+            } catch (e: Exception) {
+                AppLogger.e(TAG, "Screenshot failed", e)
+                false
+            }
+        }
+    }
+
+    suspend fun getCurrentActivityName(context: Context): String? {
+        val service = accessibilityService ?: return null
+        return withContext(Dispatchers.IO) {
+            try {
+                val rootNode = service.rootInActiveWindow ?: return@withContext null
+                val activityName = rootNode.className?.toString()
+                rootNode.recycle()
+                activityName
+            } catch (e: Exception) {
+                AppLogger.e(TAG, "Failed to get current activity name", e)
+                null
+            }
+        }
+    }
+
+    private fun serializeNodeToXml(node: AccessibilityNodeInfo, sb: StringBuilder, depth: Int) {
+        val indent = "  ".repeat(depth)
+        sb.append("$indent<node")
+        appendAttr(sb, "index", node.parent?.let { parent ->
+            (0 until parent.childCount).firstOrNull { parent.getChild(it) == node }?.toString()
+        } ?: "0")
+        appendAttr(sb, "text", node.text?.toString())
+        appendAttr(sb, "resource-id", node.viewIdResourceName)
+        appendAttr(sb, "package", node.packageName?.toString())
+        appendAttr(sb, "class", node.className?.toString())
+        appendAttr(sb, "content-desc", node.contentDescription?.toString())
+        appendAttr(sb, "checkable", node.isCheckable.toString())
+        appendAttr(sb, "checked", node.isChecked.toString())
+        appendAttr(sb, "clickable", node.isClickable.toString())
+        appendAttr(sb, "enabled", node.isEnabled.toString())
+        appendAttr(sb, "focusable", node.isFocusable.toString())
+        appendAttr(sb, "focused", node.isFocused.toString())
+        appendAttr(sb, "scrollable", node.isScrollable.toString())
+        appendAttr(sb, "long-clickable", node.isLongClickable.toString())
+        appendAttr(sb, "password", node.isPassword.toString())
+        appendAttr(sb, "selected", node.isSelected.toString())
+        val bounds = Rect()
+        node.getBoundsInScreen(bounds)
+        appendAttr(sb, "bounds", bounds.toShortString())
+
+        if (node.childCount == 0) {
+            sb.append(" />\n")
+        } else {
+            sb.append(">\n")
+            for (i in 0 until node.childCount) {
+                val child = node.getChild(i)
+                if (child != null) {
+                    serializeNodeToXml(child, sb, depth + 1)
+                    child.recycle()
+                }
+            }
+            sb.append("$indent</node>\n")
+        }
+    }
+
+    private fun appendAttr(sb: StringBuilder, name: String, value: String?) {
+        sb.append(" $name=\"${escapeXml(value ?: "")}\"")
+    }
+
+    private fun escapeXml(input: String): String {
+        return input
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("\"", "&quot;")
+            .replace("'", "&apos;")
     }
 }

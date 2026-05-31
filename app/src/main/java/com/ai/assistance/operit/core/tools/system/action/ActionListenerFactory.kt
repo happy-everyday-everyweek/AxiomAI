@@ -27,11 +27,11 @@ class ActionListenerFactory {
 
             // 创建新的监听器实例
             val listener = when (permissionLevel) {
-                AndroidPermissionLevel.ROOT -> RootActionListener(context)
-                AndroidPermissionLevel.ADMIN -> AdminActionListener(context)
-                AndroidPermissionLevel.DEBUGGER -> DebuggerActionListener(context)
                 AndroidPermissionLevel.ACCESSIBILITY -> AccessibilityActionListener(context)
                 AndroidPermissionLevel.STANDARD -> StandardActionListener(context)
+                AndroidPermissionLevel.ROOT,
+                AndroidPermissionLevel.ADMIN,
+                AndroidPermissionLevel.DEBUGGER -> StandardActionListener(context)
             }
 
             // 初始化监听器

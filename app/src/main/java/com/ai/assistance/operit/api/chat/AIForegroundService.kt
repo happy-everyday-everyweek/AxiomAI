@@ -47,7 +47,7 @@ import com.ai.assistance.operit.integrations.http.ExternalChatHttpState
 import com.ai.assistance.operit.services.FloatingChatService
 import com.ai.assistance.operit.services.UIDebuggerService
 import com.ai.assistance.operit.data.preferences.DisplayPreferencesManager
-import com.ai.assistance.operit.data.preferences.WakeWordPreferences
+
 import com.ai.assistance.operit.data.repository.WorkflowRepository
 import com.ai.assistance.operit.ui.main.MainActivity
 import com.ai.assistance.operit.util.WaifuMessageProcessor
@@ -500,7 +500,7 @@ class AIForegroundService : Service() {
             val appContext = context.applicationContext
             val alwaysListeningEnabled = runCatching {
                 runBlocking {
-                    WakeWordPreferences(appContext).alwaysListeningEnabledFlow.first()
+                    false
                 }
             }.getOrDefault(false)
             val backgroundKeepAliveEnabled = runCatching {
@@ -720,7 +720,6 @@ class AIForegroundService : Service() {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val chatRuntimeHolder by lazy { ChatRuntimeHolder.getInstance(applicationContext) }
-    private val wakePrefs by lazy { WakeWordPreferences(applicationContext) }
     @Volatile
     private var wakeSpeechProvider: SpeechService? = null
     private val workflowRepository by lazy { WorkflowRepository(applicationContext) }
@@ -743,13 +742,13 @@ class AIForegroundService : Service() {
     private var personalWakeListener: PersonalWakeListener? = null
 
     @Volatile
-    private var currentWakePhrase: String = WakeWordPreferences.DEFAULT_WAKE_PHRASE
+    private var currentWakePhrase: String = ""
 
     @Volatile
-    private var wakePhraseRegexEnabled: Boolean = WakeWordPreferences.DEFAULT_WAKE_PHRASE_REGEX_ENABLED
+    private var wakePhraseRegexEnabled: Boolean = false
 
     @Volatile
-    private var wakeRecognitionMode: WakeWordPreferences.WakeRecognitionMode = WakeWordPreferences.WakeRecognitionMode.STT
+    private var wakeRecognitionMode: Int = 0
 
     @Volatile
     private var personalWakeTemplates: List<FloatArray> = emptyList()
@@ -1040,11 +1039,7 @@ class AIForegroundService : Service() {
     }
 
     private fun isAlwaysListeningEnabledNow(): Boolean {
-        return try {
-            runBlocking { wakePrefs.alwaysListeningEnabledFlow.first() }
-        } catch (_: Exception) {
-            false
-        }
+        return wakeListeningEnabled
     }
 
     private suspend fun tryPromoteToMicrophoneForeground(): Boolean {
@@ -1170,9 +1165,10 @@ class AIForegroundService : Service() {
             AppLogger.d(TAG, "收到 ACTION_TOGGLE_WAKE_LISTENING")
             serviceScope.launch {
                 try {
-                    val current = wakePrefs.alwaysListeningEnabledFlow.first()
+                    val current = wakeListeningEnabled
                     AppLogger.d(TAG, "切换唤醒监听: $current -> ${!current}")
-                    wakePrefs.saveAlwaysListeningEnabled(!current)
+                    wakeListeningEnabled = !current
+                    applyWakeListeningState()
                 } catch (e: Exception) {
                     AppLogger.e(TAG, "切换唤醒监听失败: ${e.message}", e)
                 }
@@ -1360,56 +1356,14 @@ class AIForegroundService : Service() {
         AppLogger.d(TAG, "startWakeMonitoring")
         wakeMonitorJob =
             serviceScope.launch {
-                launch {
-                    wakePrefs.wakePhraseFlow.collectLatest { phrase ->
-                        currentWakePhrase = phrase.ifBlank { WakeWordPreferences.DEFAULT_WAKE_PHRASE }
-                        AppLogger.d(TAG, "唤醒词更新: '$currentWakePhrase'")
-                    }
-                }
+                wakeListeningEnabled = false
+                AppLogger.d(TAG, "唤醒监听开关更新: enabled=$wakeListeningEnabled")
 
-                launch {
-                    wakePrefs.wakePhraseRegexEnabledFlow.collectLatest { enabled ->
-                        wakePhraseRegexEnabled = enabled
-                        AppLogger.d(TAG, "唤醒词正则开关更新: enabled=$enabled")
-                    }
-                }
+                updateKeepAliveOverlayVisibility()
+                applyWakeListeningState()
 
-                launch {
-                    wakePrefs.wakeRecognitionModeFlow.collectLatest { mode ->
-                        wakeRecognitionMode = mode
-                        AppLogger.d(TAG, "唤醒识别模式更新: $mode")
-                        applyWakeListeningState()
-                    }
-                }
-
-                launch {
-                    wakePrefs.personalWakeTemplatesFlow.collectLatest { templates ->
-                        personalWakeTemplates = templates.mapNotNull { t ->
-                            val feats = t.features
-                            if (feats.isEmpty()) null else feats.toFloatArray()
-                        }
-                        AppLogger.d(TAG, "个人化唤醒模板更新: count=${personalWakeTemplates.size}")
-                        applyWakeListeningState()
-                    }
-                }
-
-                wakePrefs.alwaysListeningEnabledFlow.collectLatest { enabled ->
-                    wakeListeningEnabled = enabled
-                    AppLogger.d(TAG, "唤醒监听开关更新: enabled=$enabled")
-
-                    updateKeepAliveOverlayVisibility()
-
-                    if (enabled) {
-                        startRecordingStateMonitoring()
-                    } else {
-                        stopRecordingStateMonitoring()
-                    }
-
-                    applyWakeListeningState()
-
-                    val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                    manager.notify(NOTIFICATION_ID, createNotification())
-                }
+                val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                manager.notify(NOTIFICATION_ID, createNotification())
             }
     }
 
@@ -1535,7 +1489,7 @@ class AIForegroundService : Service() {
 
     private suspend fun startWakeListeningLocked() {
         if (!wakeListeningEnabled) return
-        if (wakeRecognitionMode == WakeWordPreferences.WakeRecognitionMode.STT) {
+        if (wakeRecognitionMode == 0) {
             if (personalWakeJob?.isActive == true) {
                 AppLogger.d(TAG, "Switching wake listener: stopping personal wake before starting STT")
                 stopWakeListeningLocked(releaseProvider = true)
@@ -1549,7 +1503,7 @@ class AIForegroundService : Service() {
             if (personalWakeJob?.isActive == true) return
         }
 
-        if (wakeRecognitionMode == WakeWordPreferences.WakeRecognitionMode.PERSONAL_TEMPLATE) {
+        if (wakeRecognitionMode == 1) {
             startPersonalWakeListening()
             return
         }
@@ -1570,10 +1524,6 @@ class AIForegroundService : Service() {
         if (!micGranted) {
             AppLogger.e(TAG, "启动唤醒监听失败: 未授予 RECORD_AUDIO（请在系统设置中允许麦克风权限）")
             wakeListeningEnabled = false
-            try {
-                wakePrefs.saveAlwaysListeningEnabled(false)
-            } catch (_: Exception) {
-            }
             val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.notify(NOTIFICATION_ID, createNotification())
             return

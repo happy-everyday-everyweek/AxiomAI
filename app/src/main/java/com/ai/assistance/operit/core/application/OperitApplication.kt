@@ -40,11 +40,11 @@ import com.ai.assistance.operit.data.db.AppDatabase
 import com.ai.assistance.operit.data.preferences.CharacterCardManager
 import com.ai.assistance.operit.data.preferences.ExternalHttpApiPreferences
 import com.ai.assistance.operit.data.preferences.UserPreferencesManager
-import com.ai.assistance.operit.data.preferences.WakeWordPreferences
+
 import com.ai.assistance.operit.data.preferences.initAndroidPermissionPreferences
 import com.ai.assistance.operit.data.preferences.initUserPreferencesManager
 import com.ai.assistance.operit.data.preferences.preferencesManager
-import com.ai.assistance.operit.data.repository.CustomEmojiRepository
+
 import com.ai.assistance.operit.ui.features.chat.webview.LocalWebServer
 import com.ai.assistance.operit.ui.features.chat.webview.workspace.editor.language.LanguageFactory
 import com.ai.assistance.operit.util.GlobalExceptionHandler
@@ -203,12 +203,7 @@ class OperitApplication : Application(), ImageLoaderFactory, WorkConfiguration.P
             AppLogger.d(TAG, "【启动计时】功能提示词管理器初始化完成（异步） - ${System.currentTimeMillis() - characterStartTime}ms")
         }
 
-        // 初始化当前活跃角色目标的自定义表情
-        applicationScope.launch {
-            val emojiStartTime = System.currentTimeMillis()
-            CustomEmojiRepository.getInstance(applicationContext).initializeBuiltinEmojis()
-            AppLogger.d(TAG, "【启动计时】当前角色自定义表情初始化完成（异步） - ${System.currentTimeMillis() - emojiStartTime}ms")
-        }
+
 
         // 初始化AndroidShellExecutor上下文
         AndroidShellExecutor.setContext(applicationContext)
@@ -356,17 +351,7 @@ class OperitApplication : Application(), ImageLoaderFactory, WorkConfiguration.P
             }
         }
 
-        // 在应用启动时尝试绑定无障碍服务提供者（解决后台绑定限制问题）
-        applicationScope.launch {
-            AppLogger.d(TAG, "【启动计时】开始预绑定无障碍服务提供者...")
-            val bindStartTime = System.currentTimeMillis()
-            try {
-                val bound = com.ai.assistance.operit.data.repository.UIHierarchyManager.bindToService(this@OperitApplication)
-                AppLogger.d(TAG, "【启动计时】无障碍服务预绑定完成（异步） - 结果: $bound, 耗时: ${System.currentTimeMillis() - bindStartTime}ms")
-            } catch (e: Exception) {
-                AppLogger.e(TAG, "无障碍服务预绑定失败", e)
-            }
-        }
+
         
         val totalTime = System.currentTimeMillis() - startTime
         AppLogger.d(TAG, "【启动计时】应用启动全部完成 - 总耗时: ${totalTime}ms")
@@ -474,13 +459,10 @@ class OperitApplication : Application(), ImageLoaderFactory, WorkConfiguration.P
 
     private fun startGlobalAIForegroundServiceIfNeeded() {
         try {
-            val alwaysListeningEnabled = runBlocking {
-                WakeWordPreferences(applicationContext).alwaysListeningEnabledFlow.first()
-            }
             val externalHttpEnabled = runBlocking {
                 ExternalHttpApiPreferences.getInstance(applicationContext).enabledFlow.first()
             }
-            if ((!alwaysListeningEnabled && !externalHttpEnabled) || AIForegroundService.isRunning.get()) {
+            if (!externalHttpEnabled || AIForegroundService.isRunning.get()) {
                 return
             }
             val intent = Intent(this, AIForegroundService::class.java).apply {

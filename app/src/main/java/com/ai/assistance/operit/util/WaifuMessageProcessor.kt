@@ -3,7 +3,7 @@ package com.ai.assistance.operit.util
 import android.content.Context
 import android.os.SystemClock
 import com.ai.assistance.operit.data.preferences.ActivePromptManager
-import com.ai.assistance.operit.data.repository.CustomEmojiRepository
+
 import com.ai.assistance.operit.util.markdown.MarkdownProcessorType
 import com.ai.assistance.operit.util.stream.Stream
 import com.ai.assistance.operit.util.stream.stream
@@ -37,7 +37,7 @@ object WaifuMessageProcessor {
     private val ENTITY_PLACEHOLDER_REGEX =
         Regex("${Regex.escape(ENTITY_PLACEHOLDER_PREFIX)}\\d+${Regex.escape(ENTITY_PLACEHOLDER_SUFFIX)}")
     
-    private var customEmojiRepository: CustomEmojiRepository? = null
+    private var customEmojiRepository: Nothing? = null
     private var activePromptManager: ActivePromptManager? = null
 
     class StreamingSession(
@@ -195,7 +195,7 @@ object WaifuMessageProcessor {
      * 初始化处理器（需要在应用启动时调用）
      */
     fun initialize(appContext: Context) {
-        customEmojiRepository = CustomEmojiRepository.getInstance(appContext)
+        customEmojiRepository = null
         activePromptManager = ActivePromptManager.getInstance(appContext)
     }
     

@@ -13,6 +13,16 @@ android {
         minSdk = 26
     }
 
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+        }
+        create("nightly") {
+            isMinifyEnabled = false
+            matchingFallbacks += listOf("release")
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

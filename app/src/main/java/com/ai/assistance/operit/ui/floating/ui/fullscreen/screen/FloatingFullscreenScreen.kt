@@ -66,8 +66,8 @@ import com.ai.assistance.operit.data.preferences.ActivePromptManager
 import com.ai.assistance.operit.data.model.ActivePrompt
 import com.ai.assistance.operit.data.preferences.SpeechServicesPreferences
 import com.ai.assistance.operit.data.preferences.UserPreferencesManager
-import com.ai.assistance.operit.data.preferences.WakeWordPreferences
-import com.ai.assistance.operit.data.repository.AvatarRepository
+
+
 import com.ai.assistance.operit.data.repository.AvatarSettings
 import com.ai.assistance.operit.data.repository.getEmotionAnimationMapping
 import com.ai.assistance.operit.data.repository.getMoodAnimationMapping
@@ -141,13 +141,13 @@ fun FloatingFullscreenMode(floatContext: FloatContext) {
     val aiAvatarUri = activeCharacterAvatarUri ?: globalAiAvatarUri
 
     val avatarModelFactory = remember { AvatarModelFactoryImpl() }
-    val avatarRepository = remember { AvatarRepository.getInstance(context, avatarModelFactory) }
+    val avatarRepository: Nothing? = null
     val avatarControllerFactory = remember { AvatarControllerFactoryImpl() }
     val avatarRendererFactory = remember { AvatarRendererFactoryImpl() }
-    val currentAvatarModel by avatarRepository.currentAvatar.collectAsState(initial = null)
-    val avatarSettings by avatarRepository.settings.collectAsState(initial = AvatarSettings())
-    val avatarConfigs by avatarRepository.configs.collectAsState(initial = emptyList())
-    val avatarInstanceSettings by avatarRepository.instanceSettings.collectAsState(initial = emptyMap())
+    val currentAvatarModel by remember { mutableStateOf<com.ai.assistance.operit.core.avatar.common.model.AvatarModel?>(null) }
+    val avatarSettings by remember { mutableStateOf(AvatarSettings()) }
+    val avatarConfigs by remember { mutableStateOf(emptyList<com.ai.assistance.operit.data.repository.AvatarConfig>()) }
+    val avatarInstanceSettings by remember { mutableStateOf(emptyMap<String, com.ai.assistance.operit.data.repository.AvatarInstanceSettings>()) }
     val currentAvatarConfig = remember(avatarConfigs, currentAvatarModel?.id) {
         currentAvatarModel?.let { avatar -> avatarConfigs.find { it.id == avatar.id } }
     }
@@ -182,8 +182,7 @@ fun FloatingFullscreenMode(floatContext: FloatContext) {
     val speechServicesPrefs = SpeechServicesPreferences(context)
     val ttsCleanerRegexs by speechServicesPrefs.ttsCleanerRegexsFlow.collectAsState(initial = emptyList())
     
-    val wakePrefs = remember { WakeWordPreferences(context.applicationContext) }
-    val autoNewChatGroup by wakePrefs.autoNewChatGroupFlow.collectAsState(initial = WakeWordPreferences.DEFAULT_AUTO_NEW_CHAT_GROUP)
+    val autoNewChatGroup by remember { mutableStateOf(false) }
     
     val volumeLevel by viewModel.volumeLevelFlow.collectAsState()
     
@@ -411,8 +410,8 @@ fun FloatingFullscreenMode(floatContext: FloatContext) {
     ) {
             IconButton(
                 onClick = {
-                    val group = autoNewChatGroup.trim().ifBlank {
-                        WakeWordPreferences.DEFAULT_AUTO_NEW_CHAT_GROUP
+                    val group = autoNewChatGroup.toString().trim().ifBlank {
+                        "default"
                     }
                     floatContext.chatService?.getChatCore()?.createNewChat(
                         group = group,

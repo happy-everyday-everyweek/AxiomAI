@@ -965,13 +965,7 @@ private fun DebuggerPermissionSection(
 
     // 检查Shizuku是否需要更新
     val isShizukuUpdateNeeded = remember {
-        try {
-            com.ai.assistance.operit.core.tools.system.ShizukuInstaller.isShizukuUpdateNeeded(
-                    context
-            )
-        } catch (e: Exception) {
-            false
-        }
+        false
     }
 
     Column {

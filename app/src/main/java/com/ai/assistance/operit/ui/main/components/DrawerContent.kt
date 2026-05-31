@@ -52,7 +52,6 @@ import com.ai.assistance.operit.R
 import com.ai.assistance.operit.core.tools.AIToolHandler
 import com.ai.assistance.operit.core.tools.packTool.PackageManager
 import com.ai.assistance.operit.core.tools.system.AndroidPermissionLevel
-import com.ai.assistance.operit.core.tools.system.ShizukuAuthorizer
 import com.ai.assistance.operit.core.tools.system.action.ActionListenerFactory
 import com.ai.assistance.operit.data.preferences.UserPreferencesManager
 import com.ai.assistance.operit.data.preferences.androidPermissionPreferences
@@ -81,25 +80,7 @@ private suspend fun resolveSidebarPermissionStatus(
                         SidebarPermissionStatus(
                                 badgeTextResId = R.string.sidebar_status_normal
                         )
-                AndroidPermissionLevel.DEBUGGER ->
-                        when {
-                                !ShizukuAuthorizer.isShizukuInstalled(context) ->
-                                        SidebarPermissionStatus(
-                                                badgeTextResId = R.string.status_not_installed
-                                        )
-                                !ShizukuAuthorizer.isShizukuServiceRunning() ->
-                                        SidebarPermissionStatus(
-                                                badgeTextResId = R.string.status_not_running
-                                        )
-                                ShizukuAuthorizer.hasShizukuPermission() ->
-                                        SidebarPermissionStatus(
-                                                badgeTextResId = R.string.sidebar_status_normal
-                                        )
-                                else ->
-                                        SidebarPermissionStatus(
-                                                badgeTextResId = R.string.unauthorized
-                                        )
-                        }
+                AndroidPermissionLevel.DEBUGGER,
                 AndroidPermissionLevel.ACCESSIBILITY,
                 AndroidPermissionLevel.ADMIN,
                 AndroidPermissionLevel.ROOT -> {

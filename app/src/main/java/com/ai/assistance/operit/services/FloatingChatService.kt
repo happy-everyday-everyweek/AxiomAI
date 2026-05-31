@@ -31,7 +31,7 @@ import com.ai.assistance.operit.api.voice.VoiceServiceFactory
 import com.ai.assistance.operit.data.model.AttachmentInfo
 import com.ai.assistance.operit.data.model.ChatMessage
 import com.ai.assistance.operit.data.model.InputProcessingState
-import com.ai.assistance.operit.data.preferences.WakeWordPreferences
+
 import com.ai.assistance.operit.data.model.SerializableColorScheme
 import com.ai.assistance.operit.data.model.SerializableTypography
 import com.ai.assistance.operit.data.model.toComposeColorScheme
@@ -52,7 +52,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -117,7 +116,7 @@ class FloatingChatService : Service(), FloatingWindowCallback {
     private val autoExitHandler = Handler(Looper.getMainLooper())
     private var autoExitRunnable: Runnable? = null
 
-    private val wakePrefs by lazy { WakeWordPreferences(applicationContext) }
+
 
     fun consumeAutoEnterVoiceChat(): Boolean {
         val value = autoEnterVoiceChat.value
@@ -415,33 +414,7 @@ class FloatingChatService : Service(), FloatingWindowCallback {
 
             if (wakeLaunchedExtra) {
                 serviceScope.launch {
-                    val enabled = wakePrefs.wakeCreateNewChatOnWakeEnabledFlow.first()
-                    if (enabled) {
-                        val currentChatId = chatCore.currentChatId.value
-                        if (currentChatId != null) {
-                            var history = chatCore.chatHistory.value
-                            var waitCount = 0
-                            while (history.isEmpty() && waitCount < 6) {
-                                kotlinx.coroutines.delay(80)
-                                waitCount++
-                                history = chatCore.chatHistory.value
-                            }
-
-                            val hasAnyUserMessage = history.any { it.sender == "user" }
-                            if (!hasAnyUserMessage) {
-                                AppLogger.d(
-                                    TAG,
-                                    "Skip auto createNewChat on wake: current chat has no user messages"
-                                )
-                                return@launch
-                            }
-                        }
-
-                        val group = wakePrefs.autoNewChatGroupFlow.first().trim().ifBlank {
-                            WakeWordPreferences.DEFAULT_AUTO_NEW_CHAT_GROUP
-                        }
-                        chatCore.createNewChat(group = group, inheritGroupFromCurrent = false)
-                    }
+                    chatCore.createNewChat(group = "default", inheritGroupFromCurrent = false)
                 }
             }
 

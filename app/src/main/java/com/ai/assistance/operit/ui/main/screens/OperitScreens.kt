@@ -58,7 +58,7 @@ import com.ai.assistance.operit.ui.features.settings.screens.ModelConfigScreen
 import com.ai.assistance.operit.ui.features.settings.screens.ModelPromptsSettingsScreen
 import com.ai.assistance.operit.ui.features.settings.screens.TagMarketScreen
 import com.ai.assistance.operit.ui.features.settings.screens.SettingsScreen
-import com.ai.assistance.operit.ui.features.settings.screens.SpeechServicesSettingsScreen
+
 import com.ai.assistance.operit.ui.features.settings.screens.ThemeSettingsScreen
 import com.ai.assistance.operit.ui.features.settings.screens.ToolPermissionSettingsScreen
 import com.ai.assistance.operit.ui.features.settings.screens.UserPreferencesGuideScreen
@@ -803,26 +803,6 @@ sealed class Screen(
             )
         }
     }
-    // 添加SpeechServicesSettings屏幕定义
-    data object SpeechServicesSettings :
-            Screen(navItem = NavItem.Settings, titleRes = R.string.screen_title_speech_services_settings) {
-        @Composable
-        override fun Content(
-                navController: NavController,
-                navigateTo: ScreenNavigationHandler,
-                onGoBack: () -> Unit,
-                hasBackgroundImage: Boolean,
-                onLoading: (Boolean) -> Unit,
-                onError: (String) -> Unit,
-                onGestureConsumed: (Boolean) -> Unit
-        ) {
-            SpeechServicesSettingsScreen(
-                onBackPressed = onGoBack,
-                onNavigateToTextToSpeech = { navigateTo(TextToSpeech) }
-            )
-        }
-    }
-    
     data object ExternalHttpChatSettings :
         Screen(navItem = NavItem.Settings, titleRes = R.string.screen_title_external_http_chat_settings) {
         @Composable
@@ -892,31 +872,11 @@ sealed class Screen(
             onGestureConsumed: (Boolean) -> Unit
         ) {
             com.ai.assistance.operit.ui.features.settings.screens.WaifuModeSettingsScreen(
-                onNavigateBack = onGoBack,
-                onNavigateToCustomEmoji = { navigateTo(CustomEmojiManagement) }
-            )
-        }
-    }
-    
-    // 自定义表情管理页面
-    data object CustomEmojiManagement :
-        Screen(navItem = NavItem.Settings, titleRes = R.string.manage_custom_emoji) {
-        @Composable
-        override fun Content(
-            navController: NavController,
-            navigateTo: ScreenNavigationHandler,
-            onGoBack: () -> Unit,
-            hasBackgroundImage: Boolean,
-            onLoading: (Boolean) -> Unit,
-            onError: (String) -> Unit,
-            onGestureConsumed: (Boolean) -> Unit
-        ) {
-            com.ai.assistance.operit.ui.features.settings.screens.CustomEmojiManagementScreen(
                 onNavigateBack = onGoBack
             )
         }
     }
-    
+
     data object TagMarket :
         Screen(navItem = NavItem.Settings, titleRes = R.string.screen_title_tag_market) {
         @Composable

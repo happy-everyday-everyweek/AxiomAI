@@ -20,7 +20,7 @@ import com.ai.assistance.operit.data.model.OperitAttachedTagPayload
 import com.ai.assistance.operit.data.model.OperitCharacterCardPayload
 import com.ai.assistance.operit.data.model.PromptFunctionType
 import com.ai.assistance.operit.data.model.ActivePrompt
-import com.ai.assistance.operit.data.repository.CustomEmojiRepository
+
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonElement
@@ -57,7 +57,7 @@ class CharacterCardManager private constructor(private val context: Context) {
     private val userPreferencesManager = UserPreferencesManager.getInstance(context)
     // 添加WaifuPreferences引用用于Waifu模式配置管理
     private val waifuPreferences = WaifuPreferences.getInstance(context)
-    private val customEmojiRepository by lazy { CustomEmojiRepository.getInstance(context) }
+    private val customEmojiRepository: Nothing? = null
     
     companion object {
         private val CHARACTER_CARD_LIST = stringSetPreferencesKey("character_card_list")

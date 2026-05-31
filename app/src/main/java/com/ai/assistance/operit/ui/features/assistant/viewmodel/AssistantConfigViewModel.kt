@@ -7,14 +7,13 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.ai.assistance.operit.R
 import com.ai.assistance.operit.core.avatar.common.model.AvatarModel
-import com.ai.assistance.operit.core.avatar.common.model.AvatarType
 import com.ai.assistance.operit.core.avatar.common.state.AvatarCustomMoodDefinition
 import com.ai.assistance.operit.core.avatar.common.state.AvatarEmotion
 import com.ai.assistance.operit.core.avatar.common.state.AvatarMoodTypes
 import com.ai.assistance.operit.core.avatar.impl.factory.AvatarModelFactoryImpl
 import com.ai.assistance.operit.data.repository.AvatarConfig
 import com.ai.assistance.operit.data.repository.AvatarInstanceSettings
-import com.ai.assistance.operit.data.repository.AvatarRepository
+
 import com.ai.assistance.operit.data.repository.getCustomMoodDefinitions
 import com.ai.assistance.operit.data.repository.getEmotionAnimationMapping
 import com.ai.assistance.operit.data.repository.getMoodAnimationMapping
@@ -26,7 +25,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 class AssistantConfigViewModel(
-    private val repository: AvatarRepository,
     private val context: Context
 ) : ViewModel() {
 
@@ -62,7 +60,6 @@ class AssistantConfigViewModel(
                     when {
                         currentAvatar == null -> AvatarInstanceSettings()
                         persistedSettings != null -> persistedSettings
-                        currentAvatar.type == AvatarType.DRAGONBONES -> AvatarInstanceSettings(scale = 0.5f)
                         else -> AvatarInstanceSettings()
                     }
                 val currentConfig =
@@ -384,8 +381,7 @@ class AssistantConfigViewModel(
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(AssistantConfigViewModel::class.java)) {
                 val modelFactory = AvatarModelFactoryImpl()
-                val repository = AvatarRepository.getInstance(context, modelFactory)
-                return AssistantConfigViewModel(repository, context) as T
+                return AssistantConfigViewModel(context) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

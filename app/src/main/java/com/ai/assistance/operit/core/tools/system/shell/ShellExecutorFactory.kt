@@ -31,11 +31,11 @@ class ShellExecutorFactory {
             // 创建新的执行器实例
             val executor =
                     when (permissionLevel) {
-                        AndroidPermissionLevel.ROOT -> RootShellExecutor(context)
-                        AndroidPermissionLevel.ADMIN -> AdminShellExecutor(context)
-                        AndroidPermissionLevel.DEBUGGER -> DebuggerShellExecutor(context)
                         AndroidPermissionLevel.ACCESSIBILITY -> AccessibilityShellExecutor(context)
                         AndroidPermissionLevel.STANDARD -> StandardShellExecutor(context)
+                        AndroidPermissionLevel.ROOT,
+                        AndroidPermissionLevel.ADMIN,
+                        AndroidPermissionLevel.DEBUGGER -> StandardShellExecutor(context)
                     }
 
             // 初始化执行器

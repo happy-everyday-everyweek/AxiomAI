@@ -32,7 +32,7 @@ import com.ai.assistance.operit.data.preferences.CharacterCardToolAccessResolver
 import com.ai.assistance.operit.data.model.PromptFunctionType
 import com.ai.assistance.operit.data.preferences.preferencesManager
 import com.ai.assistance.operit.core.avatar.impl.factory.AvatarModelFactoryImpl
-import com.ai.assistance.operit.data.repository.AvatarRepository
+
 import com.ai.assistance.operit.util.ChatMarkupRegex
 import com.ai.assistance.operit.util.ChatUtils
 import com.ai.assistance.operit.core.tools.ToolProgressBus
@@ -51,15 +51,14 @@ import org.json.JSONObject
 import com.ai.assistance.operit.core.tools.ComputerDesktopActionResultData
 import com.ai.assistance.operit.util.LocaleUtils
 import com.ai.assistance.operit.api.chat.enhance.MultiServiceManager
-import com.ai.assistance.operit.data.repository.CustomEmojiRepository
+
 import com.ai.assistance.operit.api.chat.llmprovider.MediaLinkBuilder
 import com.ai.assistance.operit.data.repository.getCustomMoodDefinitions
 import com.ai.assistance.operit.data.repository.getMoodAnimationMapping
 
 /** 处理会话相关功能的服务类，包括会话总结、偏好处理和对话切割准备 */
 class ConversationService(
-    private val context: Context,
-    private val customEmojiRepository: CustomEmojiRepository
+    private val context: Context
     ) {
 
     companion object {
@@ -78,9 +77,7 @@ class ConversationService(
     private val characterCardToolAccessResolver = CharacterCardToolAccessResolver.getInstance(context)
     private val activePromptManager = ActivePromptManager.getInstance(context)
     private val userPreferencesManager = preferencesManager
-    private val avatarRepository by lazy {
-        AvatarRepository.getInstance(context, AvatarModelFactoryImpl())
-    }
+    private val avatarRepository: Nothing? = null
     private val conversationMutex = Mutex()
 
     /**

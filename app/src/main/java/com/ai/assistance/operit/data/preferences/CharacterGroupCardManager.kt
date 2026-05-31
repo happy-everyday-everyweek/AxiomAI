@@ -18,7 +18,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.ai.assistance.operit.data.model.ActivePrompt
 import com.ai.assistance.operit.data.model.CharacterGroupCard
 import com.ai.assistance.operit.data.model.GroupMemberConfig
-import com.ai.assistance.operit.data.repository.CustomEmojiRepository
+
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -45,7 +45,7 @@ class CharacterGroupCardManager private constructor(private val context: Context
     private val characterCardManager = CharacterCardManager.getInstance(context)
     private val userPreferencesManager = UserPreferencesManager.getInstance(context)
     private val waifuPreferences = WaifuPreferences.getInstance(context)
-    private val customEmojiRepository by lazy { CustomEmojiRepository.getInstance(context) }
+    private val customEmojiRepository: Nothing? = null
 
     companion object {
         private val CHARACTER_GROUP_LIST = stringSetPreferencesKey("character_group_list")

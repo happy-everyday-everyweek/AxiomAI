@@ -30,7 +30,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.ai.assistance.operit.R
 import com.ai.assistance.operit.data.model.InputProcessingState
 import com.ai.assistance.operit.data.model.PromptFunctionType
-import com.ai.assistance.operit.ui.floating.voice.SpeechInteractionManager
+
 import kotlinx.coroutines.launch
 
 // 内部状态枚举
@@ -63,40 +63,10 @@ fun SiriBall(
     // 语音交互管理器
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val speechManager = remember(context, scope) {
-        SpeechInteractionManager(
-            context = context,
-            coroutineScope = scope,
-            onSpeechResult = { text, _ ->
-                // 收到语音结果，发送消息
-                floatContext.onSendMessage?.invoke(text, PromptFunctionType.VOICE)
-            },
-            onStateChange = { msg ->
-                // 根据状态消息判断是否需要重置状态
-                if (msg == context.getString(R.string.floating_didnt_hear_clearly)) {
-                    ballState = StateIdle
-                }
-            }
-        )
-    }
 
     // 初始化与清理语音服务
     DisposableEffect(Unit) {
-        scope.launch {
-            speechManager.initialize()
-            // 尝试获取焦点以便能从麦克风录音
-            val view = floatContext.chatService?.getComposeView()
-            speechManager.requestFocus(view)
-        }
         onDispose {
-            speechManager.cleanup()
-        }
-    }
-
-    // 收集语音识别结果流并反馈给管理器处理
-    LaunchedEffect(speechManager) {
-        speechManager.recognitionResultFlow.collect { result ->
-            speechManager.handleRecognitionResult(result.text, result.isFinal)
         }
     }
     

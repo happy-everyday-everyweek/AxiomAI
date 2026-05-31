@@ -1,29 +1,19 @@
 package com.ai.assistance.operit.ui.features.assistant.components
 
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -35,9 +25,6 @@ import com.ai.assistance.operit.R
 @Composable
 fun HowToImportSection() {
     var expanded by remember { mutableStateOf(false) }
-    val context = LocalContext.current
-    val newEditorUrl = "https://www.loongbones.com/"
-    val oldEditorUrl = "https://www.egret.uk/download/"
 
     Column(
         modifier = Modifier
@@ -118,46 +105,6 @@ fun HowToImportSection() {
                 lineHeight = MaterialTheme.typography.bodyLarge.lineHeight,
                 modifier = Modifier.padding(top = 8.dp)
             )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Surface(
-                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.dragonbones_important_tip),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onErrorContainer,
-                    modifier = Modifier.padding(all = 8.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Button(
-                    onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(oldEditorUrl))
-                        context.startActivity(intent)
-                    },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(stringResource(R.string.download_old_editor))
-                }
-                Button(
-                    onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(newEditorUrl))
-                        context.startActivity(intent)
-                    },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(stringResource(R.string.visit_online_editor))
-                }
-            }
         }
     }
 }

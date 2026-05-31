@@ -68,6 +68,10 @@ android {
                 "proguard-rules.pro"
             )
         }
+        create("nightly") {
+            isMinifyEnabled = false
+            matchingFallbacks += listOf("release")
+        }
     }
 
     externalNativeBuild {

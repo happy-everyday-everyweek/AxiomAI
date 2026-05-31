@@ -11,7 +11,7 @@ import android.widget.Toast
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import com.ai.assistance.operit.core.tools.system.OperitTerminalManager
-import com.ai.assistance.operit.core.tools.system.RootAuthorizer
+
 import com.ai.assistance.operit.data.repository.UIHierarchyManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -24,8 +24,7 @@ import android.content.pm.PackageManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.ai.assistance.operit.core.tools.system.AccessibilityProviderInstaller
-import com.ai.assistance.operit.core.tools.system.ShizukuAuthorizer
+
 import com.ai.assistance.operit.core.tools.system.Terminal
 import com.ai.assistance.operit.data.mcp.plugins.MCPSharedSession
 import com.ai.assistance.operit.R
@@ -49,13 +48,7 @@ class DemoStateManager(private val context: Context, private val coroutineScope:
     // Shizuku state change listeners
     private val shizukuListener: () -> Unit = { refreshStatus() }
 
-    // Root state change listener
-    private val rootListener: () -> Unit = { refreshStatus() }
-
     init {
-        // Register listeners for Shizuku and Root state changes
-        ShizukuAuthorizer.addStateChangeListener(shizukuListener)
-        RootAuthorizer.addStateChangeListener(rootListener)
         // 初始化时刷新所有状态
         coroutineScope.launch {
             refreshAllStates()
@@ -176,9 +169,6 @@ class DemoStateManager(private val context: Context, private val coroutineScope:
 
     /** Clean up resources */
     fun cleanup() {
-        // Remove listeners
-        ShizukuAuthorizer.removeStateChangeListener(shizukuListener)
-        RootAuthorizer.removeStateChangeListener(rootListener)
     }
 
     /**
@@ -244,7 +234,7 @@ class DemoStateManager(private val context: Context, private val coroutineScope:
 
             // Check Shizuku API_V23 permission
             if (_uiState.value.isShizukuInstalled.value && _uiState.value.isShizukuRunning.value) {
-                _uiState.value.hasShizukuPermission.value = ShizukuAuthorizer.hasShizukuPermission()
+                _uiState.value.hasShizukuPermission.value = false
 
                 if (!_uiState.value.hasShizukuPermission.value) {
                     AppLogger.d(TAG, "缺少Shizuku API_V23权限，显示Shizuku向导卡片")
@@ -347,18 +337,13 @@ suspend fun refreshPermissionsAndStatus(
     AppLogger.d(TAG, "刷新应用权限状态...")
 
     // 检查Shizuku安装、运行和权限状态
-    val isShizukuInstalled = ShizukuAuthorizer.isShizukuInstalled(context)
-    val isShizukuRunning = ShizukuAuthorizer.isShizukuServiceRunning()
+    val isShizukuInstalled = false
+    val isShizukuRunning = false
     updateShizukuInstalled(isShizukuInstalled)
     updateShizukuRunning(isShizukuRunning)
 
     // Shizuku权限检查
-    val hasShizukuPermission =
-        if (isShizukuInstalled && isShizukuRunning) {
-            ShizukuAuthorizer.hasShizukuPermission()
-        } else {
-            false
-        }
+    val hasShizukuPermission = false
     updateShizukuPermission(hasShizukuPermission)
 
     // 检查NodeJS和Python环境是否就绪（替代OperitTerminal安装检查）
@@ -435,16 +420,6 @@ suspend fun refreshPermissionsAndStatus(
     val hasBatteryOptimizationExemption =
         powerManager.isIgnoringBatteryOptimizations(context.packageName)
     updateBatteryOptimizationExemption(hasBatteryOptimizationExemption)
-
-    // 检查无障碍服务提供者和服务的状态
-    val isProviderInstalled = UIHierarchyManager.isProviderAppInstalled(context)
-    updateAccessibilityProviderInstalled(isProviderInstalled)
-
-    // 只有在提供者安装后才尝试绑定并检查服务状态
-    if (isProviderInstalled) {
-        // 确保服务已绑定
-        UIHierarchyManager.bindToService(context)
-    }
 
     val hasAccessibilityServiceEnabled =
         UIHierarchyManager.isAccessibilityServiceEnabled(context)
