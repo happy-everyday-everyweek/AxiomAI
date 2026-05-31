@@ -22,7 +22,6 @@ import com.ai.assistance.operit.util.TtsSegmenter
 import com.ai.assistance.operit.util.WaifuMessageProcessor
 import com.ai.assistance.operit.data.preferences.ApiPreferences
 import com.ai.assistance.operit.data.preferences.CharacterCardManager
-import com.ai.assistance.operit.data.preferences.WaifuPreferences
 import com.ai.assistance.operit.data.preferences.FunctionalConfigManager
 import com.ai.assistance.operit.data.preferences.ModelConfigManager
 import com.ai.assistance.operit.data.preferences.UserPreferencesManager
@@ -675,11 +674,8 @@ class MessageProcessingDelegate(
             var serviceForTurnComplete: EnhancedAIService? = null
             var shouldNotifyTurnComplete = false
             var finalInputStateAfterSend: EnhancedInputProcessingState? = null
-            var isWaifuModeEnabled = false
             var didStreamAutoRead = false
             val effectiveRoleCardId = roleCardId
-            val waifuEmittedMessages = mutableListOf<ChatMessage>()
-            var syncWaifuMessageMetricsHandler: (suspend (ChatMessage) -> Unit)? = null
             var requestSentAt = 0L
             var requestStartElapsed = 0L
             var firstResponseElapsed: Long? = null
@@ -916,80 +912,9 @@ class MessageProcessingDelegate(
                     "创建带流的AI消息, stream is null: ${aiMessage.contentStream == null}, timestamp: ${aiMessage.timestamp}"
                 )
 
-                // 检查是否启用waifu模式来决定是否显示流式过程
-                val waifuPreferences = WaifuPreferences.getInstance(context)
-                isWaifuModeEnabled = waifuPreferences.enableWaifuModeFlow.first()
-                val waifuCharDelay = waifuPreferences.waifuCharDelayFlow.first()
-                val waifuRemovePunctuation =
-                    if (isWaifuModeEnabled) {
-                        waifuPreferences.waifuRemovePunctuationFlow.first()
-                    } else {
-                        false
-                    }
-
-                suspend fun emitWaifuSegment(segment: String) {
-                    if (segment.isBlank()) return
-
-                    val interrupt = waifuEmittedMessages.isEmpty()
-                    val segmentMessage =
-                        ChatMessage(
-                            sender = "ai",
-                            content = segment,
-                            contentStream = null,
-                            timestamp = ChatMessageTimestampAllocator.next(),
-                            roleName = currentRoleName,
-                            provider = provider,
-                            modelName = modelName,
-                            sentAt = requestSentAt
-                        )
-
-                    withContext(Dispatchers.Main) {
-                        waifuEmittedMessages += segmentMessage
-                        if (effectivePersistTurn && chatId != null) {
-                            addMessageToChat(chatId, segmentMessage)
-                        }
-                        if (getIsAutoReadEnabled()) {
-                            didStreamAutoRead = true
-                            AppLogger.d(
-                                TAG,
-                                "autoRead[waifuStream] interrupt=$interrupt len=${segment.length} preview=\"${speechPreview(segment)}\""
-                            )
-                            speakMessageHandler(segment, interrupt)
-                        }
-                        tryEmitScrollToBottomThrottled(chatId)
-                    }
-                }
-
-                suspend fun syncWaifuMessageMetrics(sourceMessage: ChatMessage) {
-                    if (!effectivePersistTurn || chatId == null || waifuEmittedMessages.isEmpty()) return
-
-                    withContext(Dispatchers.Main) {
-                        waifuEmittedMessages.indices.forEach { index ->
-                            val updatedMessage =
-                                waifuEmittedMessages[index].copy(
-                                    inputTokens = sourceMessage.inputTokens,
-                                    outputTokens = sourceMessage.outputTokens,
-                                    cachedInputTokens = sourceMessage.cachedInputTokens,
-                                    sentAt = sourceMessage.sentAt,
-                                    outputDurationMs = sourceMessage.outputDurationMs,
-                                    waitDurationMs = sourceMessage.waitDurationMs,
-                                    completedAt = sourceMessage.completedAt,
-                                )
-                            waifuEmittedMessages[index] = updatedMessage
-                            addMessageToChat(chatId, updatedMessage)
-                        }
-                    }
-                }
-                syncWaifuMessageMetricsHandler = { sourceMessage ->
-                    syncWaifuMessageMetrics(sourceMessage)
-                }
-                
-                // 只有在非waifu模式下才添加初始的AI消息
-                if (!isWaifuModeEnabled) {
-                    withContext(Dispatchers.Main) {
-                        if (effectivePersistTurn && chatId != null) {
-                            addMessageToChat(chatId, aiMessage)
-                        }
+                withContext(Dispatchers.Main) {
+                    if (effectivePersistTurn && chatId != null) {
+                        addMessageToChat(chatId, aiMessage)
                     }
                 }
                 
@@ -1004,12 +929,7 @@ class MessageProcessingDelegate(
                             val revisionMutex = Mutex()
                             val autoReadBuffer = StringBuilder()
                             var isFirstAutoReadSegment = true
-                            val autoReadStream =
-                                if (!isWaifuModeEnabled) {
-                                    XmlTextProcessor.processStreamToText(sharedCharStream)
-                                } else {
-                                    null
-                                }
+                            val autoReadStream = XmlTextProcessor.processStreamToText(sharedCharStream)
                             val revisableStream = sharedCharStream as? TextStreamEventCarrier
 
                             fun flushAutoReadSegment(segment: String, interrupt: Boolean) {
@@ -1031,7 +951,6 @@ class MessageProcessingDelegate(
 
                             fun tryFlushAutoRead() {
                                 if (!getIsAutoReadEnabled()) return
-                                if (isWaifuModeEnabled) return
                                 while (true) {
                                     val bufferBefore = autoReadBuffer.length
                                     val cutIdx = TtsSegmenter.nextSegmentEnd(autoReadBuffer)
@@ -1053,7 +972,7 @@ class MessageProcessingDelegate(
                                 contentSnapshot: String,
                                 force: Boolean = false
                             ) {
-                                if (!effectivePersistTurn || isWaifuModeEnabled || chatId == null) return
+                                if (!effectivePersistTurn || chatId == null) return
                                 val now = messageTimingNow()
                                 if (!force && now - lastStreamingPersistAt < STREAM_PERSIST_INTERVAL_MS) {
                                     return
@@ -1064,27 +983,13 @@ class MessageProcessingDelegate(
                             }
 
                             val autoReadJob =
-                                autoReadStream?.let { stream ->
+                                autoReadStream.let { stream ->
                                     launch {
                                         stream.collect { char ->
                                             autoReadBuffer.append(char)
                                             tryFlushAutoRead()
                                         }
                                     }
-                                }
-                            val waifuSegmentsJob =
-                                if (isWaifuModeEnabled) {
-                                    launch {
-                                        WaifuMessageProcessor.streamSegmentsWithTypingQueue(
-                                            sourceStream = sharedCharStream,
-                                            removePunctuation = waifuRemovePunctuation,
-                                            charDelayMs = waifuCharDelay
-                                        ).collect { segment ->
-                                            emitWaifuSegment(segment)
-                                        }
-                                    }
-                                } else {
-                                    null
                                 }
 
                             val revisionJob =
@@ -1106,7 +1011,7 @@ class MessageProcessingDelegate(
 
                                                     aiMessage.content = snapshot
 
-                                                    if (!isWaifuModeEnabled) {
+                                                    if (true) {
                                                         persistStreamingSnapshot(snapshot)
                                                         tryEmitScrollToBottomThrottled(chatId)
                                                     }
@@ -1138,16 +1043,13 @@ class MessageProcessingDelegate(
                                 
                                 // 流式内容由 contentStream 实时渲染，这里仅按固定间隔同步快照，避免碎片 chunk 导致高频持久化。
                                 persistStreamingSnapshot(content)
-                                if (!isWaifuModeEnabled) {
-                                    tryEmitScrollToBottomThrottled(chatId)
-                                }
+                                tryEmitScrollToBottomThrottled(chatId)
                             }
 
                             revisionJob?.cancelAndJoin()
-                            autoReadJob?.join()
-                            waifuSegmentsJob?.join()
+                            autoReadJob.join()
 
-                            if (getIsAutoReadEnabled() && !isWaifuModeEnabled) {
+                            if (getIsAutoReadEnabled()) {
                                 val remaining = autoReadBuffer.toString()
                                 autoReadBuffer.clear()
                                 AppLogger.d(
@@ -1225,10 +1127,6 @@ class MessageProcessingDelegate(
                 }
                 aiMessage = aiMessage.copy(completedAt = System.currentTimeMillis())
 
-                if (isWaifuModeEnabled) {
-                    syncWaifuMessageMetricsHandler?.invoke(aiMessage)
-                }
-
                 val stateAfterStream =
                     _inputProcessingStateByChatId.value[chatKey(chatId)]
                 if (stateAfterStream !is EnhancedInputProcessingState.Error) {
@@ -1247,7 +1145,7 @@ class MessageProcessingDelegate(
                 logMessageTiming(
                     stage = "delegate.responseProcessingComplete",
                     startTimeMs = responseStartTime,
-                    details = "chatId=$activeChatId, waifu=$isWaifuModeEnabled, autoRead=$didStreamAutoRead"
+                    details = "chatId=$activeChatId, autoRead=$didStreamAutoRead"
                 )
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) {
@@ -1271,11 +1169,9 @@ class MessageProcessingDelegate(
                             chatId = chatId,
                             activeChatId = activeChatId,
                             aiMessageProvider = { aiMessage },
-                            isWaifuModeEnabled = isWaifuModeEnabled,
-                            skipFinalAutoRead = didStreamAutoRead && !isWaifuModeEnabled,
-                            syncWaifuMessageMetrics = { sourceMessage ->
-                                syncWaifuMessageMetricsHandler?.invoke(sourceMessage)
-                            },
+                            isWaifuModeEnabled = false,
+                            skipFinalAutoRead = didStreamAutoRead,
+                            syncWaifuMessageMetrics = { _ -> },
                             calculateNextWindowSize = calculateNextWindowSize,
                             turnOptions = turnOptions
                         )
@@ -1617,40 +1513,34 @@ class MessageProcessingDelegate(
             val completedAt = System.currentTimeMillis()
 
             withContext(Dispatchers.IO) {
-                if (isWaifuModeEnabled) {
-                    syncWaifuMessageMetrics(aiMessage.copy(completedAt = completedAt))
-                    forceEmitScrollToBottom(chatId)
-                } else {
-                    // 普通模式，直接清理流
-                    val finalMessage =
-                        aiMessage.copy(
-                            content = finalContent,
-                            contentStream = null,
-                            completedAt = completedAt,
-                        )
-                    withContext(Dispatchers.Main) {
-                        if (turnOptions.persistTurn && chatId != null) {
-                            addMessageToChat(chatId, finalMessage)
-                        }
-                        AppLogger.d(
-                            TAG,
-                            "autoRead[final] enabled=${getIsAutoReadEnabled()} skipFinalAutoRead=$skipFinalAutoRead len=${finalContent.length} preview=\"${speechPreview(finalContent)}\""
-                        )
+                val finalMessage =
+                    aiMessage.copy(
+                        content = finalContent,
+                        contentStream = null,
+                        completedAt = completedAt,
+                    )
+                withContext(Dispatchers.Main) {
+                    if (turnOptions.persistTurn && chatId != null) {
+                        addMessageToChat(chatId, finalMessage)
+                    }
+                    AppLogger.d(
+                        TAG,
+                        "autoRead[final] enabled=${getIsAutoReadEnabled()} skipFinalAutoRead=$skipFinalAutoRead len=${finalContent.length} preview=\"${speechPreview(finalContent)}\""
+                    )
                         // 如果启用了自动朗读，则朗读完整消息
                         if (getIsAutoReadEnabled() && !skipFinalAutoRead) {
                             speakMessageHandler(finalContent, true)
                         }
                         forceEmitScrollToBottom(chatId)
                     }
-                }
             }
         } catch (e: UninitializedPropertyAccessException) {
             AppLogger.d(TAG, "AI消息未初始化，跳过流清理步骤")
         } catch (e: kotlinx.coroutines.CancellationException) {
-            AppLogger.d(TAG, "消息收尾阶段被取消，跳过waifu收尾处理")
+            AppLogger.d(TAG, "消息收尾阶段被取消")
             throw e
         } catch (e: Exception) {
-            AppLogger.e(TAG, "处理waifu模式时出错", e)
+            AppLogger.e(TAG, "处理消息收尾时出错", e)
             try {
                 val aiMessage = aiMessageProvider()
                 val finalContent = aiMessage.content

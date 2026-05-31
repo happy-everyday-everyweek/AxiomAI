@@ -25,7 +25,6 @@ import androidx.navigation.NavController
 import com.ai.assistance.operit.R
 import com.ai.assistance.operit.ui.common.NavItem
 import com.ai.assistance.operit.ui.features.about.screens.AboutScreen
-import com.ai.assistance.operit.ui.features.assistant.screens.AssistantConfigScreen
 import com.ai.assistance.operit.ui.features.chat.screens.AIChatScreen
 import com.ai.assistance.operit.ui.features.demo.screens.ShizukuDemoScreen
 import com.ai.assistance.operit.ui.features.help.screens.HelpScreen
@@ -58,7 +57,6 @@ import com.ai.assistance.operit.ui.features.settings.screens.ModelConfigScreen
 import com.ai.assistance.operit.ui.features.settings.screens.ModelPromptsSettingsScreen
 import com.ai.assistance.operit.ui.features.settings.screens.TagMarketScreen
 import com.ai.assistance.operit.ui.features.settings.screens.SettingsScreen
-import com.ai.assistance.operit.ui.features.settings.screens.SpeechServicesSettingsScreen
 import com.ai.assistance.operit.ui.features.settings.screens.ThemeSettingsScreen
 import com.ai.assistance.operit.ui.features.settings.screens.ToolPermissionSettingsScreen
 import com.ai.assistance.operit.ui.features.settings.screens.UserPreferencesGuideScreen
@@ -81,8 +79,6 @@ import com.ai.assistance.operit.ui.features.toolbox.screens.ProcessLimitRemoverT
 import com.ai.assistance.operit.ui.features.toolbox.screens.sqlviewer.SqlViewerToolScreen
 import com.ai.assistance.operit.ui.features.toolbox.screens.ffmpegtoolbox.FFmpegToolboxScreen
 import com.ai.assistance.operit.ui.features.toolbox.screens.htmlpackager.HtmlPackagerScreen
-import com.ai.assistance.operit.ui.features.toolbox.screens.speechtotext.SpeechToTextToolScreen
-import com.ai.assistance.operit.ui.features.toolbox.screens.texttospeech.TextToSpeechToolScreen
 import com.ai.assistance.operit.ui.features.toolbox.screens.tooltester.ToolTesterScreen
 import com.ai.assistance.operit.ui.features.toolbox.screens.autoglm.AutoGlmOneClickToolScreen
 import com.ai.assistance.operit.ui.features.toolbox.screens.autoglm.AutoGlmToolScreen
@@ -559,10 +555,7 @@ sealed class Screen(
                     navigateToChatHistorySettings = { navigateTo(ChatHistorySettings) },
                     navigateToChatBackupSettings = { navigateTo(ChatBackupSettings) },
                     navigateToLanguageSettings = { navigateTo(LanguageSettings) },
-                    navigateToSpeechServicesSettings = { navigateTo(SpeechServicesSettings) },
                     navigateToExternalHttpChatSettings = { navigateTo(ExternalHttpChatSettings) },
-                    navigateToPersonaCardGeneration = { navigateTo(PersonaCardGeneration) },
-                    navigateToWaifuModeSettings = { navigateTo(WaifuModeSettings) },
                     navigateToTokenUsageStatistics = { navigateTo(TokenUsageStatistics) },
                     navigateToContextSummarySettings = { navigateTo(ContextSummarySettings) },
                     navigateToLayoutAdjustmentSettings = { navigateTo(LayoutAdjustmentSettings) }
@@ -652,25 +645,6 @@ sealed class Screen(
             onGestureConsumed: (Boolean) -> Unit
         ) {
             UpdateScreen(onNavigateToThemeSettings = { navigateTo(ThemeSettings) })
-        }
-    }
-
-    data object AssistantConfig :
-            Screen(
-                    navItem = NavItem.AssistantConfig,
-                    participatesInCrossfadeTransition = false
-            ) {
-        @Composable
-        override fun Content(
-                navController: NavController,
-                navigateTo: ScreenNavigationHandler,
-                onGoBack: () -> Unit,
-                hasBackgroundImage: Boolean,
-                onLoading: (Boolean) -> Unit,
-                onError: (String) -> Unit,
-                onGestureConsumed: (Boolean) -> Unit
-        ) {
-            AssistantConfigScreen()
         }
     }
 
@@ -803,26 +777,6 @@ sealed class Screen(
             )
         }
     }
-    // 添加SpeechServicesSettings屏幕定义
-    data object SpeechServicesSettings :
-            Screen(navItem = NavItem.Settings, titleRes = R.string.screen_title_speech_services_settings) {
-        @Composable
-        override fun Content(
-                navController: NavController,
-                navigateTo: ScreenNavigationHandler,
-                onGoBack: () -> Unit,
-                hasBackgroundImage: Boolean,
-                onLoading: (Boolean) -> Unit,
-                onError: (String) -> Unit,
-                onGestureConsumed: (Boolean) -> Unit
-        ) {
-            SpeechServicesSettingsScreen(
-                onBackPressed = onGoBack,
-                onNavigateToTextToSpeech = { navigateTo(TextToSpeech) }
-            )
-        }
-    }
-    
     data object ExternalHttpChatSettings :
         Screen(navItem = NavItem.Settings, titleRes = R.string.screen_title_external_http_chat_settings) {
         @Composable
@@ -853,67 +807,6 @@ sealed class Screen(
             onGestureConsumed: (Boolean) -> Unit
         ) {
             MnnModelDownloadScreen(onBackPressed = onGoBack)
-        }
-    }
-    
-    // 新增：人设卡生成页面
-    data object PersonaCardGeneration :
-        Screen(navItem = NavItem.Settings, titleRes = R.string.screen_title_persona_card_generation) {
-        @Composable
-        override fun Content(
-            navController: NavController,
-            navigateTo: ScreenNavigationHandler,
-            onGoBack: () -> Unit,
-            hasBackgroundImage: Boolean,
-            onLoading: (Boolean) -> Unit,
-            onError: (String) -> Unit,
-            onGestureConsumed: (Boolean) -> Unit
-        ) {
-            com.ai.assistance.operit.ui.features.settings.screens.PersonaCardGenerationScreen(
-                onNavigateToSettings = { navigateTo(Settings) },
-                onNavigateToUserPreferences = { navigateTo(UserPreferencesSettings) },
-                onNavigateToModelConfig = { navigateTo(ModelConfig) },
-                onNavigateToModelPrompts = { navigateTo(ModelPromptsSettings) }
-            )
-        }
-    }
-
-    // 新增：Waifu模式设置页面
-    data object WaifuModeSettings :
-        Screen(navItem = NavItem.Settings, titleRes = R.string.screen_title_waifu_mode_settings) {
-        @Composable
-        override fun Content(
-            navController: NavController,
-            navigateTo: ScreenNavigationHandler,
-            onGoBack: () -> Unit,
-            hasBackgroundImage: Boolean,
-            onLoading: (Boolean) -> Unit,
-            onError: (String) -> Unit,
-            onGestureConsumed: (Boolean) -> Unit
-        ) {
-            com.ai.assistance.operit.ui.features.settings.screens.WaifuModeSettingsScreen(
-                onNavigateBack = onGoBack,
-                onNavigateToCustomEmoji = { navigateTo(CustomEmojiManagement) }
-            )
-        }
-    }
-    
-    // 自定义表情管理页面
-    data object CustomEmojiManagement :
-        Screen(navItem = NavItem.Settings, titleRes = R.string.manage_custom_emoji) {
-        @Composable
-        override fun Content(
-            navController: NavController,
-            navigateTo: ScreenNavigationHandler,
-            onGoBack: () -> Unit,
-            hasBackgroundImage: Boolean,
-            onLoading: (Boolean) -> Unit,
-            onError: (String) -> Unit,
-            onGestureConsumed: (Boolean) -> Unit
-        ) {
-            com.ai.assistance.operit.ui.features.settings.screens.CustomEmojiManagementScreen(
-                onNavigateBack = onGoBack
-            )
         }
     }
     
@@ -948,7 +841,6 @@ sealed class Screen(
             ModelPromptsSettingsScreen(
                 onBackPressed = onGoBack,
                 onNavigateToMarket = { navigateTo(TagMarket) },
-                onNavigateToPersonaGeneration = { navigateTo(PersonaCardGeneration) },
                 onNavigateToChatManagement = { navigateTo(ChatHistorySettings) }
             )
         }
@@ -1362,40 +1254,7 @@ sealed class Screen(
         }
     }
 
-    // 在MarkdownDemo对象后添加TextToSpeech对象
-    data object TextToSpeech :
-            Screen(navItem = NavItem.Toolbox, titleRes = R.string.screen_title_text_to_speech) {
-        @Composable
-        override fun Content(
-                navController: NavController,
-                navigateTo: ScreenNavigationHandler,
-                onGoBack: () -> Unit,
-                hasBackgroundImage: Boolean,
-                onLoading: (Boolean) -> Unit,
-                onError: (String) -> Unit,
-                onGestureConsumed: (Boolean) -> Unit
-        ) {
-            TextToSpeechToolScreen(navController = navController)
-        }
-    }
-
     // Tools screens
-    data object SpeechToText :
-            Screen(navItem = NavItem.Toolbox, titleRes = R.string.screen_title_speech_to_text) {
-        @Composable
-        override fun Content(
-                navController: NavController,
-                navigateTo: ScreenNavigationHandler,
-                onGoBack: () -> Unit,
-                hasBackgroundImage: Boolean,
-                onLoading: (Boolean) -> Unit,
-                onError: (String) -> Unit,
-                onGestureConsumed: (Boolean) -> Unit
-        ) {
-            SpeechToTextToolScreen(navController = navController)
-        }
-    }
-
     data object DefaultAssistantGuide :
             Screen(navItem = NavItem.Toolbox, titleRes = R.string.screen_title_default_assistant_guide) {
         @Composable

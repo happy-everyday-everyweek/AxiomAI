@@ -39,7 +39,6 @@ import com.ai.assistance.operit.data.model.ModelConfigData
 import com.ai.assistance.operit.data.model.AITool
 import com.ai.assistance.operit.data.preferences.ApiPreferences
 import com.ai.assistance.operit.data.preferences.ExternalHttpApiPreferences
-import com.ai.assistance.operit.data.preferences.WakeWordPreferences
 import com.ai.assistance.operit.util.stream.MutableSharedStream
 import com.ai.assistance.operit.util.stream.Stream
 import com.ai.assistance.operit.util.stream.StreamCollector
@@ -76,7 +75,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import com.ai.assistance.operit.data.repository.CustomEmojiRepository
 import com.ai.assistance.operit.data.preferences.CharacterCardManager
 import com.ai.assistance.operit.data.preferences.CharacterCardToolAccessResolver
 import com.ai.assistance.operit.data.preferences.UserPreferencesManager
@@ -360,7 +358,7 @@ class EnhancedAIService private constructor(private val context: Context) {
     @Volatile private var isServiceManagerInitialized = false
 
     // 添加ConversationService实例
-    private val conversationService = ConversationService(context, CustomEmojiRepository.getInstance(context))
+    private val conversationService = ConversationService(context)
 
     // 添加FileBindingService实例
     private val fileBindingService = FileBindingService(context)
@@ -881,7 +879,7 @@ class EnhancedAIService private constructor(private val context: Context) {
                 withContext(Dispatchers.IO) {
                     // 仅当会话首次启动时开启服务，并更新前台通知为“运行中”
                     if (!isSubTask) {
-                        startAiService(characterName, avatarUri)
+                        startAiService()
                     }
 
                     // Update state to show we're processing
@@ -1963,8 +1961,8 @@ class EnhancedAIService private constructor(private val context: Context) {
         }
 
         if (!isSubTask) {
-            notifyReplyCompleted(chatId, characterName, avatarUri, notifyReplyOverride)
-            stopAiService(characterName, avatarUri)
+            notifyReplyCompleted(chatId, notifyReplyOverride)
+            stopAiService()
         }
     }
 
@@ -2226,7 +2224,7 @@ class EnhancedAIService private constructor(private val context: Context) {
                 onTokenLimitExceeded?.invoke()
                 context.isConversationActive.set(false)
                 if (!isSubTask) {
-                    stopAiService(characterName, avatarUri)
+                    stopAiService()
                 }
                 // 关键修复：在触发总结后，直接返回，因为后续流程将由回调处理
                 return
@@ -2916,18 +2914,14 @@ class EnhancedAIService private constructor(private val context: Context) {
     // --- Service Lifecycle Management ---
 
     /** 启动或更新前台服务为“AI 正在运行”状态，以保持应用活跃 */
-    private fun startAiService(characterName: String? = null, avatarUri: String? = null) {
+    private fun startAiService() {
         val refCount = FOREGROUND_REF_COUNT.incrementAndGet()
         val appInForeground = ActivityLifecycleManager.getCurrentActivity() != null
-        val alwaysListeningEnabled = runCatching {
-            runBlocking { WakeWordPreferences(context).alwaysListeningEnabledFlow.first() }
-        }.getOrDefault(false)
         val externalHttpEnabled = runCatching {
             runBlocking { ExternalHttpApiPreferences.getInstance(context).enabledFlow.first() }
         }.getOrDefault(false)
         if (!appInForeground &&
             !AIForegroundService.isRunning.get() &&
-            !alwaysListeningEnabled &&
             !externalHttpEnabled
         ) {
             AppLogger.d(TAG, "应用不在前台，跳过启动 AIForegroundService")
@@ -2936,12 +2930,6 @@ class EnhancedAIService private constructor(private val context: Context) {
         try {
             val updateIntent = Intent(context, AIForegroundService::class.java).apply {
                 putExtra(AIForegroundService.EXTRA_STATE, AIForegroundService.STATE_RUNNING)
-                if (characterName != null) {
-                    putExtra(AIForegroundService.EXTRA_CHARACTER_NAME, characterName)
-                }
-                if (avatarUri != null) {
-                    putExtra(AIForegroundService.EXTRA_AVATAR_URI, avatarUri)
-                }
             }
             context.startService(updateIntent)
         } catch (e: Exception) {
@@ -2955,22 +2943,18 @@ class EnhancedAIService private constructor(private val context: Context) {
 
     private fun notifyReplyCompleted(
         chatId: String?,
-        characterName: String? = null,
-        avatarUri: String? = null,
         notifyReplyOverride: Boolean? = null
     ) {
         AIForegroundService.notifyReplyCompleted(
             context = context,
             chatId = chatId,
-            characterName = characterName,
             rawReplyContent = lastReplyContent,
-            avatarUri = avatarUri,
             notifyReplyOverride = notifyReplyOverride
         )
     }
 
     /** 将前台服务更新为“空闲/已完成”状态，但不真正停止服务 */
-    private fun stopAiService(characterName: String? = null, avatarUri: String? = null) {
+    private fun stopAiService() {
         val remaining = run {
             var remainingValue = -1
             while (true) {
@@ -2994,12 +2978,8 @@ class EnhancedAIService private constructor(private val context: Context) {
 
             try {
                 val stopIntent = Intent(context, AIForegroundService::class.java).apply {
-                    putExtra(AIForegroundService.EXTRA_CHARACTER_NAME, characterName)
-                    putExtra(AIForegroundService.EXTRA_AVATAR_URI, avatarUri)
                     putExtra(AIForegroundService.EXTRA_STATE, AIForegroundService.STATE_IDLE)
                 }
-
-                AppLogger.d(TAG, "传递闲置状态 - 角色: $characterName, 头像: $avatarUri")
 
                 // 仅发送更新，不再真正停止前台服务
                 context.startService(stopIntent)

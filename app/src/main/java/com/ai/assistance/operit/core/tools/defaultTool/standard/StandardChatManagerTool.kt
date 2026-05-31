@@ -33,7 +33,6 @@ import com.ai.assistance.operit.data.model.InputProcessingState
 import com.ai.assistance.operit.data.model.PromptFunctionType
 import com.ai.assistance.operit.data.model.ToolResult
 import com.ai.assistance.operit.data.preferences.CharacterCardManager
-import com.ai.assistance.operit.data.preferences.WaifuPreferences
 import com.ai.assistance.operit.data.repository.ChatHistoryManager
 import com.ai.assistance.operit.services.ChatServiceCore
 import com.ai.assistance.operit.services.FloatingChatService
@@ -1551,15 +1550,6 @@ class StandardChatManagerTool(private val context: Context) {
                 is MessageSendStreamStartResult.Failed -> send(startResult.result)
                 is MessageSendStreamStartResult.Started -> {
                     val session = startResult.session
-                    val effectiveWaifuMode = waifuMode == true
-                    val waifuPreferences = WaifuPreferences.getInstance(context)
-                    val waifuCharDelay = waifuPreferences.waifuCharDelayFlow.first()
-                    val waifuRemovePunctuation =
-                        if (effectiveWaifuMode) {
-                            waifuPreferences.waifuRemovePunctuationFlow.first()
-                        } else {
-                            false
-                        }
 
                     send(
                         ToolResult(
@@ -1569,7 +1559,7 @@ class StandardChatManagerTool(private val context: Context) {
                                 type = "start",
                                 chatId = session.chatId,
                                 message = session.message,
-                                waifu = effectiveWaifuMode,
+                                waifu = false,
                                 chunkIndex = 0,
                                 receivedChars = 0
                             ),
@@ -1591,7 +1581,7 @@ class StandardChatManagerTool(private val context: Context) {
                                     type = "chunk",
                                     chatId = session.chatId,
                                     message = session.message,
-                                    waifu = effectiveWaifuMode,
+                                    waifu = false,
                                     chunk = chunk,
                                     chunkIndex = chunkIndex,
                                     receivedChars = receivedChars
@@ -1612,32 +1602,14 @@ class StandardChatManagerTool(private val context: Context) {
                                         }
                                         fullResponse.append(chunk)
                                         receivedChars += chunk.length
-                                        if (!effectiveWaifuMode) {
-                                            sendChunk(chunk)
-                                        }
+                                        sendChunk(chunk)
                                     }
                                     fullResponse.toString()
                                 }
 
-                                val waifuStreamJob =
-                                    if (effectiveWaifuMode) {
-                                        launch {
-                                            WaifuMessageProcessor.streamSegmentsWithTypingQueue(
-                                                sourceStream = session.responseStream,
-                                                removePunctuation = waifuRemovePunctuation,
-                                                charDelayMs = waifuCharDelay
-                                            ).collect { segment ->
-                                                sendChunk(segment)
-                                            }
-                                        }
-                                    } else {
-                                        null
-                                    }
-
                                 val result = withTimeout(session.responseTimeoutMs) {
                                     rawStreamJob.await()
                                 }
-                                waifuStreamJob?.join()
                                 result
                             }
                         } catch (e: TimeoutCancellationException) {

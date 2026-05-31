@@ -102,7 +102,6 @@ private fun BottomInputBar(
     // 监听焦点状态变化，通知服务更新窗口焦点
     LaunchedEffect(isInputFocused) {
         floatContext.onInputFocusRequest?.invoke(isInputFocused)
-        AIForegroundService.setWakeListeningSuspendedForIme(context, isInputFocused)
     }
 
     Column(

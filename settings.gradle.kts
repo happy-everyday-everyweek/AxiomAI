@@ -19,11 +19,8 @@ dependencyResolutionManagement {
 
 rootProject.name = "Operit"
 include(":app")
-include(":dragonbones")
 include(":terminal")
 include(":mnn")
 include(":llama")
-include(":mmd")
-include(":fbx")
 include(":showerclient")
 include(":quickjs")

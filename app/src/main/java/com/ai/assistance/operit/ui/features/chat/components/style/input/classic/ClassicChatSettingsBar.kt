@@ -116,8 +116,6 @@ fun ClassicChatSettingsBar(
     onNavigateToModelConfig: () -> Unit,
     onNavigateToModelPrompts: () -> Unit,
     onNavigateToPackageManager: () -> Unit,
-    isAutoReadEnabled: Boolean,
-    onToggleAutoRead: () -> Unit,
     enableTools: Boolean,
     onToggleTools: () -> Unit,
     toolPromptVisibility: Map<String, Boolean>,
@@ -630,28 +628,6 @@ fun ClassicChatSettingsBar(
                                     }
                                 )
                             }
-
-                            // 自动朗读
-                            SettingItem(
-                                title = stringResource(R.string.auto_read_message),
-                                    icon =
-                                            if (isAutoReadEnabled) Icons.AutoMirrored.Rounded.VolumeUp
-                                            else Icons.AutoMirrored.Outlined.VolumeOff,
-                                    iconTint =
-                                            if (isAutoReadEnabled)
-                                                    MaterialTheme.colorScheme.primary
-                                            else
-                                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                                            alpha = 0.7f
-                                                    ),
-                                isChecked = isAutoReadEnabled,
-                                onToggle = onToggleAutoRead,
-                                onInfoClick = {
-                                        infoPopupContent =
-                                                context.getString(R.string.auto_read_message) to context.getString(R.string.auto_read_desc)
-                                    showMenu = false
-                                }
-                            )
 
                             HorizontalDivider(
                                 modifier = Modifier.padding(vertical = 2.dp),

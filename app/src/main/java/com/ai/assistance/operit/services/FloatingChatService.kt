@@ -31,7 +31,6 @@ import com.ai.assistance.operit.api.voice.VoiceServiceFactory
 import com.ai.assistance.operit.data.model.AttachmentInfo
 import com.ai.assistance.operit.data.model.ChatMessage
 import com.ai.assistance.operit.data.model.InputProcessingState
-import com.ai.assistance.operit.data.preferences.WakeWordPreferences
 import com.ai.assistance.operit.data.model.SerializableColorScheme
 import com.ai.assistance.operit.data.model.SerializableTypography
 import com.ai.assistance.operit.data.model.toComposeColorScheme
@@ -116,8 +115,6 @@ class FloatingChatService : Service(), FloatingWindowCallback {
 
     private val autoExitHandler = Handler(Looper.getMainLooper())
     private var autoExitRunnable: Runnable? = null
-
-    private val wakePrefs by lazy { WakeWordPreferences(applicationContext) }
 
     fun consumeAutoEnterVoiceChat(): Boolean {
         val value = autoEnterVoiceChat.value
@@ -395,10 +392,7 @@ class FloatingChatService : Service(), FloatingWindowCallback {
             val isFullscreenMode =
                 windowState.currentMode.value == FloatingMode.FULLSCREEN ||
                     windowState.currentMode.value == FloatingMode.SCREEN_OCR
-            AIForegroundService.setWakeListeningSuspendedForFloatingFullscreen(
-                applicationContext,
-                isFullscreenMode
-            )
+
 
             val autoEnterVoiceChatExtra = intent?.getBooleanExtra(EXTRA_AUTO_ENTER_VOICE_CHAT, false) == true
             if (autoEnterVoiceChatExtra) {
@@ -437,10 +431,7 @@ class FloatingChatService : Service(), FloatingWindowCallback {
                             }
                         }
 
-                        val group = wakePrefs.autoNewChatGroupFlow.first().trim().ifBlank {
-                            WakeWordPreferences.DEFAULT_AUTO_NEW_CHAT_GROUP
-                        }
-                        chatCore.createNewChat(group = group, inheritGroupFromCurrent = false)
+                        chatCore.createNewChat(group = "default", inheritGroupFromCurrent = false)
                     }
                 }
             }
@@ -579,10 +570,6 @@ class FloatingChatService : Service(), FloatingWindowCallback {
 
     override fun onDestroy() {
         try {
-            AIForegroundService.setWakeListeningSuspendedForFloatingFullscreen(
-                applicationContext,
-                false
-            )
             scheduleAutoExit(null)
             releaseWakeLock()
 
@@ -645,10 +632,6 @@ class FloatingChatService : Service(), FloatingWindowCallback {
     override fun onClose() {
         AppLogger.d(TAG, "Close request from window manager")
         try {
-            AIForegroundService.setWakeListeningSuspendedForFloatingFullscreen(
-                applicationContext,
-                false
-            )
             chatCore.cancelCurrentMessage()
         } catch (_: Exception) {
         }

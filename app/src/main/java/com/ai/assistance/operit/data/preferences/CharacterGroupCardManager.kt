@@ -18,7 +18,6 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.ai.assistance.operit.data.model.ActivePrompt
 import com.ai.assistance.operit.data.model.CharacterGroupCard
 import com.ai.assistance.operit.data.model.GroupMemberConfig
-import com.ai.assistance.operit.data.repository.CustomEmojiRepository
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -44,8 +43,6 @@ class CharacterGroupCardManager private constructor(private val context: Context
     private val gson = Gson()
     private val characterCardManager = CharacterCardManager.getInstance(context)
     private val userPreferencesManager = UserPreferencesManager.getInstance(context)
-    private val waifuPreferences = WaifuPreferences.getInstance(context)
-    private val customEmojiRepository by lazy { CustomEmojiRepository.getInstance(context) }
 
     companion object {
         private val CHARACTER_GROUP_LIST = stringSetPreferencesKey("character_group_list")
@@ -91,7 +88,6 @@ class CharacterGroupCardManager private constructor(private val context: Context
     internal fun observeActiveCharacterGroupId(): Flow<String?> = activeCharacterGroupCardIdFlow
 
     suspend fun createCharacterGroupCard(group: CharacterGroupCard): String {
-        val emojiSourcePrompt = resolveEmojiSourcePrompt()
         val now = System.currentTimeMillis()
         val id = group.id.takeIf { it.isNotBlank() } ?: UUID.randomUUID().toString()
         val normalizedGroup = normalizeGroup(
@@ -113,7 +109,7 @@ class CharacterGroupCardManager private constructor(private val context: Context
             }
         }
 
-        createDefaultBindingsForCharacterGroup(normalizedGroup, emojiSourcePrompt)
+        createDefaultBindingsForCharacterGroup(normalizedGroup)
         return id
     }
 
@@ -156,8 +152,6 @@ class CharacterGroupCardManager private constructor(private val context: Context
         }
 
         runCatching { userPreferencesManager.deleteCharacterGroupTheme(groupId) }
-        runCatching { waifuPreferences.deleteCharacterGroupWaifuSettings(groupId) }
-        runCatching { customEmojiRepository.deleteCharacterGroupEmojis(groupId) }
     }
 
     suspend fun setActiveCharacterGroupCard(groupId: String?) {
@@ -171,7 +165,6 @@ class CharacterGroupCardManager private constructor(private val context: Context
 
         if (!groupId.isNullOrBlank()) {
             runCatching { userPreferencesManager.switchToCharacterGroupTheme(groupId) }
-            runCatching { waifuPreferences.switchToCharacterGroupWaifuSettings(groupId) }
         }
     }
 
@@ -194,12 +187,6 @@ class CharacterGroupCardManager private constructor(private val context: Context
     suspend fun cloneBindingsFromCharacterGroup(sourceGroupId: String, targetGroupId: String) {
         runCatching {
             userPreferencesManager.cloneThemeBetweenCharacterGroups(sourceGroupId, targetGroupId)
-        }
-        runCatching {
-            waifuPreferences.cloneWaifuSettingsBetweenCharacterGroups(sourceGroupId, targetGroupId)
-        }
-        runCatching {
-            customEmojiRepository.cloneEmojisBetweenCharacterGroups(sourceGroupId, targetGroupId)
         }
     }
 
@@ -250,25 +237,12 @@ class CharacterGroupCardManager private constructor(private val context: Context
 
     private suspend fun createDefaultBindingsForCharacterGroup(
         group: CharacterGroupCard,
-        emojiSourcePrompt: ActivePrompt
     ) {
         runCatching { userPreferencesManager.copyCurrentThemeToCharacterGroup(group.id) }
-        runCatching { waifuPreferences.copyCurrentWaifuSettingsToCharacterGroup(group.id) }
-        runCatching { customEmojiRepository.cloneEmojiSet(emojiSourcePrompt, ActivePrompt.CharacterGroup(group.id)) }
         runCatching {
             val avatarUri = buildDefaultGroupAvatar(group)
             userPreferencesManager.saveAiAvatarForCharacterGroup(group.id, avatarUri)
         }
-    }
-
-    private suspend fun resolveEmojiSourcePrompt(): ActivePrompt {
-        val activeGroupId = observeActiveCharacterGroupId().first()
-        if (!activeGroupId.isNullOrBlank()) {
-            return ActivePrompt.CharacterGroup(activeGroupId)
-        }
-
-        val activeCardId = characterCardManager.observeActiveCharacterCardId().first()
-        return ActivePrompt.CharacterCard(activeCardId ?: CharacterCardManager.DEFAULT_CHARACTER_CARD_ID)
     }
 
     private fun hasMemberRosterChanged(

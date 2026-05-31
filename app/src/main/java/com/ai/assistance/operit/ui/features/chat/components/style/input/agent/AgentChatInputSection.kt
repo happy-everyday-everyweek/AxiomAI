@@ -207,8 +207,6 @@ fun AgentChatInputSection(
     onTogglePermission: () -> Unit = {},
     enableMemoryAutoUpdate: Boolean = false,
     onToggleMemoryAutoUpdate: () -> Unit = {},
-    isAutoReadEnabled: Boolean = false,
-    onToggleAutoRead: () -> Unit = {},
     onToggleTools: () -> Unit = {},
     disableStreamOutput: Boolean = false,
     onToggleDisableStreamOutput: () -> Unit = {},
@@ -444,17 +442,6 @@ fun AgentChatInputSection(
             )
         }
     }
-
-    val voicePermissionLauncher =
-        rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.RequestPermission(),
-        ) { isGranted ->
-            if (isGranted) {
-                actualViewModel.launchFloatingModeIn(FloatingMode.FULLSCREEN, colorScheme, typography)
-            } else {
-                actualViewModel.showToast(context.getString(R.string.microphone_permission_denied_toast))
-            }
-        }
 
     val (showAttachmentPanel, setShowAttachmentPanel) =
         remember { mutableStateOf(externalAttachmentPanelState ?: false) }
@@ -1051,14 +1038,6 @@ fun AgentChatInputSection(
                                                             setShowAttachmentPanel(false)
                                                         }
                                                     }
-                                                    else -> {
-                                                        actualViewModel.onFloatingButtonClick(
-                                                            FloatingMode.FULLSCREEN,
-                                                            voicePermissionLauncher,
-                                                            colorScheme,
-                                                            typography,
-                                                        )
-                                                    }
                                                 }
                                             },
                                         ),
@@ -1070,14 +1049,14 @@ fun AgentChatInputSection(
                                             showCancelAction -> Icons.Default.Close
                                             showQueueAction -> Icons.Default.Add
                                             canSendMessage -> Icons.AutoMirrored.Filled.Send
-                                            else -> Icons.Default.Mic
+                                            else -> Icons.AutoMirrored.Filled.Send
                                         },
                                     contentDescription =
                                         when {
                                             showCancelAction -> context.getString(R.string.cancel)
                                             showQueueAction -> context.getString(R.string.chat_queue_add_message)
                                             canSendMessage -> context.getString(R.string.send)
-                                            else -> context.getString(R.string.voice_input)
+                                            else -> context.getString(R.string.send)
                                         },
                                     tint = actionButtonIconTint,
                                     modifier = Modifier.size(18.dp),
@@ -1351,14 +1330,6 @@ fun AgentChatInputSection(
                                                                 setShowAttachmentPanel(false)
                                                             }
                                                         }
-                                                        else -> {
-                                                            actualViewModel.onFloatingButtonClick(
-                                                                FloatingMode.FULLSCREEN,
-                                                                voicePermissionLauncher,
-                                                                colorScheme,
-                                                                typography,
-                                                            )
-                                                        }
                                                     }
                                                 },
                                             ),
@@ -1370,14 +1341,14 @@ fun AgentChatInputSection(
                                                 showCancelAction -> Icons.Default.Close
                                                 showQueueAction -> Icons.Default.Add
                                                 canSendMessage -> Icons.AutoMirrored.Filled.Send
-                                                else -> Icons.Default.Mic
+                                                else -> Icons.AutoMirrored.Filled.Send
                                             },
                                         contentDescription =
                                             when {
                                                 showCancelAction -> context.getString(R.string.cancel)
                                                 showQueueAction -> context.getString(R.string.chat_queue_add_message)
                                                 canSendMessage -> context.getString(R.string.send)
-                                                else -> context.getString(R.string.voice_input)
+                                                else -> context.getString(R.string.send)
                                             },
                                         tint = actionButtonIconTint,
                                         modifier = Modifier.size(18.dp),
@@ -1432,8 +1403,6 @@ fun AgentChatInputSection(
                 featureStates = featureStates,
                 onToggleFeature = onToggleFeature,
                 inputMenuRuntime = inputMenuRuntime,
-                isAutoReadEnabled = isAutoReadEnabled,
-                onToggleAutoRead = onToggleAutoRead,
                 permissionLevel = permissionLevel,
                 onTogglePermission = onTogglePermission,
                 enableTools = enableTools,
@@ -2252,8 +2221,6 @@ private fun AgentExtraSettingsPopup(
     featureStates: Map<String, Boolean>,
     onToggleFeature: (String) -> Unit,
     inputMenuRuntime: String,
-    isAutoReadEnabled: Boolean,
-    onToggleAutoRead: () -> Unit,
     permissionLevel: PermissionLevel,
     onTogglePermission: () -> Unit,
     enableTools: Boolean,
@@ -2404,23 +2371,6 @@ private fun AgentExtraSettingsPopup(
                             onInfoClick = { title, description -> infoPopupContent = title to description },
                         )
                     }
-
-                    AgentSimpleToggleSettingItem(
-                        title = stringResource(R.string.auto_read_message),
-                        icon =
-                            if (isAutoReadEnabled) {
-                                Icons.AutoMirrored.Rounded.VolumeUp
-                            } else {
-                                Icons.AutoMirrored.Outlined.VolumeOff
-                            },
-                        isChecked = isAutoReadEnabled,
-                        onToggle = onToggleAutoRead,
-                        onInfoClick = {
-                            infoPopupContent =
-                                context.getString(R.string.auto_read_message) to
-                                    context.getString(R.string.auto_read_desc)
-                        },
-                    )
 
                     AgentSimpleToggleSettingItem(
                         title = stringResource(R.string.auto_approve),

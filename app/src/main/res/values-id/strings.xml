@@ -226,7 +226,6 @@
     <string name="common_expand_more">Buka Lebih Banyak</string>
     <string name="nav_packages">Manajemen Paket</string>
     <string name="nav_memory_base">Basis Memori</string>
-    <string name="nav_assistant_config">Konfigurasi Asisten</string>
     <string name="nav_terminal">Terminal</string>
     <string name="nav_toolbox">Kotak Alat</string>
     <string name="nav_item_agreement">Perjanjian Pengguna</string>

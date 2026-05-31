@@ -56,10 +56,7 @@ fun SettingsScreen(
         navigateToChatHistorySettings: () -> Unit,
         navigateToChatBackupSettings: () -> Unit,
         navigateToLanguageSettings: () -> Unit,
-        navigateToSpeechServicesSettings: () -> Unit,
         navigateToExternalHttpChatSettings: () -> Unit,
-        navigateToPersonaCardGeneration: () -> Unit,
-        navigateToWaifuModeSettings: () -> Unit,
         navigateToTokenUsageStatistics: () -> Unit,
         navigateToContextSummarySettings: () -> Unit,
         navigateToLayoutAdjustmentSettings: () -> Unit
@@ -200,13 +197,6 @@ fun SettingsScreen(
                                 onClick = navigateToFunctionalConfig
                         )
                         
-                        CompactSettingsItem(
-                                title = stringResource(id = R.string.settings_speech_services),
-                                subtitle = stringResource(id = R.string.settings_speech_services_subtitle),
-                                icon = Icons.Default.RecordVoiceOver,
-                                onClick = navigateToSpeechServicesSettings
-                        )
-                        
                 }
 
                 // ======= 提示词配置 =======
@@ -220,22 +210,6 @@ fun SettingsScreen(
                                 subtitle = stringResource(id = R.string.settings_system_prompts_subtitle),
                                 icon = Icons.Default.ChatBubble,
                                 onClick = navigateToModelPrompts
-                        )
-                        
-                        // 新增：人设卡生成
-                        CompactSettingsItem(
-                                title = stringResource(R.string.persona_card_generation),
-                                subtitle = stringResource(R.string.persona_card_generation_desc),
-                                icon = Icons.Default.Face,
-                                onClick = navigateToPersonaCardGeneration
-                        )
-                        
-                        // 新增：Waifu模式设置
-                        CompactSettingsItem(
-                                title = stringResource(R.string.waifu_mode_settings),
-                                subtitle = stringResource(R.string.waifu_mode_settings_desc),
-                                icon = Icons.Default.EmojiEmotions,
-                                onClick = navigateToWaifuModeSettings
                         )
                 }
 

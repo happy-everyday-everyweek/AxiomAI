@@ -110,14 +110,6 @@ object ScreenRouteRegistry {
                 order = 10
             ),
             hostEntryDefinition(
-                entryId = "main.assistant_config",
-                screen = Screen.AssistantConfig,
-                surface = NavigationSurface.MAIN_SIDEBAR_AI,
-                launchNavItem = NavItem.AssistantConfig,
-                icon = NavItem.AssistantConfig.icon,
-                order = 20
-            ),
-            hostEntryDefinition(
                 entryId = "main.memory_base",
                 screen = Screen.MemoryBase,
                 surface = NavigationSurface.MAIN_SIDEBAR_AI,
@@ -191,23 +183,6 @@ object ScreenRouteRegistry {
                 icon = Icons.Default.Folder,
                 order = 20
             ),
-            hostEntryDefinition(
-                entryId = "toolbox.text_to_speech",
-                screen = Screen.TextToSpeech,
-                surface = NavigationSurface.TOOLBOX,
-                titleResId = R.string.tool_tts,
-                descriptionResId = R.string.tool_tts_desc,
-                icon = Icons.Default.RecordVoiceOver,
-                order = 30
-            ),
-            hostEntryDefinition(
-                entryId = "toolbox.speech_to_text",
-                screen = Screen.SpeechToText,
-                surface = NavigationSurface.TOOLBOX,
-                titleResId = R.string.tool_speech_recognition,
-                descriptionResId = R.string.tool_speech_recognition_desc,
-                icon = Icons.Default.Mic,
-                order = 40
             ),
             hostEntryDefinition(
                 entryId = "toolbox.app_permissions",

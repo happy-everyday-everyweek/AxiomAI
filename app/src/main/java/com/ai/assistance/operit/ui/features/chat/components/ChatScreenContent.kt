@@ -124,10 +124,6 @@ fun ChatScreenContent(
         bubbleAiBubbleLiquidGlass: Boolean = false,
         bubbleAiBubbleWaterGlass: Boolean = false,
         historyListState: LazyListState,
-        showCharacterSelector: Boolean,
-        onShowCharacterSelectorChange: (Boolean) -> Unit,
-        onSwitchCharacter: (CharacterSelectorTarget) -> Unit,
-        onOpenCharacterSettings: () -> Unit,
         chatAreaHorizontalPadding: Float = 16f,
         bubbleUserImageStyle: BubbleImageStyleConfig? = null,
         bubbleAiImageStyle: BubbleImageStyleConfig? = null,
@@ -325,8 +321,7 @@ fun ChatScreenContent(
                         showChatHistorySelector = showChatHistorySelector,
                         chatHeaderTransparent = chatHeaderTransparent,
                         chatHeaderHistoryIconColor = chatHeaderHistoryIconColor,
-                        chatHeaderPipIconColor = chatHeaderPipIconColor,
-                        onCharacterSwitcherClick = { onShowCharacterSelectorChange(true) }
+                        chatHeaderPipIconColor = chatHeaderPipIconColor
                 )
             }
         } else {
@@ -336,8 +331,7 @@ fun ChatScreenContent(
                         showChatHistorySelector = showChatHistorySelector,
                         chatHeaderTransparent = chatHeaderTransparent,
                         chatHeaderHistoryIconColor = chatHeaderHistoryIconColor,
-                        chatHeaderPipIconColor = chatHeaderPipIconColor,
-                        onCharacterSwitcherClick = { onShowCharacterSelectorChange(true) }
+                        chatHeaderPipIconColor = chatHeaderPipIconColor
                 )
                 ChatArea(
                         chatHistory = chatHistory,

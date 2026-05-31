@@ -1,7 +1,7 @@
 package com.ai.assistance.operit.core.config
 
-import com.ai.assistance.operit.core.avatar.common.state.AvatarCustomMoodDefinition
-import com.ai.assistance.operit.core.avatar.common.state.AvatarMoodTypes
+import com.ai.assistance.operit.core.avatarstate.AvatarCustomMoodDefinition
+import com.ai.assistance.operit.core.avatarstate.AvatarMoodTypes
 
 /**
  * A centralized repository for system prompts used across various functional services.

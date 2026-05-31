@@ -3,7 +3,6 @@ package com.ai.assistance.operit.util
 import android.content.Context
 import android.os.SystemClock
 import com.ai.assistance.operit.data.preferences.ActivePromptManager
-import com.ai.assistance.operit.data.repository.CustomEmojiRepository
 import com.ai.assistance.operit.util.markdown.MarkdownProcessorType
 import com.ai.assistance.operit.util.stream.Stream
 import com.ai.assistance.operit.util.stream.stream
@@ -37,7 +36,6 @@ object WaifuMessageProcessor {
     private val ENTITY_PLACEHOLDER_REGEX =
         Regex("${Regex.escape(ENTITY_PLACEHOLDER_PREFIX)}\\d+${Regex.escape(ENTITY_PLACEHOLDER_SUFFIX)}")
     
-    private var customEmojiRepository: CustomEmojiRepository? = null
     private var activePromptManager: ActivePromptManager? = null
 
     class StreamingSession(
@@ -195,7 +193,6 @@ object WaifuMessageProcessor {
      * 初始化处理器（需要在应用启动时调用）
      */
     fun initialize(appContext: Context) {
-        customEmojiRepository = CustomEmojiRepository.getInstance(appContext)
         activePromptManager = ActivePromptManager.getInstance(appContext)
     }
     
@@ -895,41 +892,6 @@ object WaifuMessageProcessor {
      * @return 表情图片的完整路径（file:// 格式），如果找不到则返回null
      */
     private fun getRandomEmojiPath(emotion: String): String? {
-        try {
-            // 只从自定义表情中查找
-            val customEmoji = try {
-                customEmojiRepository?.let { repo ->
-                    runBlocking {
-                        val activePrompt = activePromptManager?.getActivePrompt() ?: return@runBlocking null
-                        repo.initializeBuiltinEmojis(activePrompt)
-                        val emojis = repo.getEmojisForCategory(activePrompt, emotion).first()
-                        if (emojis.isNotEmpty()) {
-                            val randomEmoji = emojis.random()
-                            val file = repo.getEmojiFile(activePrompt, randomEmoji)
-                            if (file.exists()) {
-                                return@runBlocking file.absolutePath
-                            }
-                        }
-                        null
-                    }
-                }
-            } catch (e: Exception) {
-                com.ai.assistance.operit.util.AppLogger.e("WaifuMessageProcessor", "查询自定义表情失败", e)
-                null
-            }
-            
-            // 如果找到自定义表情，直接返回（已经是完整路径）
-            if (customEmoji != null) {
-                return customEmoji
-            }
-            
-            // 如果自定义表情中没有找到，则直接返回null
-            com.ai.assistance.operit.util.AppLogger.w("WaifuMessageProcessor", "在自定义表情中未找到对于情绪 '$emotion' 的表情")
-            return null
-            
-        } catch (e: Exception) {
-            com.ai.assistance.operit.util.AppLogger.e("WaifuMessageProcessor", "获取表情图片失败: $emotion", e)
-            return null
-        }
+        return null
     }
 } 

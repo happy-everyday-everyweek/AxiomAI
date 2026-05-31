@@ -24,7 +24,6 @@
     <string name="common_expand_more">展开更多</string>
     <string name="nav_packages">包管理</string>
     <string name="nav_memory_base">记忆库</string>
-    <string name="nav_assistant_config">助手配置</string>
     <string name="nav_terminal">终端</string>
     <string name="nav_toolbox">工具箱</string>
     <string name="nav_item_agreement">用户协议</string>
@@ -1564,8 +1563,6 @@
     <string name="chat_hidden_user_message_badge">自动触发</string>
     <string name="info">信息</string>
     <string name="read_message">朗读消息</string>
-    <string name="auto_read_message">自动朗读</string>
-    <string name="auto_read_desc">启用后，AI回复会自动朗读</string>
     <string name="auto_read_active">自动朗读已启用</string>
     <string name="disable_stream_output">禁用流式输出</string>
     <string name="disable_stream_output_desc">禁用后，AI回复将一次性完整显示，而不是逐字流式显示</string>
@@ -1984,8 +1981,6 @@
     <string name="tool_test_center_desc">测试AI工具的可用性和功能状态</string>
     <string name="tool_file_manager">文件管理器</string>
     <string name="tool_file_manager_desc">浏览和管理设备文件，支持多种操作</string>
-    <string name="tool_tts">文本转语音</string>
-    <string name="tool_tts_desc">将文本转换为语音，支持调整语速和音调</string>
     <string name="tts_title">文本转语音演示</string>
     <string name="tts_input_text">输入文本</string>
     <string name="tts_input_hint">请输入要转换为语音的文本</string>
@@ -2019,8 +2014,6 @@
     <string name="tts_debug_params">请求参数: 文本=\'%1$s\', 语速=%2$sx, 音调=%3$sx</string>
     <string name="tts_debug_params_with_service">请求参数: 文本=\'%1$s\', 语速=%2$sx, 音调=%3$sx\n服务类型: %4$s</string>
     <string name="tts_usage_instructions_content">1. 在输入框中输入要转换为语音的文本\n2. 调整语速和音调设置\n3. 点击「播放语音」按钮开始播放\n4. 点击「停止播放」按钮停止播放\n5. 如果出现错误，查看详细的错误信息和调试信息\n6. 使用「清除错误信息」按钮清除错误显示</string>
-    <string name="tool_speech_recognition">语音识别</string>
-    <string name="tool_speech_recognition_desc">将语音转换为文本，支持多种引擎和语言</string>
     <string name="tool_permission_manager">应用权限管理</string>
     <string name="tool_permission_manager_desc">管理手机各个应用的权限，保护隐私安全</string>
     <string name="tool_user_agreement">用户协议</string>
@@ -3320,8 +3313,6 @@
     <string name="layout_adjustment_subtitle">调整界面元素位置和边距</string>
     <string name="settings_model_params_subtitle">模型参数和API配置</string>
     <string name="settings_functional_model_subtitle">功能模型专项配置</string>
-    <string name="settings_speech_services">语音服务配置</string>
-    <string name="settings_speech_services_subtitle">TTS/STT服务设置</string>
     <string name="settings_custom_headers">自定义请求头</string>
     <string name="settings_custom_headers_subtitle">API请求头字段配置</string>
     <string name="headers_configured_count">已配置 %1$d 条</string>
@@ -3906,7 +3897,6 @@
     <string name="screen_title_user_preferences_guide">用户偏好引导</string>
     <string name="screen_title_user_preferences_settings">用户偏好设置</string>
     <string name="screen_title_model_config">模型与参数配置</string>
-    <string name="screen_title_speech_services_settings">语音服务设置</string>
     <string name="screen_title_persona_card_generation">人设卡生成</string>
     <string name="screen_title_waifu_mode_settings">Waifu模式设置</string>
     <string name="screen_title_tag_market">标签市场</string>
@@ -3928,8 +3918,6 @@
     <string name="screen_title_ffmpeg_toolbox">FFmpeg工具箱</string>
     <string name="screen_title_markdown_demo">流式Markdown演示</string>
     <string name="screen_title_tool_tester">工具测试中心</string>
-    <string name="screen_title_text_to_speech">文本转语音</string>
-    <string name="screen_title_speech_to_text">语音识别</string>
     <string name="screen_title_process_limit_remover">解除幻象进程限制</string>
     <string name="screen_title_autoglm_one_click">AutoGLM 一键配置</string>
     <string name="screen_title_autoglm_tool">autoglm执行</string>
@@ -4694,8 +4682,6 @@
     <string name="custom">自定义</string>
 
     <!-- Voice Assistant Widget -->
-    <string name="voice_assistant_widget_description">快速启动 Operit 语音助手</string>
-    <string name="voice_assistant_widget_title">语音助手</string>
     <string name="toolpkg_widget_host_label">自定义小部件</string>
     <string name="toolpkg_widget_host_description">添加后可绑定到某个插件注册的小组件页面</string>
     <string name="toolpkg_widget_unconfigured_title">自定义小部件</string>
@@ -5017,7 +5003,6 @@
     <string name="generate_image_failed">生成图片失败: %1$s</string>
     <string name="start_export">开始导出...</string>
     <string name="file_operation_error">文件操作错误: %1$s</string>
-    <string name="voice_input">语音输入</string>
     <string name="insert_attachment">插入附件</string>
     <string name="remove_attachment">删除附件</string>
     <string name="token_limit_exceeded_message">已超出最大Token限制 (%1$d / %2$d)</string>

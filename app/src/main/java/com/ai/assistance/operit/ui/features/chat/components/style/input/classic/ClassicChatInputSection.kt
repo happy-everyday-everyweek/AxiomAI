@@ -189,21 +189,6 @@ fun ClassicChatInputSection(
             else -> true // Mic button
         }
 
-    val voicePermissionLauncher =
-        rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.RequestPermission()
-        ) { isGranted ->
-            if (isGranted) {
-                actualViewModel.launchFloatingModeIn(
-                    FloatingMode.FULLSCREEN,
-                    colorScheme,
-                    typography
-                )
-            } else {
-                actualViewModel.showToast(context.getString(R.string.microphone_permission_denied_toast))
-            }
-        }
-
     // 控制附件面板的展开状态 - 使用外部状态或本地状态
     val (showAttachmentPanel, setShowAttachmentPanel) =
         androidx.compose.runtime.remember {
@@ -680,15 +665,6 @@ fun ClassicChatInputSection(
                                             )
                                         }
                                     }
-
-                                    else -> {
-                                        actualViewModel.onFloatingButtonClick(
-                                            FloatingMode.FULLSCREEN,
-                                            voicePermissionLauncher,
-                                            colorScheme,
-                                            typography
-                                        )
-                                    }
                                 }
                             }
                         ),
@@ -712,14 +688,14 @@ fun ClassicChatInputSection(
                             showCancelAction -> Icons.Default.Close
                             showQueueAction -> Icons.Default.Add
                             canSendMessage -> Icons.AutoMirrored.Filled.Send
-                            else -> Icons.Default.Mic
+                            else -> Icons.AutoMirrored.Filled.Send
                         },
                         contentDescription =
                         when {
                             showCancelAction -> context.getString(R.string.cancel)
                             showQueueAction -> context.getString(R.string.chat_queue_add_message)
                             canSendMessage -> context.getString(R.string.send)
-                            else -> context.getString(R.string.voice_input)
+                            else -> context.getString(R.string.send)
                         },
                         tint = iconTint,
                         modifier = Modifier.size(18.dp)

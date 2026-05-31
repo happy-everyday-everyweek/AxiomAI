@@ -1,35 +1,21 @@
 package com.ai.assistance.operit.ui.features.chat.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.PictureInPicture
-import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.ai.assistance.operit.R
-import android.net.Uri
-import androidx.compose.foundation.Image
-import androidx.compose.ui.layout.ContentScale
-import coil.compose.rememberAsyncImagePainter
-
-private const val CHAT_HEADER_CHARACTER_NAME_MAX_LENGTH = 12
-
-private fun String.toChatHeaderName(maxLength: Int = CHAT_HEADER_CHARACTER_NAME_MAX_LENGTH): String {
-        return if (length <= maxLength) this else take(maxLength) + "…"
-}
 
 @Composable
 fun ChatHeader(
@@ -40,13 +26,8 @@ fun ChatHeader(
         isFloatingMode: Boolean = false,
         historyIconColor: Int? = null,
         pipIconColor: Int? = null,
-        runningTaskCount: Int = 0,
-        activeCharacterName: String,
-        activeCharacterAvatarUri: String?,
-        onCharacterClick: () -> Unit
+        runningTaskCount: Int = 0
 ) {
-        val displayCharacterName = activeCharacterName.toChatHeaderName()
-
         Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -148,51 +129,6 @@ fun ChatHeader(
                                         modifier = Modifier.size(20.dp)
                                 )
                         }
-                }
-
-                // Character Switcher
-                Row(
-                        modifier =
-                                Modifier
-                                        .widthIn(max = 176.dp)
-                                        .clip(CircleShape)
-                                        .clickable(onClick = onCharacterClick)
-                                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                        // Placeholder for Avatar
-                        Box(
-                                modifier =
-                                        Modifier
-                                                .size(24.dp)
-                                                .clip(CircleShape)
-                                                .background(MaterialTheme.colorScheme.secondaryContainer),
-                                contentAlignment = Alignment.Center
-                        ) {
-                                // Use Coil or another image loader for activeCharacterAvatarUri
-                                if (activeCharacterAvatarUri != null) {
-                                    Image(
-                                        painter = rememberAsyncImagePainter(model = Uri.parse(activeCharacterAvatarUri)),
-                                        contentDescription = "Character Avatar",
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentScale = ContentScale.Crop
-                                    )
-                                } else {
-                                    Icon(
-                                        Icons.Rounded.Person,
-                                        contentDescription = "Character Avatar",
-                                        modifier = Modifier.padding(4.dp)
-                                    )
-                                }
-                        }
-                        Text(
-                                text = displayCharacterName,
-                                style = MaterialTheme.typography.bodyMedium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.widthIn(max = 116.dp)
-                        )
                 }
         }
 }

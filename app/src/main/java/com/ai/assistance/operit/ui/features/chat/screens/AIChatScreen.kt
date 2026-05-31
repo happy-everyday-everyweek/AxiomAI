@@ -53,7 +53,6 @@ import com.ai.assistance.operit.data.model.ToolParameter
 import com.ai.assistance.operit.data.preferences.ApiPreferences
 import com.ai.assistance.operit.data.preferences.DisplayPreferencesManager
 import com.ai.assistance.operit.data.preferences.UserPreferencesManager
-import com.ai.assistance.operit.data.preferences.WaifuPreferences
 import com.ai.assistance.operit.ui.components.ErrorDialog
 import com.ai.assistance.operit.ui.features.chat.components.*
 import com.ai.assistance.operit.ui.features.chat.components.style.input.agent.AgentChatInputSection
@@ -317,7 +316,6 @@ val actualViewModel: ChatViewModel = viewModel ?: viewModel { ChatViewModel(cont
     val disableUserPreferenceDescription by
             actualViewModel.disableUserPreferenceDescription.collectAsState()
     val summaryTokenThreshold by actualViewModel.summaryTokenThreshold.collectAsState()
-    val isAutoReadEnabled by actualViewModel.isAutoReadEnabled.collectAsState()
     val showChatHistorySelector by actualViewModel.showChatHistorySelector.collectAsState()
     val chatHistories by actualViewModel.chatHistories.collectAsState()
     val currentChatId by actualViewModel.currentChatId.collectAsState()
@@ -780,11 +778,7 @@ val actualViewModel: ChatViewModel = viewModel ?: viewModel { ChatViewModel(cont
     var verticalDrag by remember { mutableStateOf(0f) }
     val onVerticalDragChange = remember { { it: Float -> verticalDrag = it } }
     val dragThreshold = 40f // 与PhoneLayout保持一致
-    val onSwitchCharacter = remember(actualViewModel) {
-        { target: CharacterSelectorTarget ->
-            actualViewModel.switchActiveCharacterTarget(target)
-        }
-    }
+
 
     // 收集WebView显示状态
     val showWebView by actualViewModel.showWebView.collectAsState()
@@ -912,7 +906,7 @@ val actualViewModel: ChatViewModel = viewModel ?: viewModel { ChatViewModel(cont
     var exportFilePath by remember { mutableStateOf<String?>(null) }
     var exportErrorMessage by remember { mutableStateOf<String?>(null) }
     var webContentDir by remember { mutableStateOf<File?>(null) }
-    var showCharacterSelector by remember { mutableStateOf(false) }
+
 
     var bottomBarHeightPx by remember { mutableStateOf(0) }
     val bottomBarHeightDp = with(density) { bottomBarHeightPx.toDp() }
@@ -1035,10 +1029,6 @@ val actualViewModel: ChatViewModel = viewModel ?: viewModel { ChatViewModel(cont
                                 bubbleAiBubbleLiquidGlass = bubbleAiBubbleLiquidGlass,
                                 bubbleAiBubbleWaterGlass = bubbleAiBubbleWaterGlass,
                                 historyListState = historyListState,
-                                showCharacterSelector = showCharacterSelector,
-                                onShowCharacterSelectorChange = { showCharacterSelector = it },
-                                onSwitchCharacter = onSwitchCharacter,
-                                onOpenCharacterSettings = onNavigateToModelPrompts,
                                 chatAreaHorizontalPadding = chatAreaHorizontalPadding,
                                 bubbleUserImageStyle = bubbleUserImageStyle,
                                 bubbleAiImageStyle = bubbleAiImageStyle,
@@ -1105,8 +1095,6 @@ val actualViewModel: ChatViewModel = viewModel ?: viewModel { ChatViewModel(cont
                                     onNavigateToModelConfig = onNavigateToModelConfig,
                                     onNavigateToModelPrompts = onNavigateToModelPrompts,
                                     onNavigateToPackageManager = onNavigateToPackageManager,
-                                    isAutoReadEnabled = isAutoReadEnabled,
-                                    onToggleAutoRead = { actualViewModel.toggleAutoRead() },
                                     enableTools = enableTools,
                                     onToggleTools = { actualViewModel.toggleTools() },
                                     toolPromptVisibility = toolPromptVisibility,
@@ -1165,7 +1153,6 @@ val actualViewModel: ChatViewModel = viewModel ?: viewModel { ChatViewModel(cont
                                 enableMaxContextMode = enableMaxContextMode,
                                 featureStates = featureStates,
                                 enableMemoryAutoUpdate = enableMemoryAutoUpdate,
-                                isAutoReadEnabled = isAutoReadEnabled,
                                 disableStreamOutput = disableStreamOutput,
                                 disableUserPreferenceDescription =
                                         disableUserPreferenceDescription,
@@ -1185,13 +1172,6 @@ val actualViewModel: ChatViewModel = viewModel ?: viewModel { ChatViewModel(cont
                                 onRequestAutoScrollToBottom = requestAutoScrollToBottom,
                         )
                     }
-
-                    CharacterSelectorPanel(
-                        isVisible = showCharacterSelector,
-                        onDismiss = { showCharacterSelector = false },
-                        onSelectCharacter = onSwitchCharacter,
-                        onOpenCharacterSettings = onNavigateToModelPrompts
-                    )
 
                     AnimatedVisibility(
                         visible = showChatHistorySelector,
@@ -1556,7 +1536,6 @@ private fun ChatInputBottomBar(
     enableMaxContextMode: Boolean,
     featureStates: Map<String, Boolean>,
     enableMemoryAutoUpdate: Boolean,
-    isAutoReadEnabled: Boolean,
     disableStreamOutput: Boolean,
     disableUserPreferenceDescription: Boolean,
     onNavigateToUserPreferences: () -> Unit,
@@ -1572,7 +1551,6 @@ private fun ChatInputBottomBar(
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val coroutineScope = rememberCoroutineScope()
-    val waifuPreferences = remember(context) { WaifuPreferences.getInstance(context) }
 
     val userMessage by actualViewModel.userMessage.collectAsState()
     val attachments by actualViewModel.attachments.collectAsState()
@@ -1581,13 +1559,6 @@ private fun ChatInputBottomBar(
     val permissionLevel by actualViewModel.masterPermissionLevel.collectAsState()
     val isSummarizing by actualViewModel.isSummarizing.collectAsState()
     val isSendTriggeredSummarizing by actualViewModel.isSendTriggeredSummarizing.collectAsState()
-    val isWaifuModeEnabled by waifuPreferences.enableWaifuModeFlow.collectAsState(initial = false)
-    val isWaifuMergeSendEnabled by
-        waifuPreferences.waifuEnableMergeSendFlow.collectAsState(initial = false)
-    val waifuMergeSendDelayMs by
-        waifuPreferences.waifuMergeSendDelayMsFlow.collectAsState(
-            initial = WaifuPreferences.DEFAULT_WAIFU_MERGE_SEND_DELAY_MS
-        )
 
     val isMessageProcessing =
         isLoading ||
@@ -1605,7 +1576,6 @@ private fun ChatInputBottomBar(
     var nextPendingQueueId by remember(currentChatId) { mutableStateOf(1L) }
     var wasQueueBlocked by remember(currentChatId) { mutableStateOf(false) }
     var suppressNextAutoDequeue by remember(currentChatId) { mutableStateOf(false) }
-    val waifuMergeBuffer = remember(currentChatId) { mutableStateListOf<String>() }
     val latestQueueBlocked = rememberUpdatedState(isQueueBlocked)
     val latestCurrentChatId = rememberUpdatedState(currentChatId)
 
@@ -1652,62 +1622,6 @@ private fun ChatInputBottomBar(
         if (normalizedMessage.isNotBlank()) {
             Toast.makeText(context, normalizedMessage, Toast.LENGTH_SHORT).show()
         }
-    }
-
-    LaunchedEffect(
-        currentChatId,
-        waifuMergeBuffer.size,
-        isWaifuModeEnabled,
-        isWaifuMergeSendEnabled,
-        waifuMergeSendDelayMs
-    ) {
-        if (!isWaifuModeEnabled || !isWaifuMergeSendEnabled) {
-            waifuMergeBuffer.clear()
-            return@LaunchedEffect
-        }
-        if (waifuMergeBuffer.isEmpty()) {
-            return@LaunchedEffect
-        }
-
-        delay(waifuMergeSendDelayMs.toLong())
-        snapshotFlow { latestQueueBlocked.value }.first { blocked -> !blocked }
-
-        val messages = waifuMergeBuffer.toList()
-        if (messages.isEmpty()) {
-            return@LaunchedEffect
-        }
-
-        val chatId = latestCurrentChatId.value
-        if (chatId.isNullOrBlank()) {
-            Toast.makeText(
-                context,
-                context.getString(R.string.chat_please_create_new_chat),
-                Toast.LENGTH_SHORT,
-            ).show()
-            return@LaunchedEffect
-        }
-
-        val triggerText = messages.last()
-        val removedVisibleMessage =
-            actualViewModel.removeLastVisibleUserMessageFromCurrentChat(triggerText)
-        if (!removedVisibleMessage) {
-            return@LaunchedEffect
-        }
-        waifuMergeBuffer.clear()
-
-        focusManager.clearFocus()
-        actualViewModel.sendTextMessage(triggerText)
-        onRequestAutoScrollToBottom()
-        ChatInputHookRegistry.dispatchNotification(
-            buildChatInputHookContext(
-                eventName = ChatInputEvents.SUBMITTED,
-                text = triggerText,
-                selectionStart = triggerText.length,
-                selectionEnd = triggerText.length,
-                source = "waifu_merge",
-                submitSource = "waifu_merge"
-            )
-        )
     }
 
     fun restorePendingQueueItem(item: PendingQueueMessageItem) {
@@ -1858,22 +1772,6 @@ private fun ChatInputBottomBar(
                     )
                 )
             }
-            val shouldUseWaifuMergeSend =
-                isWaifuModeEnabled &&
-                    isWaifuMergeSendEnabled &&
-                    attachments.isEmpty() &&
-                    replyToMessage == null &&
-                    finalText.isNotBlank()
-            if (shouldUseWaifuMergeSend) {
-                val visibleText = finalText.trim()
-                waifuMergeBuffer.add(visibleText)
-                actualViewModel.addVisibleUserMessageToCurrentChat(visibleText)
-                actualViewModel.updateUserMessage(TextFieldValue(""))
-                actualViewModel.resetAttachmentPanelState()
-                focusManager.clearFocus()
-                onRequestAutoScrollToBottom()
-                return@launch
-            }
             focusManager.clearFocus()
             actualViewModel.sendUserMessage()
             actualViewModel.resetAttachmentPanelState()
@@ -1938,8 +1836,6 @@ private fun ChatInputBottomBar(
                 onTogglePermission = actualViewModel::toggleMasterPermission,
                 enableMemoryAutoUpdate = enableMemoryAutoUpdate,
                 onToggleMemoryAutoUpdate = actualViewModel::toggleMemoryAutoUpdate,
-                isAutoReadEnabled = isAutoReadEnabled,
-                onToggleAutoRead = actualViewModel::toggleAutoRead,
                 onToggleTools = actualViewModel::toggleTools,
                 disableStreamOutput = disableStreamOutput,
                 onToggleDisableStreamOutput = actualViewModel::toggleDisableStreamOutput,

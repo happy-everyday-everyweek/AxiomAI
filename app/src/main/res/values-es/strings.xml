@@ -1561,7 +1561,6 @@
     <string name="action_retry">Reintentar</string>
     <string name="common_collapse">Contraer</string>
     <string name="common_expand_more">Expandir más</string>
-    <string name="nav_assistant_config">Configuración del asistente</string>
     <string name="sidebar_permission_short">Permisos</string>
     <string name="sidebar_status_normal">Normal</string>
     <string name="chat_fullscreen_input">Entrada a pantalla completa</string>

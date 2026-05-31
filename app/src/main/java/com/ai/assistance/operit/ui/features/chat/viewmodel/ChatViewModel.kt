@@ -54,7 +54,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import com.ai.assistance.operit.ui.floating.ui.pet.AvatarEmotionManager
 import com.ai.assistance.operit.api.voice.VoiceService
 import com.ai.assistance.operit.api.voice.VoiceServiceFactory
 import com.ai.assistance.operit.data.preferences.SpeechServicesPreferences
@@ -1367,7 +1366,7 @@ class ChatViewModel(private val context: Context) : ViewModel() {
                 val timestampOfFirstDeletedMessage = currentHistory[index].timestamp
                 chatHistoryDelegate.truncateChatHistory(timestampOfFirstDeletedMessage)
 
-                val plainText = AvatarEmotionManager.stripXmlLikeTags(targetMessage.content)
+                val plainText = stripXmlLikeTags(targetMessage.content)
                 updateUserMessage(TextFieldValue(plainText))
 
                 uiStateDelegate.showToast(context.getString(R.string.chat_rolled_back_message_in_input))
@@ -3113,6 +3112,28 @@ class ChatViewModel(private val context: Context) : ViewModel() {
 
     fun manuallySummarizeConversation() {
         messageCoordinationDelegate.manuallySummarizeConversation()
+    }
+
+    private fun stripXmlLikeTags(text: String): String {
+        var s = text
+        val paired = Regex(
+            pattern = "<([A-Za-z][A-Za-z0-9:_-]*)(\\s[^>]*)?>[\\s\\S]*?</\\1>",
+            options = setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+        )
+        repeat(5) { _ ->
+            val updated = s.replace(paired, "")
+            if (updated == s) return@repeat
+            s = updated
+        }
+        s = s.replace(
+            Regex("<[A-Za-z][A-Za-z0-9:_-]*(\\s[^>]*)?/\\s*>", RegexOption.IGNORE_CASE),
+            ""
+        )
+        s = s.replace(
+            Regex("</?[^>]+>", RegexOption.IGNORE_CASE),
+            ""
+        )
+        return s.trim()
     }
 
 }

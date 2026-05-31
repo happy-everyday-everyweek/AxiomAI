@@ -40,11 +40,10 @@ import com.ai.assistance.operit.data.db.AppDatabase
 import com.ai.assistance.operit.data.preferences.CharacterCardManager
 import com.ai.assistance.operit.data.preferences.ExternalHttpApiPreferences
 import com.ai.assistance.operit.data.preferences.UserPreferencesManager
-import com.ai.assistance.operit.data.preferences.WakeWordPreferences
 import com.ai.assistance.operit.data.preferences.initAndroidPermissionPreferences
 import com.ai.assistance.operit.data.preferences.initUserPreferencesManager
 import com.ai.assistance.operit.data.preferences.preferencesManager
-import com.ai.assistance.operit.data.repository.CustomEmojiRepository
+
 import com.ai.assistance.operit.ui.features.chat.webview.LocalWebServer
 import com.ai.assistance.operit.ui.features.chat.webview.workspace.editor.language.LanguageFactory
 import com.ai.assistance.operit.util.GlobalExceptionHandler
@@ -56,7 +55,7 @@ import com.ai.assistance.operit.util.OperitPaths
 import com.ai.assistance.operit.util.SkillRepoZipPoolManager
 import com.ai.assistance.operit.util.SerializationSetup
 import com.ai.assistance.operit.util.TextSegmenter
-import com.ai.assistance.operit.util.WaifuMessageProcessor
+
 import com.ai.assistance.operit.core.tools.agent.ShowerController
 import com.ai.assistance.operit.ui.common.displays.VirtualDisplayOverlay
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
@@ -203,13 +202,6 @@ class OperitApplication : Application(), ImageLoaderFactory, WorkConfiguration.P
             AppLogger.d(TAG, "【启动计时】功能提示词管理器初始化完成（异步） - ${System.currentTimeMillis() - characterStartTime}ms")
         }
 
-        // 初始化当前活跃角色目标的自定义表情
-        applicationScope.launch {
-            val emojiStartTime = System.currentTimeMillis()
-            CustomEmojiRepository.getInstance(applicationContext).initializeBuiltinEmojis()
-            AppLogger.d(TAG, "【启动计时】当前角色自定义表情初始化完成（异步） - ${System.currentTimeMillis() - emojiStartTime}ms")
-        }
-
         // 初始化AndroidShellExecutor上下文
         AndroidShellExecutor.setContext(applicationContext)
         AppLogger.d(TAG, "【启动计时】AndroidShellExecutor初始化完成 - ${System.currentTimeMillis() - startTime}ms")
@@ -258,10 +250,6 @@ class OperitApplication : Application(), ImageLoaderFactory, WorkConfiguration.P
             TextSegmenter.initialize(applicationContext)
             AppLogger.d(TAG, "【启动计时】TextSegmenter预热完成（异步） - ${System.currentTimeMillis() - segmenterStartTime}ms")
         }
-        
-        // Initialize WaifuMessageProcessor
-        WaifuMessageProcessor.initialize(applicationContext)
-        AppLogger.d(TAG, "【启动计时】WaifuMessageProcessor初始化完成 - ${System.currentTimeMillis() - startTime}ms")
 
         // 预加载数据库
         applicationScope.launch {
@@ -474,13 +462,10 @@ class OperitApplication : Application(), ImageLoaderFactory, WorkConfiguration.P
 
     private fun startGlobalAIForegroundServiceIfNeeded() {
         try {
-            val alwaysListeningEnabled = runBlocking {
-                WakeWordPreferences(applicationContext).alwaysListeningEnabledFlow.first()
-            }
             val externalHttpEnabled = runBlocking {
                 ExternalHttpApiPreferences.getInstance(applicationContext).enabledFlow.first()
             }
-            if ((!alwaysListeningEnabled && !externalHttpEnabled) || AIForegroundService.isRunning.get()) {
+            if (!externalHttpEnabled || AIForegroundService.isRunning.get()) {
                 return
             }
             val intent = Intent(this, AIForegroundService::class.java).apply {

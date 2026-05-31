@@ -5,7 +5,6 @@ import android.app.Application
 import android.os.Bundle
 import com.ai.assistance.operit.util.AppLogger
 import android.view.WindowManager
-import com.ai.assistance.operit.api.chat.AIForegroundService
 import com.ai.assistance.operit.data.preferences.ApiPreferences
 import com.ai.assistance.operit.plugins.lifecycle.AppLifecycleEvent
 import com.ai.assistance.operit.plugins.lifecycle.AppLifecycleHookParams
@@ -39,7 +38,6 @@ object ActivityLifecycleManager : Application.ActivityLifecycleCallbacks {
     private var keepScreenOnForcedRequestCount = 0
 
     @Volatile
-    private var lastMicEnsureAtMs: Long = 0L
 
     /**
      * Initializes the manager and registers it with the application.
@@ -161,17 +159,8 @@ object ActivityLifecycleManager : Application.ActivityLifecycleCallbacks {
     }
 
     override fun onActivityResumed(activity: Activity) {
-        // When an activity is resumed, it becomes the current foreground activity.
         currentActivity = WeakReference(activity)
 
-        try {
-            val now = System.currentTimeMillis()
-            if (now - lastMicEnsureAtMs >= 2500L) {
-                lastMicEnsureAtMs = now
-                AIForegroundService.ensureMicrophoneForeground(activity.applicationContext)
-            }
-        } catch (_: Exception) {
-        }
         AppLifecycleHookPluginRegistry.dispatchAsync(
             event = AppLifecycleEvent.ACTIVITY_RESUME,
             params =

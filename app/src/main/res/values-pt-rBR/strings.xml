@@ -20,7 +20,6 @@
     <string name="common_expand_more">Expanda mais</string>
     <string name="nav_packages">Gerenciamento de pacotes</string>
     <string name="nav_memory_base">banco de memória</string>
-    <string name="nav_assistant_config">Configuração do assistente</string>
     <string name="nav_terminal">terminal</string>
     <string name="nav_toolbox">caixa de ferramentas</string>
     <string name="nav_item_agreement">Contrato do usuário</string>

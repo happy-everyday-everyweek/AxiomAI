@@ -742,13 +742,6 @@ class FloatingWindowManager(
         callback.saveState()
 
         if (wasFullscreen != willFullscreen) {
-            try {
-                AIForegroundService.setWakeListeningSuspendedForFloatingFullscreen(
-                    context.applicationContext,
-                    willFullscreen
-                )
-            } catch (_: Exception) {
-            }
         }
 
         // 计算目标尺寸和位置

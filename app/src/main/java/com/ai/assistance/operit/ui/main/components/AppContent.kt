@@ -113,10 +113,6 @@ private fun ImeWakeListeningEffect(
     density: androidx.compose.ui.unit.Density,
 ) {
     val imeVisible = WindowInsets.ime.getBottom(density) > 0
-
-    LaunchedEffect(context, imeVisible) {
-        AIForegroundService.setWakeListeningSuspendedForIme(context, imeVisible)
-    }
 }
 
 // 用于屏幕切换动画的状态

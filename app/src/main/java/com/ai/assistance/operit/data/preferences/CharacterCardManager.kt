@@ -20,7 +20,6 @@ import com.ai.assistance.operit.data.model.OperitAttachedTagPayload
 import com.ai.assistance.operit.data.model.OperitCharacterCardPayload
 import com.ai.assistance.operit.data.model.PromptFunctionType
 import com.ai.assistance.operit.data.model.ActivePrompt
-import com.ai.assistance.operit.data.repository.CustomEmojiRepository
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonElement
@@ -55,9 +54,6 @@ class CharacterCardManager private constructor(private val context: Context) {
     private val tagManager = PromptTagManager.getInstance(context)
     // 添加UserPreferencesManager引用用于主题管理
     private val userPreferencesManager = UserPreferencesManager.getInstance(context)
-    // 添加WaifuPreferences引用用于Waifu模式配置管理
-    private val waifuPreferences = WaifuPreferences.getInstance(context)
-    private val customEmojiRepository by lazy { CustomEmojiRepository.getInstance(context) }
     
     companion object {
         private val CHARACTER_CARD_LIST = stringSetPreferencesKey("character_card_list")
@@ -198,13 +194,6 @@ class CharacterCardManager private constructor(private val context: Context) {
     ) {
         // 新建角色卡使用默认主题，不继承创建时的当前主题。
         userPreferencesManager.deleteCharacterCardTheme(characterCardId)
-        // 同时也复制当前Waifu模式配置
-        waifuPreferences.copyCurrentWaifuSettingsToCharacterCard(characterCardId)
-        // 同时复制创建前活跃目标的自定义表情配置
-        customEmojiRepository.cloneEmojiSet(
-            emojiSourcePrompt,
-            ActivePrompt.CharacterCard(characterCardId)
-        )
     }
 
 
@@ -213,18 +202,6 @@ class CharacterCardManager private constructor(private val context: Context) {
             userPreferencesManager.cloneThemeBetweenCharacterCards(sourceCharacterCardId, targetCharacterCardId)
         } catch (e: Exception) {
             AppLogger.e("CharacterCardManager", "克隆角色卡主题配置失败", e)
-        }
-
-        try {
-            waifuPreferences.cloneWaifuSettingsBetweenCharacterCards(sourceCharacterCardId, targetCharacterCardId)
-        } catch (e: Exception) {
-            AppLogger.e("CharacterCardManager", "克隆角色卡Waifu配置失败", e)
-        }
-
-        try {
-            customEmojiRepository.cloneEmojisBetweenCharacterCards(sourceCharacterCardId, targetCharacterCardId)
-        } catch (e: Exception) {
-            AppLogger.e("CharacterCardManager", "克隆角色卡自定义表情失败", e)
         }
     }
 
@@ -375,11 +352,6 @@ class CharacterCardManager private constructor(private val context: Context) {
 
         // 删除角色卡对应的主题配置
         userPreferencesManager.deleteCharacterCardTheme(id)
-        // 删除角色卡对应的Waifu模式配置
-        waifuPreferences.deleteCharacterCardWaifuSettings(id)
-        // 删除角色卡对应的自定义表情配置
-        customEmojiRepository.deleteCharacterCardEmojis(id)
-        
     }
     
     // 设置活跃角色卡
@@ -390,8 +362,6 @@ class CharacterCardManager private constructor(private val context: Context) {
 
         // 切换到对应角色卡的主题
         switchToCharacterCardTheme(id)
-        // 切换到对应角色卡的Waifu模式配置
-        switchToCharacterCardWaifuSettings(id)
     }
 
     // 清空活跃角色卡
@@ -1322,39 +1292,6 @@ class CharacterCardManager private constructor(private val context: Context) {
                 }
                 preferences.remove(legacyKey)
             }
-        }
-    }
-
-    /**
-     * 切换到指定角色卡的Waifu模式配置
-     */
-    private suspend fun switchToCharacterCardWaifuSettings(characterCardId: String) {
-        try {
-            // 始终调用切换方法，即使角色卡没有配置也会清空当前配置，避免保留上一个角色卡的设置
-            waifuPreferences.switchToCharacterCardWaifuSettings(characterCardId)
-            
-            if (waifuPreferences.hasCharacterCardWaifuSettings(characterCardId)) {
-                AppLogger.d("CharacterCardManager", "已切换到角色卡 $characterCardId 的Waifu模式配置")
-            } else {
-                AppLogger.d("CharacterCardManager", "角色卡 $characterCardId 没有Waifu模式配置，已清空当前配置")
-            }
-        } catch (e: Exception) {
-            AppLogger.e("CharacterCardManager", "切换角色卡Waifu模式配置失败", e)
-        }
-    }
-
-    /**
-     * 为当前活跃角色卡保存Waifu模式配置
-     */
-    suspend fun saveWaifuSettingsForActiveCharacterCard() {
-        try {
-            val activeCard = activeCharacterCardFlow.first()
-            if (activeCard != null) {
-                waifuPreferences.saveCurrentWaifuSettingsToCharacterCard(activeCard.id)
-                AppLogger.d("CharacterCardManager", "已为角色卡 ${activeCard.id} 保存Waifu模式配置")
-            }
-        } catch (e: Exception) {
-            AppLogger.e("CharacterCardManager", "为活跃角色卡保存Waifu配置失败", e)
         }
     }
 } 

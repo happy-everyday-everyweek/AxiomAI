@@ -106,7 +106,6 @@ import coil.compose.AsyncImage
 fun ModelPromptsSettingsScreen(
         onBackPressed: () -> Unit = {},
         onNavigateToMarket: () -> Unit = {},
-    onNavigateToPersonaGeneration: () -> Unit = {},
     onNavigateToChatManagement: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -893,7 +892,6 @@ fun ModelPromptsSettingsScreen(
                                 refreshTrigger++
                             }
                         },
-                        onNavigateToPersonaGeneration = onNavigateToPersonaGeneration,
                         onImportTavernCard = {
                             filePickerLauncher.launch("*/*")
                         },
@@ -1959,7 +1957,6 @@ fun CharacterCardTab(
     onDuplicateCharacterCard: (CharacterCard) -> Unit,
     onResetDefaultCharacterCard: () -> Unit,
     onSetActiveCharacterCard: (String) -> Unit,
-    onNavigateToPersonaGeneration: () -> Unit,
     onImportTavernCard: () -> Unit,
     onImportColorQrCode: () -> Unit,
     onScanColorQrCode: () -> Unit,
@@ -2025,17 +2022,6 @@ fun CharacterCardTab(
                             Icon(
                                 imageVector = Icons.Default.Add,
                                 contentDescription = stringResource(R.string.create_new),
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-
-                        IconButton(
-                            onClick = onNavigateToPersonaGeneration,
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.AutoAwesome,
-                                contentDescription = stringResource(R.string.ai_creation),
                                 modifier = Modifier.size(18.dp)
                             )
                         }
