@@ -1,5 +1,7 @@
 package com.ai.assistance.operit.ui.features.chat.components.part
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -34,24 +36,29 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.assistance.operit.R
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** 简洁样式的工具调用显示组件 使用箭头图标+工具名+参数的简洁行样式 */
+internal val ToolCallGrayColor: Color = Color(0xFF9E9E9E)
+internal val ToolCallSuccessColor: Color = Color(0xFF4CAF50)
+internal val ToolCallFailureColor: Color = Color(0xFFF44336)
+internal const val COLOR_FEEDBACK_DURATION_MS = 3000
+
 @Composable
 fun CompactToolDisplay(
         toolName: String,
         params: String = "",
         textColor: Color,
         modifier: Modifier = Modifier,
-        enableDialog: Boolean = true  // 新增参数：是否启用弹窗功能，默认启用
+        enableDialog: Boolean = true,
+        isSuccess: Boolean? = null,
 ) {
     val context = LocalContext.current
     val (displayToolName, displayParams) = remember(toolName, params) {
         normalizeToolDisplayForStrictProxy(toolName, params)
     }
-    // 弹窗状态
     var showDetailDialog by remember { mutableStateOf(false) }
     val hasParams = displayParams.isNotBlank()
     val semanticDescription = remember(displayToolName, displayParams.length) {
@@ -63,7 +70,6 @@ fun CompactToolDisplay(
         )
     }
 
-    // 显示详细内容的弹窗 - 仅在启用弹窗时显示
     if (showDetailDialog && hasParams && enableDialog) {
         ContentDetailDialog(
             title = "$displayToolName ${context.getString(R.string.tool_call_parameters)}",
@@ -73,33 +79,55 @@ fun CompactToolDisplay(
         )
     }
 
-    val summary = remember(displayParams) { buildParamsHeadPreview(displayParams) }
+    val targetColor = when (isSuccess) {
+        true -> ToolCallSuccessColor
+        false -> ToolCallFailureColor
+        null -> ToolCallGrayColor
+    }
 
-    CanvasToolSummaryRow(
-        toolName = displayToolName,
-        summary = summary,
-        semanticDescription = semanticDescription,
-        leadingIcon = getToolIcon(displayToolName),
-        titleColor = MaterialTheme.colorScheme.primary,
-        summaryColor = textColor.copy(alpha = 0.7f),
-        modifier = modifier,
-        onClick =
-            if (hasParams && enableDialog) {
-                { showDetailDialog = true }
-            } else {
-                null
-            },
+    var feedbackActive by remember(isSuccess) { mutableStateOf(isSuccess != null) }
+
+    LaunchedEffect(isSuccess) {
+        if (isSuccess != null) {
+            delay(COLOR_FEEDBACK_DURATION_MS.toLong())
+            feedbackActive = false
+        }
+    }
+
+    val animatedTitleColor by animateColorAsState(
+        targetValue = if (feedbackActive) targetColor else ToolCallGrayColor,
+        animationSpec = tween(durationMillis = 300),
+        label = "toolTitleColor"
+    )
+
+    Text(
+        text = displayToolName,
+        style = MaterialTheme.typography.bodySmall.copy(
+            fontSize = 12.sp,
+            color = animatedTitleColor,
+        ),
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier
+            .then(
+                if (hasParams && enableDialog) {
+                    Modifier.clickable { showDetailDialog = true }
+                } else {
+                    Modifier
+                }
+            )
+            .semantics { contentDescription = semanticDescription },
     )
 }
 
-/** 卡片式工具显示组件 用于显示较长内容的工具调用，支持流式渲染，美化版 */
 @Composable
 fun DetailedToolDisplay(
         toolName: String,
         params: String = "",
         textColor: Color,
         modifier: Modifier = Modifier,
-        enableDialog: Boolean = true  // 新增参数：是否启用弹窗功能，默认启用
+        enableDialog: Boolean = true,
+        isSuccess: Boolean? = null,
 ) {
     val context = LocalContext.current
     val (displayToolName, displayParams) = remember(toolName, params) {
@@ -115,9 +143,6 @@ fun DetailedToolDisplay(
             useByteSummary = true
         )
     }
-    val paramsSizeLabel = remember(displayParams) {
-        buildToolParamsSizeLabel(context, displayParams)
-    }
 
     if (showDetailDialog && hasParams && enableDialog) {
         ContentDetailDialog(
@@ -128,20 +153,44 @@ fun DetailedToolDisplay(
         )
     }
 
-    CanvasToolSummaryRow(
-        toolName = displayToolName,
-        summary = paramsSizeLabel,
-        semanticDescription = semanticDescription,
-        leadingIcon = getToolIcon(displayToolName),
-        titleColor = MaterialTheme.colorScheme.primary,
-        summaryColor = textColor.copy(alpha = 0.7f),
-        modifier = modifier,
-        onClick =
-            if (hasParams && enableDialog) {
-                { showDetailDialog = true }
-            } else {
-                null
-            },
+    val targetColor = when (isSuccess) {
+        true -> ToolCallSuccessColor
+        false -> ToolCallFailureColor
+        null -> ToolCallGrayColor
+    }
+
+    var feedbackActive by remember(isSuccess) { mutableStateOf(isSuccess != null) }
+
+    LaunchedEffect(isSuccess) {
+        if (isSuccess != null) {
+            delay(COLOR_FEEDBACK_DURATION_MS.toLong())
+            feedbackActive = false
+        }
+    }
+
+    val animatedTitleColor by animateColorAsState(
+        targetValue = if (feedbackActive) targetColor else ToolCallGrayColor,
+        animationSpec = tween(durationMillis = 300),
+        label = "toolTitleColor"
+    )
+
+    Text(
+        text = displayToolName,
+        style = MaterialTheme.typography.bodySmall.copy(
+            fontSize = 12.sp,
+            color = animatedTitleColor,
+        ),
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier
+            .then(
+                if (hasParams && enableDialog) {
+                    Modifier.clickable { showDetailDialog = true }
+                } else {
+                    Modifier
+                }
+            )
+            .semantics { contentDescription = semanticDescription },
     )
 }
 

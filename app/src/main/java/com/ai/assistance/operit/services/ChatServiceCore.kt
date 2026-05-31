@@ -16,6 +16,8 @@ import com.ai.assistance.operit.services.core.ChatHistoryDelegate
 import com.ai.assistance.operit.services.core.MessageCoordinationDelegate
 import com.ai.assistance.operit.services.core.MessageProcessingDelegate
 import com.ai.assistance.operit.services.core.TokenStatisticsDelegate
+import com.ai.assistance.operit.core.task.TaskCheckpointManager
+import com.ai.assistance.operit.core.task.TaskRecord
 import com.ai.assistance.operit.core.tools.AIToolHandler
 import com.ai.assistance.operit.ui.features.chat.viewmodel.UiStateDelegate
 import com.ai.assistance.operit.util.stream.SharedStream
@@ -23,6 +25,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import java.util.UUID
 
 /**
  * 聊天服务核心类
@@ -38,6 +41,10 @@ class ChatServiceCore(
     companion object {
         private const val TAG = "ChatServiceCore"
     }
+
+    private val checkpointManager by lazy { TaskCheckpointManager.getInstance(context) }
+
+    private val activeTaskIds = mutableMapOf<String, String>()
 
     // EnhancedAIService 实例（全局单例）
     private var enhancedAiService: EnhancedAIService? = null
@@ -515,5 +522,84 @@ class ChatServiceCore(
             chatHistoryDelegate.showLatestMessagesForCurrentChat()
         }
     }
+
+    fun startTaskWithCheckpoint(
+        chatId: String,
+        promptFunctionType: PromptFunctionType = PromptFunctionType.CHAT,
+        roleCardIdOverride: String? = null,
+        chatModelConfigIdOverride: String? = null,
+        chatModelIndexOverride: Int? = null,
+        turnOptions: ChatTurnOptions = ChatTurnOptions()
+    ): String {
+        val taskId = UUID.randomUUID().toString()
+        activeTaskIds[chatId] = taskId
+        checkpointManager.registerTask(taskId, chatId)
+        checkpointManager.markRunning(taskId)
+
+        sendUserMessage(
+            promptFunctionType = promptFunctionType,
+            roleCardIdOverride = roleCardIdOverride,
+            chatIdOverride = chatId,
+            chatModelConfigIdOverride = chatModelConfigIdOverride,
+            chatModelIndexOverride = chatModelIndexOverride,
+            turnOptions = turnOptions
+        )
+
+        return taskId
+    }
+
+    fun pauseTask(chatId: String) {
+        val taskId = activeTaskIds[chatId] ?: return
+        checkpointManager.markPaused(taskId)
+        cancelMessage(chatId)
+        AppLogger.d(TAG, "Task paused: taskId=$taskId, chatId=$chatId")
+    }
+
+    fun resumeTask(chatId: String): Boolean {
+        val taskId = activeTaskIds[chatId] ?: return false
+        val checkpoint = checkpointManager.resumeTask(taskId)
+        if (checkpoint != null) {
+            AppLogger.d(TAG, "Task resumed from checkpoint: taskId=$taskId, chatId=$chatId, lastMsgIdx=${checkpoint.lastProcessedMessageIndex}")
+            return true
+        }
+        AppLogger.w(TAG, "No checkpoint found for task: taskId=$taskId, chatId=$chatId")
+        return false
+    }
+
+    fun completeTask(chatId: String) {
+        val taskId = activeTaskIds.remove(chatId) ?: return
+        checkpointManager.markCompleted(taskId)
+        AppLogger.d(TAG, "Task completed: taskId=$taskId, chatId=$chatId")
+    }
+
+    fun failTask(chatId: String, error: String) {
+        val taskId = activeTaskIds[chatId] ?: return
+        checkpointManager.markFailed(taskId, error)
+        AppLogger.d(TAG, "Task failed: taskId=$taskId, chatId=$chatId, error=$error")
+    }
+
+    fun saveTaskCheckpoint(
+        chatId: String,
+        lastProcessedMessageIndex: Int,
+        lastToolInvocationIndex: Int = -1,
+        partialResult: String = "",
+        metadata: Map<String, String> = emptyMap()
+    ) {
+        val taskId = activeTaskIds[chatId] ?: return
+        checkpointManager.createAndSaveCheckpoint(
+            taskId = taskId,
+            chatId = chatId,
+            lastProcessedMessageIndex = lastProcessedMessageIndex,
+            lastToolInvocationIndex = lastToolInvocationIndex,
+            partialResult = partialResult,
+            metadata = metadata
+        )
+    }
+
+    fun getResumableTasks(chatId: String): List<TaskRecord> {
+        return checkpointManager.getResumableTasks(chatId)
+    }
+
+    fun getActiveTaskId(chatId: String): String? = activeTaskIds[chatId]
 }
 

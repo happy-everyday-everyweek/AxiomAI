@@ -118,9 +118,6 @@ class WebChatHttpBridge(
             session.uri == BOOTSTRAP_PATH && session.method == NanoHTTPD.Method.GET ->
                 handleBootstrap()
 
-            session.uri == CHARACTER_SELECTOR_PATH && session.method == NanoHTTPD.Method.GET ->
-                handleCharacterSelector()
-
             session.uri == ACTIVE_PROMPT_PATH && session.method == NanoHTTPD.Method.POST ->
                 handleSetActivePrompt(session)
 
@@ -231,38 +228,6 @@ class WebChatHttpBridge(
         }.withCors()
     }
 
-    fun serveStatic(session: NanoHTTPD.IHTTPSession): NanoHTTPD.Response {
-        cleanupExpiredEntries()
-
-        if (session.method != NanoHTTPD.Method.GET && session.method != NanoHTTPD.Method.HEAD) {
-            return plainTextResponse(
-                NanoHTTPD.Response.Status.METHOD_NOT_ALLOWED,
-                "Method not allowed"
-            ).withCors()
-        }
-
-        val requestedPath = normalizeStaticPath(session.uri)
-            ?: return plainTextResponse(
-                NanoHTTPD.Response.Status.FORBIDDEN,
-                "Access denied"
-            ).withCors()
-
-        val assetPath = resolvePackagedAssetPath(requestedPath)
-        val staticAsset = openPackagedAsset(assetPath)
-        if (staticAsset == null) {
-            return plainTextResponse(
-                NanoHTTPD.Response.Status.NOT_FOUND,
-                "Web assets are not available in app assets/web-chat"
-            ).withCors()
-        }
-
-        return byteArrayResponse(
-            status = NanoHTTPD.Response.Status.OK,
-            mimeType = staticAsset.mimeType,
-            bytes = staticAsset.bytes
-        ).withCors()
-    }
-
     private fun handleBootstrap(): NanoHTTPD.Response {
         val currentChatId = core.currentChatId.value
         val snapshot = runBlocking { resolveThemePreferenceSnapshot() }
@@ -271,8 +236,7 @@ class WebChatHttpBridge(
             WebBootstrapResponse(
                 versionName = BuildConfig.VERSION_NAME,
                 currentChatId = currentChatId,
-                defaultChatStyle = snapshot.chatStyle,
-                defaultInputStyle = snapshot.inputStyle,
+                defaultChatStyle = "cursor",
                 showThinkingProcess = snapshot.showThinkingProcess,
                 showStatusTags = snapshot.showStatusTags,
                 showInputProcessingStatus = snapshot.showInputProcessingStatus,
@@ -286,11 +250,6 @@ class WebChatHttpBridge(
                 )
             )
         )
-    }
-
-    private fun handleCharacterSelector(): NanoHTTPD.Response {
-        val response = runBlocking { buildCharacterSelectorResponse() }
-        return jsonResponse(NanoHTTPD.Response.Status.OK, response)
     }
 
     private fun handleSetActivePrompt(session: NanoHTTPD.IHTTPSession): NanoHTTPD.Response {
@@ -2254,12 +2213,6 @@ class WebChatHttpBridge(
         val globalUserAvatarUri = displayPreferencesManager.globalUserAvatarUri.first()
             ?.trim()
             ?.takeIf { it.isNotBlank() }
-        val cursorUserLiquidGlass = userPreferencesManager.cursorUserBubbleLiquidGlass.first()
-        val cursorUserWaterGlass = userPreferencesManager.cursorUserBubbleWaterGlass.first()
-        val bubbleUserLiquidGlass = userPreferencesManager.bubbleUserBubbleLiquidGlass.first()
-        val bubbleUserWaterGlass = userPreferencesManager.bubbleUserBubbleWaterGlass.first()
-        val bubbleAssistantLiquidGlass = userPreferencesManager.bubbleAiBubbleLiquidGlass.first()
-        val bubbleAssistantWaterGlass = userPreferencesManager.bubbleAiBubbleWaterGlass.first()
         val colorScheme = resolveThemeColorScheme(appContext, snapshot)
         return WebThemeSnapshot(
             source = snapshot.source,
@@ -2298,11 +2251,7 @@ class WebChatHttpBridge(
                 overlay = snapshot.chatHeaderOverlayMode
             ),
             input = WebInputTheme(
-                style = snapshot.inputStyle,
-                transparent = snapshot.chatInputTransparent,
-                floating = snapshot.chatInputFloating,
-                liquidGlass = snapshot.chatInputLiquidGlass,
-                waterGlass = snapshot.chatInputWaterGlass
+                style = "agent"
             ),
             font = WebFontTheme(
                 type = snapshot.fontType,
@@ -2312,46 +2261,14 @@ class WebChatHttpBridge(
                 },
                 scale = snapshot.fontScale
             ),
-            chatStyle = snapshot.chatStyle,
+            chatStyle = "cursor",
             showThinkingProcess = snapshot.showThinkingProcess,
             showStatusTags = snapshot.showStatusTags,
             showInputProcessingStatus = snapshot.showInputProcessingStatus,
             display = displayPreferences,
             bubble = WebBubbleTheme(
                 showAvatar = snapshot.bubbleShowAvatar,
-                wideLayout = snapshot.bubbleWideLayoutEnabled,
-                cursorUserFollowTheme = snapshot.cursorUserBubbleFollowTheme,
-                cursorUserColor = colorToCss(snapshot.cursorUserBubbleColor),
-                userBubbleColor = colorToCss(snapshot.bubbleUserBubbleColor),
-                assistantBubbleColor = colorToCss(snapshot.bubbleAiBubbleColor),
-                userTextColor = colorToCss(snapshot.bubbleUserTextColor),
-                assistantTextColor = colorToCss(snapshot.bubbleAiTextColor),
-                cursorUserLiquidGlass = cursorUserLiquidGlass && !cursorUserWaterGlass,
-                cursorUserWaterGlass = cursorUserWaterGlass,
-                userLiquidGlass = bubbleUserLiquidGlass && !bubbleUserWaterGlass,
-                userWaterGlass = bubbleUserWaterGlass,
-                assistantLiquidGlass = bubbleAssistantLiquidGlass && !bubbleAssistantWaterGlass,
-                assistantWaterGlass = bubbleAssistantWaterGlass,
-                userRounded = snapshot.bubbleUserRoundedCornersEnabled,
-                assistantRounded = snapshot.bubbleAiRoundedCornersEnabled,
-                userPaddingLeft = snapshot.bubbleUserContentPaddingLeft,
-                userPaddingRight = snapshot.bubbleUserContentPaddingRight,
-                assistantPaddingLeft = snapshot.bubbleAiContentPaddingLeft,
-                assistantPaddingRight = snapshot.bubbleAiContentPaddingRight,
-                userImage = WebBubbleImageTheme(
-                    enabled = snapshot.bubbleUserUseImage && !snapshot.bubbleUserImageUri.isNullOrBlank(),
-                    assetUrl = snapshot.bubbleUserImageUri?.takeIf { snapshot.bubbleUserUseImage }?.let {
-                        registerAsset(it, guessMimeType(it))
-                    },
-                    renderMode = snapshot.bubbleImageRenderMode
-                ),
-                assistantImage = WebBubbleImageTheme(
-                    enabled = snapshot.bubbleAiUseImage && !snapshot.bubbleAiImageUri.isNullOrBlank(),
-                    assetUrl = snapshot.bubbleAiImageUri?.takeIf { snapshot.bubbleAiUseImage }?.let {
-                        registerAsset(it, guessMimeType(it))
-                    },
-                    renderMode = snapshot.bubbleImageRenderMode
-                )
+                wideLayout = snapshot.bubbleWideLayoutEnabled
             ),
             avatars = WebAvatarTheme(
                 shape = snapshot.avatarShape,
@@ -2547,39 +2464,6 @@ class WebChatHttpBridge(
         }
     }
 
-    private fun normalizeStaticPath(uri: String): String? {
-        var path = uri.substringBefore('?').trim()
-        if (path.isEmpty() || path == "/") {
-            return "/"
-        }
-        if (!path.startsWith("/")) {
-            path = "/$path"
-        }
-        if (path.contains('\\')) {
-            return null
-        }
-        if (path.split('/').any { it == ".." }) {
-            return null
-        }
-        return path
-    }
-
-    private fun resolvePackagedAssetPath(path: String): String {
-        val relative = if (path == "/") DEFAULT_STATIC_ASSET else "web-chat${path}"
-        val hasExtension = path.substringAfterLast('/', "").contains('.')
-        return if (!hasExtension) DEFAULT_STATIC_ASSET else relative.removePrefix("/")
-    }
-
-    private fun openPackagedAsset(assetPath: String): AssetPayload? {
-        return try {
-            val normalizedPath = assetPath.removePrefix("/")
-            val bytes = appContext.assets.open(normalizedPath).use { it.readBytes() }
-            AssetPayload(bytes, guessMimeType(normalizedPath))
-        } catch (_: IOException) {
-            null
-        }
-    }
-
     private fun sanitizeFilename(fileName: String): String {
         return fileName.replace(Regex("[^A-Za-z0-9._-]"), "_")
             .trim('_')
@@ -2761,7 +2645,6 @@ class WebChatHttpBridge(
     companion object {
         private const val TAG = "WebChatHttpBridge"
         private const val BOOTSTRAP_PATH = "/api/web/bootstrap"
-        private const val CHARACTER_SELECTOR_PATH = "/api/web/character-selector"
         private const val ACTIVE_PROMPT_PATH = "/api/web/active-prompt"
         private const val MODEL_SELECTOR_PATH = "/api/web/model-selector"
         private const val MEMORY_SELECTOR_PATH = "/api/web/memory-selector"
@@ -2778,7 +2661,6 @@ class WebChatHttpBridge(
         private const val JSON_MIME_TYPE = "application/json; charset=utf-8"
         private const val SSE_MIME_TYPE = "text/event-stream; charset=utf-8"
         private const val DEFAULT_BINARY_MIME_TYPE = "application/octet-stream"
-        private const val DEFAULT_STATIC_ASSET = "web-chat/index.html"
         private const val DEFAULT_MESSAGES_PAGE_SIZE = 24
         private const val MAX_MESSAGES_PAGE_SIZE = 120
         private const val CHAT_SWITCH_TIMEOUT_MS = 3_000L

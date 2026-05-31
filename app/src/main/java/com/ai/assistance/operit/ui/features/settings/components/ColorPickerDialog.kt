@@ -106,11 +106,6 @@ fun ColorPickerDialog(
     navigationDrawerAccentColorInput: Int,
     historyIconColorInput: Int,
     pipIconColorInput: Int,
-    cursorUserBubbleColorInput: Int,
-    bubbleUserBubbleColorInput: Int,
-    bubbleAiBubbleColorInput: Int,
-    bubbleUserTextColorInput: Int,
-    bubbleAiTextColorInput: Int,
     recentColors: List<Int>,
     onColorSelected:
             (
@@ -121,12 +116,7 @@ fun ColorPickerDialog(
                     navigationDrawerBackgroundColor: Int?,
                     navigationDrawerAccentColor: Int?,
                     historyIconColor: Int?,
-                    pipIconColor: Int?,
-                    cursorUserBubbleColor: Int?,
-                    bubbleUserBubbleColor: Int?,
-                    bubbleAiBubbleColor: Int?,
-                    bubbleUserTextColor: Int?,
-                    bubbleAiTextColor: Int?
+                    pipIconColor: Int?
             ) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -142,11 +132,6 @@ fun ColorPickerDialog(
                 "navigationDrawerAccent" -> navigationDrawerAccentColorInput
                 "historyIcon" -> historyIconColorInput
                 "pipIcon" -> pipIconColorInput
-                "cursorUserBubble" -> cursorUserBubbleColorInput
-                "bubbleUserBubble" -> bubbleUserBubbleColorInput
-                "bubbleAiBubble" -> bubbleAiBubbleColorInput
-                "bubbleUserText" -> bubbleUserTextColorInput
-                "bubbleAiText" -> bubbleAiTextColorInput
                 else -> primaryColorInput
             }
     val currentColor = Color(currentColorForPicker)
@@ -238,16 +223,6 @@ fun ColorPickerDialog(
                                     stringResource(R.string.colorpicker_select_navigation_drawer_accent)
                                 "historyIcon" -> stringResource(R.string.colorpicker_select_history_icon)
                                 "pipIcon" -> stringResource(R.string.colorpicker_select_pip_icon)
-                                "cursorUserBubble" ->
-                                    stringResource(R.string.colorpicker_select_cursor_user_bubble)
-                                "bubbleUserBubble" ->
-                                    stringResource(R.string.colorpicker_select_bubble_user_bubble)
-                                "bubbleAiBubble" ->
-                                    stringResource(R.string.colorpicker_select_bubble_ai_bubble)
-                                "bubbleUserText" ->
-                                    stringResource(R.string.colorpicker_select_bubble_user_text)
-                                "bubbleAiText" ->
-                                    stringResource(R.string.colorpicker_select_bubble_ai_text)
                                 else -> stringResource(R.string.colorpicker_select_color)
                             },
                     style = MaterialTheme.typography.titleMedium
@@ -602,26 +577,16 @@ fun ColorPickerDialog(
                 onClick = {
                     val newColor = pickedColor.toArgb()
                     when (currentColorPickerMode) {
-                        "primary" -> onColorSelected(newColor, null, null, null, null, null, null, null, null, null, null, null, null)
-                        "secondary" -> onColorSelected(null, newColor, null, null, null, null, null, null, null, null, null, null, null)
-                        "statusBar" -> onColorSelected(null, null, newColor, null, null, null, null, null, null, null, null, null, null)
-                        "appBar" -> onColorSelected(null, null, null, newColor, null, null, null, null, null, null, null, null, null)
+                        "primary" -> onColorSelected(newColor, null, null, null, null, null, null, null)
+                        "secondary" -> onColorSelected(null, newColor, null, null, null, null, null, null)
+                        "statusBar" -> onColorSelected(null, null, newColor, null, null, null, null, null)
+                        "appBar" -> onColorSelected(null, null, null, newColor, null, null, null, null)
                         "navigationDrawerBackground" ->
-                            onColorSelected(null, null, null, null, newColor, null, null, null, null, null, null, null, null)
+                            onColorSelected(null, null, null, null, newColor, null, null, null)
                         "navigationDrawerAccent" ->
-                            onColorSelected(null, null, null, null, null, newColor, null, null, null, null, null, null, null)
-                        "historyIcon" -> onColorSelected(null, null, null, null, null, null, newColor, null, null, null, null, null, null)
-                        "pipIcon" -> onColorSelected(null, null, null, null, null, null, null, newColor, null, null, null, null, null)
-                        "cursorUserBubble" ->
-                            onColorSelected(null, null, null, null, null, null, null, null, newColor, null, null, null, null)
-                        "bubbleUserBubble" ->
-                            onColorSelected(null, null, null, null, null, null, null, null, null, newColor, null, null, null)
-                        "bubbleAiBubble" ->
-                            onColorSelected(null, null, null, null, null, null, null, null, null, null, newColor, null, null)
-                        "bubbleUserText" ->
-                            onColorSelected(null, null, null, null, null, null, null, null, null, null, null, newColor, null)
-                        "bubbleAiText" ->
-                            onColorSelected(null, null, null, null, null, null, null, null, null, null, null, null, newColor)
+                            onColorSelected(null, null, null, null, null, newColor, null, null)
+                        "historyIcon" -> onColorSelected(null, null, null, null, null, null, newColor, null)
+                        "pipIcon" -> onColorSelected(null, null, null, null, null, null, null, newColor)
                     }
                     onDismiss()
                 },

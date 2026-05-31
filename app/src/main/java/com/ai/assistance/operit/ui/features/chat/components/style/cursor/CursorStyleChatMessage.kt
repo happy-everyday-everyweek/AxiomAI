@@ -15,8 +15,6 @@ import com.ai.assistance.operit.util.stream.Stream
 fun CursorStyleChatMessage(
         message: ChatMessage,
         userMessageColor: Color,
-        userMessageLiquidGlassEnabled: Boolean = false,
-        userMessageWaterGlassEnabled: Boolean = false,
         aiMessageColor: Color,
         userTextColor: Color,
         aiTextColor: Color,
@@ -33,7 +31,7 @@ fun CursorStyleChatMessage(
         heightMemory: ChatMessageHeightMemory? = null,
         onDeleteMessage: ((Int) -> Unit)? = null,
         index: Int = -1,
-        enableDialogs: Boolean = true,  // 新增参数：是否启用弹窗功能，默认启用
+        enableDialogs: Boolean = true,
         textSelectionRequest: MarkdownTextSelectionRequest? = null,
         onEditSummary: ((ChatMessage) -> Unit)? = null,
 ) {
@@ -42,8 +40,6 @@ fun CursorStyleChatMessage(
             UserMessageComposable(
                     message = message,
                     backgroundColor = userMessageColor,
-                    enableLiquidGlass = userMessageLiquidGlassEnabled,
-                    enableWaterGlass = userMessageWaterGlassEnabled,
                     textColor = userTextColor,
                     enableDialogs = enableDialogs,
             )

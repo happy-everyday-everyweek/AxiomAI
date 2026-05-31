@@ -12,7 +12,6 @@ import com.ai.assistance.operit.data.model.InputProcessingState
 import com.ai.assistance.operit.data.model.PromptFunctionType
 import com.ai.assistance.operit.services.FloatingChatService
 import com.ai.assistance.operit.services.floating.FloatingWindowState
-import com.ai.assistance.operit.ui.floating.ui.window.models.ResizeEdge
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -182,7 +181,7 @@ class FloatContext(
 
     // 大小调整相关状态
     var isEdgeResizing: Boolean = false
-    var activeEdge: ResizeEdge = ResizeEdge.NONE
+    var activeEdge: Int = 0
     var initialWindowWidth: Float = 0f
     var initialWindowHeight: Float = 0f
 

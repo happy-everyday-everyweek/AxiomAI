@@ -200,7 +200,7 @@ fun FileManagerToolScreen(navController: NavController) {
         }
 }
 
-/** 显示终端工具屏幕 */
+/** 显示终端工具屏幕 - 简化版，仅保留命令输入和输出 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TerminalToolScreen(navController: NavController, forceShowSetup: Boolean = false) {
@@ -209,22 +209,6 @@ fun TerminalToolScreen(navController: NavController, forceShowSetup: Boolean = f
         val terminalEnv = rememberTerminalEnv(terminalManager = terminalManager, forceShowSetup = forceShowSetup)
         CustomScaffold() { paddingValues ->
                 Box(modifier = Modifier.padding(paddingValues)) { TerminalViewScreen(env = terminalEnv) }
-        }
-}
-
-/** 显示终端自动配置工具屏幕 */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun TerminalAutoConfigToolScreen(navController: NavController) {
-        CustomScaffold() { paddingValues ->
-                Box(modifier = Modifier.padding(paddingValues)) {
-                        // TODO: 需要重构以适配新的终端架构
-                        // TerminalAutoConfigScreen(navController = navController)
-                        Text(
-                            text = stringResource(R.string.tool_terminal_auto_config_under_construction),
-                            modifier = Modifier.padding(16.dp)
-                        )
-                }
         }
 }
 

@@ -11,8 +11,6 @@ data class WebBootstrapResponse(
     val currentChatId: String? = null,
     @SerialName("default_chat_style")
     val defaultChatStyle: String,
-    @SerialName("default_input_style")
-    val defaultInputStyle: String,
     @SerialName("show_thinking_process")
     val showThinkingProcess: Boolean,
     @SerialName("show_status_tags")
@@ -227,8 +225,6 @@ data class WebThemeSnapshot(
     val showInputProcessingStatus: Boolean,
     @SerialName("display")
     val display: WebDisplayPreferences,
-    @SerialName("bubble")
-    val bubble: WebBubbleTheme,
     @SerialName("avatars")
     val avatars: WebAvatarTheme
 )
@@ -284,15 +280,7 @@ data class WebHeaderTheme(
 @Serializable
 data class WebInputTheme(
     @SerialName("style")
-    val style: String,
-    @SerialName("transparent")
-    val transparent: Boolean,
-    @SerialName("floating")
-    val floating: Boolean,
-    @SerialName("liquid_glass")
-    val liquidGlass: Boolean,
-    @SerialName("water_glass")
-    val waterGlass: Boolean
+    val style: String
 )
 
 @Serializable
@@ -312,57 +300,7 @@ data class WebBubbleTheme(
     @SerialName("show_avatar")
     val showAvatar: Boolean,
     @SerialName("wide_layout")
-    val wideLayout: Boolean,
-    @SerialName("cursor_user_follow_theme")
-    val cursorUserFollowTheme: Boolean,
-    @SerialName("cursor_user_color")
-    val cursorUserColor: String? = null,
-    @SerialName("user_bubble_color")
-    val userBubbleColor: String? = null,
-    @SerialName("assistant_bubble_color")
-    val assistantBubbleColor: String? = null,
-    @SerialName("user_text_color")
-    val userTextColor: String? = null,
-    @SerialName("assistant_text_color")
-    val assistantTextColor: String? = null,
-    @SerialName("cursor_user_liquid_glass")
-    val cursorUserLiquidGlass: Boolean,
-    @SerialName("cursor_user_water_glass")
-    val cursorUserWaterGlass: Boolean,
-    @SerialName("user_liquid_glass")
-    val userLiquidGlass: Boolean,
-    @SerialName("user_water_glass")
-    val userWaterGlass: Boolean,
-    @SerialName("assistant_liquid_glass")
-    val assistantLiquidGlass: Boolean,
-    @SerialName("assistant_water_glass")
-    val assistantWaterGlass: Boolean,
-    @SerialName("user_rounded")
-    val userRounded: Boolean,
-    @SerialName("assistant_rounded")
-    val assistantRounded: Boolean,
-    @SerialName("user_padding_left")
-    val userPaddingLeft: Float,
-    @SerialName("user_padding_right")
-    val userPaddingRight: Float,
-    @SerialName("assistant_padding_left")
-    val assistantPaddingLeft: Float,
-    @SerialName("assistant_padding_right")
-    val assistantPaddingRight: Float,
-    @SerialName("user_image")
-    val userImage: WebBubbleImageTheme,
-    @SerialName("assistant_image")
-    val assistantImage: WebBubbleImageTheme
-)
-
-@Serializable
-data class WebBubbleImageTheme(
-    @SerialName("enabled")
-    val enabled: Boolean,
-    @SerialName("asset_url")
-    val assetUrl: String? = null,
-    @SerialName("render_mode")
-    val renderMode: String? = null
+    val wideLayout: Boolean
 )
 
 @Serializable

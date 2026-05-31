@@ -145,95 +145,11 @@ class UserPreferencesManager private constructor(private val context: Context) {
         private val CUSTOM_FONT_PATH = stringPreferencesKey("custom_font_path")
         private val FONT_SCALE = floatPreferencesKey("font_scale")
 
-        // Chat style preference
-        private val CHAT_STYLE = stringPreferencesKey("chat_style")
-        private val INPUT_STYLE = stringPreferencesKey("input_style")
-
         private val BUBBLE_SHOW_AVATAR = booleanPreferencesKey("bubble_show_avatar")
         private val BUBBLE_WIDE_LAYOUT_ENABLED =
             booleanPreferencesKey("bubble_wide_layout_enabled")
-        private val CURSOR_USER_BUBBLE_FOLLOW_THEME =
-            booleanPreferencesKey("cursor_user_bubble_follow_theme")
-        private val CURSOR_USER_BUBBLE_LIQUID_GLASS =
-            booleanPreferencesKey("cursor_user_bubble_liquid_glass")
-        private val CURSOR_USER_BUBBLE_WATER_GLASS =
-            booleanPreferencesKey("cursor_user_bubble_water_glass")
-        private val CURSOR_USER_BUBBLE_COLOR = intPreferencesKey("cursor_user_bubble_color")
-        private val BUBBLE_USER_BUBBLE_LIQUID_GLASS =
-            booleanPreferencesKey("bubble_user_bubble_liquid_glass")
-        private val BUBBLE_USER_BUBBLE_WATER_GLASS =
-            booleanPreferencesKey("bubble_user_bubble_water_glass")
-        private val BUBBLE_AI_BUBBLE_LIQUID_GLASS =
-            booleanPreferencesKey("bubble_ai_bubble_liquid_glass")
-        private val BUBBLE_AI_BUBBLE_WATER_GLASS =
-            booleanPreferencesKey("bubble_ai_bubble_water_glass")
-        private val BUBBLE_USER_BUBBLE_COLOR = intPreferencesKey("bubble_user_bubble_color")
-        private val BUBBLE_AI_BUBBLE_COLOR = intPreferencesKey("bubble_ai_bubble_color")
-        private val BUBBLE_USER_TEXT_COLOR = intPreferencesKey("bubble_user_text_color")
-        private val BUBBLE_AI_TEXT_COLOR = intPreferencesKey("bubble_ai_text_color")
-        private val BUBBLE_USER_USE_CUSTOM_FONT =
-            booleanPreferencesKey("bubble_user_use_custom_font")
-        private val BUBBLE_USER_FONT_TYPE = stringPreferencesKey("bubble_user_font_type")
-        private val BUBBLE_USER_SYSTEM_FONT_NAME =
-            stringPreferencesKey("bubble_user_system_font_name")
-        private val BUBBLE_USER_CUSTOM_FONT_PATH =
-            stringPreferencesKey("bubble_user_custom_font_path")
-        private val BUBBLE_AI_USE_CUSTOM_FONT =
-            booleanPreferencesKey("bubble_ai_use_custom_font")
-        private val BUBBLE_AI_FONT_TYPE = stringPreferencesKey("bubble_ai_font_type")
-        private val BUBBLE_AI_SYSTEM_FONT_NAME =
-            stringPreferencesKey("bubble_ai_system_font_name")
-        private val BUBBLE_AI_CUSTOM_FONT_PATH =
-            stringPreferencesKey("bubble_ai_custom_font_path")
-        private val BUBBLE_USER_USE_IMAGE = booleanPreferencesKey("bubble_user_use_image")
-        private val BUBBLE_AI_USE_IMAGE = booleanPreferencesKey("bubble_ai_use_image")
-        private val BUBBLE_USER_IMAGE_URI = stringPreferencesKey("bubble_user_image_uri")
-        private val BUBBLE_AI_IMAGE_URI = stringPreferencesKey("bubble_ai_image_uri")
-        private val BUBBLE_USER_IMAGE_CROP_LEFT = floatPreferencesKey("bubble_user_image_crop_left")
-        private val BUBBLE_USER_IMAGE_CROP_TOP = floatPreferencesKey("bubble_user_image_crop_top")
-        private val BUBBLE_USER_IMAGE_CROP_RIGHT = floatPreferencesKey("bubble_user_image_crop_right")
-        private val BUBBLE_USER_IMAGE_CROP_BOTTOM = floatPreferencesKey("bubble_user_image_crop_bottom")
-        private val BUBBLE_USER_IMAGE_REPEAT_START =
-            floatPreferencesKey("bubble_user_image_repeat_start")
-        private val BUBBLE_USER_IMAGE_REPEAT_END =
-            floatPreferencesKey("bubble_user_image_repeat_end")
-        private val BUBBLE_USER_IMAGE_REPEAT_Y_START =
-            floatPreferencesKey("bubble_user_image_repeat_y_start")
-        private val BUBBLE_USER_IMAGE_REPEAT_Y_END =
-            floatPreferencesKey("bubble_user_image_repeat_y_end")
-        private val BUBBLE_USER_IMAGE_SCALE =
-            floatPreferencesKey("bubble_user_image_scale")
-        private val BUBBLE_AI_IMAGE_CROP_LEFT = floatPreferencesKey("bubble_ai_image_crop_left")
-        private val BUBBLE_AI_IMAGE_CROP_TOP = floatPreferencesKey("bubble_ai_image_crop_top")
-        private val BUBBLE_AI_IMAGE_CROP_RIGHT = floatPreferencesKey("bubble_ai_image_crop_right")
-        private val BUBBLE_AI_IMAGE_CROP_BOTTOM = floatPreferencesKey("bubble_ai_image_crop_bottom")
-        private val BUBBLE_AI_IMAGE_REPEAT_START =
-            floatPreferencesKey("bubble_ai_image_repeat_start")
-        private val BUBBLE_AI_IMAGE_REPEAT_END =
-            floatPreferencesKey("bubble_ai_image_repeat_end")
-        private val BUBBLE_AI_IMAGE_REPEAT_Y_START =
-            floatPreferencesKey("bubble_ai_image_repeat_y_start")
-        private val BUBBLE_AI_IMAGE_REPEAT_Y_END =
-            floatPreferencesKey("bubble_ai_image_repeat_y_end")
-        private val BUBBLE_AI_IMAGE_SCALE =
-            floatPreferencesKey("bubble_ai_image_scale")
-        private val BUBBLE_IMAGE_RENDER_MODE =
-            stringPreferencesKey("bubble_image_render_mode")
-        private val BUBBLE_USER_ROUNDED_CORNERS_ENABLED =
-            booleanPreferencesKey("bubble_rounded_corners_enabled")
-        private val BUBBLE_AI_ROUNDED_CORNERS_ENABLED =
-            booleanPreferencesKey("bubble_ai_rounded_corners_enabled")
-        private val BUBBLE_USER_CONTENT_PADDING_LEFT =
-            floatPreferencesKey("bubble_content_padding_left")
-        private val BUBBLE_USER_CONTENT_PADDING_RIGHT =
-            floatPreferencesKey("bubble_content_padding_right")
-        private val BUBBLE_AI_CONTENT_PADDING_LEFT =
-            floatPreferencesKey("bubble_ai_content_padding_left")
-        private val BUBBLE_AI_CONTENT_PADDING_RIGHT =
-            floatPreferencesKey("bubble_ai_content_padding_right")
 
-        // 默认配置文件ID
-        private const val DEFAULT_PROFILE_ID = "default"
+        private val DEFAULT_PROFILE_ID = "default"
 
         // 主题模式常量
         const val THEME_MODE_LIGHT = "light"
@@ -254,16 +170,7 @@ class UserPreferencesManager private constructor(private val context: Context) {
         const val SOFTWARE_IDENTITY_OPERIT = "operit_ai"
         const val SOFTWARE_IDENTITY_LINGSHU = "lingshu_ai"
 
-        const val CHAT_STYLE_CURSOR = "cursor"
-        const val CHAT_STYLE_BUBBLE = "bubble"
-
-        const val INPUT_STYLE_CLASSIC = "classic"
-        const val INPUT_STYLE_AGENT = "agent"
-        const val BUBBLE_IMAGE_RENDER_MODE_TILED_NINE_SLICE = "tiled_nine_slice"
-        const val BUBBLE_IMAGE_RENDER_MODE_NINE_PATCH = "nine_patch"
-
         private val KEY_BACKGROUND_BLUR_RADIUS = floatPreferencesKey("background_blur_radius")
-        private val KEY_CHAT_STYLE = stringPreferencesKey("chat_style")
         private val KEY_SHOW_THINKING_PROCESS = booleanPreferencesKey("show_thinking_process")
         private val KEY_SHOW_STATUS_TAGS = booleanPreferencesKey("show_status_tags")
         private val KEY_SHOW_MODEL_PROVIDER = booleanPreferencesKey("show_model_provider")
@@ -521,26 +428,6 @@ class UserPreferencesManager private constructor(private val context: Context) {
                 preferences[CHAT_HEADER_TRANSPARENT] ?: false
             }
 
-    val chatInputTransparent: Flow<Boolean> =
-            context.userPreferencesDataStore.data.map { preferences ->
-                preferences[CHAT_INPUT_TRANSPARENT] ?: false
-            }
-
-    val chatInputFloating: Flow<Boolean> =
-            context.userPreferencesDataStore.data.map { preferences ->
-                preferences[CHAT_INPUT_FLOATING] ?: false
-            }
-
-    val chatInputLiquidGlass: Flow<Boolean> =
-            context.userPreferencesDataStore.data.map { preferences ->
-                preferences[CHAT_INPUT_LIQUID_GLASS] ?: false
-            }
-
-    val chatInputWaterGlass: Flow<Boolean> =
-            context.userPreferencesDataStore.data.map { preferences ->
-                preferences[CHAT_INPUT_WATER_GLASS] ?: false
-            }
-
     val forceAppBarContentColor: Flow<Boolean> =
             context.userPreferencesDataStore.data.map { preferences ->
                 preferences[FORCE_APP_BAR_CONTENT_COLOR_ENABLED] ?: false
@@ -576,17 +463,6 @@ class UserPreferencesManager private constructor(private val context: Context) {
                 preferences[BACKGROUND_BLUR_RADIUS] ?: 10f
             }
 
-    // Chat style preference
-    val chatStyle: Flow<String> =
-            context.userPreferencesDataStore.data.map { preferences ->
-                preferences[CHAT_STYLE] ?: CHAT_STYLE_CURSOR
-            }
-
-    val inputStyle: Flow<String> =
-            context.userPreferencesDataStore.data.map { preferences ->
-                preferences[INPUT_STYLE] ?: INPUT_STYLE_AGENT
-            }
-
     val bubbleShowAvatar: Flow<Boolean> =
             context.userPreferencesDataStore.data.map { preferences ->
                 preferences[BUBBLE_SHOW_AVATAR] ?: true
@@ -595,255 +471,6 @@ class UserPreferencesManager private constructor(private val context: Context) {
     val bubbleWideLayoutEnabled: Flow<Boolean> =
         context.userPreferencesDataStore.data.map { preferences ->
             preferences[BUBBLE_WIDE_LAYOUT_ENABLED] ?: false
-        }
-
-    val cursorUserBubbleFollowTheme: Flow<Boolean> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[CURSOR_USER_BUBBLE_FOLLOW_THEME] ?: true
-        }
-
-    val cursorUserBubbleLiquidGlass: Flow<Boolean> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[CURSOR_USER_BUBBLE_LIQUID_GLASS] ?: false
-        }
-
-    val cursorUserBubbleWaterGlass: Flow<Boolean> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[CURSOR_USER_BUBBLE_WATER_GLASS] ?: false
-        }
-
-    val cursorUserBubbleColor: Flow<Int?> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[CURSOR_USER_BUBBLE_COLOR]
-        }
-
-    val bubbleUserBubbleLiquidGlass: Flow<Boolean> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_USER_BUBBLE_LIQUID_GLASS] ?: false
-        }
-
-    val bubbleUserBubbleWaterGlass: Flow<Boolean> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_USER_BUBBLE_WATER_GLASS] ?: false
-        }
-
-    val bubbleUserBubbleColor: Flow<Int?> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_USER_BUBBLE_COLOR]
-        }
-
-    val bubbleAiBubbleLiquidGlass: Flow<Boolean> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_AI_BUBBLE_LIQUID_GLASS] ?: false
-        }
-
-    val bubbleAiBubbleWaterGlass: Flow<Boolean> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_AI_BUBBLE_WATER_GLASS] ?: false
-        }
-
-    val bubbleAiBubbleColor: Flow<Int?> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_AI_BUBBLE_COLOR]
-        }
-
-    val bubbleUserTextColor: Flow<Int?> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_USER_TEXT_COLOR]
-        }
-
-    val bubbleAiTextColor: Flow<Int?> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_AI_TEXT_COLOR]
-        }
-
-    val bubbleUserUseCustomFont: Flow<Boolean> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_USER_USE_CUSTOM_FONT] ?: false
-        }
-
-    val bubbleUserFontType: Flow<String> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_USER_FONT_TYPE] ?: FONT_TYPE_SYSTEM
-        }
-
-    val bubbleUserSystemFontName: Flow<String> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_USER_SYSTEM_FONT_NAME] ?: SYSTEM_FONT_DEFAULT
-        }
-
-    val bubbleUserCustomFontPath: Flow<String?> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_USER_CUSTOM_FONT_PATH]
-        }
-
-    val bubbleAiUseCustomFont: Flow<Boolean> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_AI_USE_CUSTOM_FONT] ?: false
-        }
-
-    val bubbleAiFontType: Flow<String> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_AI_FONT_TYPE] ?: FONT_TYPE_SYSTEM
-        }
-
-    val bubbleAiSystemFontName: Flow<String> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_AI_SYSTEM_FONT_NAME] ?: SYSTEM_FONT_DEFAULT
-        }
-
-    val bubbleAiCustomFontPath: Flow<String?> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_AI_CUSTOM_FONT_PATH]
-        }
-
-    val bubbleUserUseImage: Flow<Boolean> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_USER_USE_IMAGE] ?: false
-        }
-
-    val bubbleAiUseImage: Flow<Boolean> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_AI_USE_IMAGE] ?: false
-        }
-
-    val bubbleUserImageUri: Flow<String?> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_USER_IMAGE_URI]
-        }
-
-    val bubbleAiImageUri: Flow<String?> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_AI_IMAGE_URI]
-        }
-
-    val bubbleUserImageCropLeft: Flow<Float> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_USER_IMAGE_CROP_LEFT] ?: 0f
-        }
-
-    val bubbleUserImageCropTop: Flow<Float> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_USER_IMAGE_CROP_TOP] ?: 0f
-        }
-
-    val bubbleUserImageCropRight: Flow<Float> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_USER_IMAGE_CROP_RIGHT] ?: 0f
-        }
-
-    val bubbleUserImageCropBottom: Flow<Float> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_USER_IMAGE_CROP_BOTTOM] ?: 0f
-        }
-
-    val bubbleUserImageRepeatStart: Flow<Float> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_USER_IMAGE_REPEAT_START] ?: 0.35f
-        }
-
-    val bubbleUserImageRepeatEnd: Flow<Float> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_USER_IMAGE_REPEAT_END] ?: 0.65f
-        }
-
-    val bubbleUserImageRepeatYStart: Flow<Float> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_USER_IMAGE_REPEAT_Y_START]
-                ?: (preferences[BUBBLE_USER_IMAGE_REPEAT_START] ?: 0.35f)
-        }
-
-    val bubbleUserImageRepeatYEnd: Flow<Float> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_USER_IMAGE_REPEAT_Y_END]
-                ?: (preferences[BUBBLE_USER_IMAGE_REPEAT_END] ?: 0.65f)
-        }
-
-    val bubbleUserImageScale: Flow<Float> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_USER_IMAGE_SCALE] ?: 1f
-        }
-
-    val bubbleAiImageCropLeft: Flow<Float> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_AI_IMAGE_CROP_LEFT] ?: 0f
-        }
-
-    val bubbleAiImageCropTop: Flow<Float> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_AI_IMAGE_CROP_TOP] ?: 0f
-        }
-
-    val bubbleAiImageCropRight: Flow<Float> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_AI_IMAGE_CROP_RIGHT] ?: 0f
-        }
-
-    val bubbleAiImageCropBottom: Flow<Float> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_AI_IMAGE_CROP_BOTTOM] ?: 0f
-        }
-
-    val bubbleAiImageRepeatStart: Flow<Float> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_AI_IMAGE_REPEAT_START] ?: 0.35f
-        }
-
-    val bubbleAiImageRepeatEnd: Flow<Float> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_AI_IMAGE_REPEAT_END] ?: 0.65f
-        }
-
-    val bubbleAiImageRepeatYStart: Flow<Float> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_AI_IMAGE_REPEAT_Y_START]
-                ?: (preferences[BUBBLE_AI_IMAGE_REPEAT_START] ?: 0.35f)
-        }
-
-    val bubbleAiImageRepeatYEnd: Flow<Float> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_AI_IMAGE_REPEAT_Y_END]
-                ?: (preferences[BUBBLE_AI_IMAGE_REPEAT_END] ?: 0.65f)
-        }
-
-    val bubbleAiImageScale: Flow<Float> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_AI_IMAGE_SCALE] ?: 1f
-        }
-
-    val bubbleImageRenderMode: Flow<String> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_IMAGE_RENDER_MODE] ?: BUBBLE_IMAGE_RENDER_MODE_TILED_NINE_SLICE
-        }
-
-    val bubbleUserRoundedCornersEnabled: Flow<Boolean> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_USER_ROUNDED_CORNERS_ENABLED] ?: true
-        }
-
-    val bubbleAiRoundedCornersEnabled: Flow<Boolean> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_AI_ROUNDED_CORNERS_ENABLED] ?: true
-        }
-
-    val bubbleUserContentPaddingLeft: Flow<Float> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_USER_CONTENT_PADDING_LEFT] ?: 12f
-        }
-
-    val bubbleUserContentPaddingRight: Flow<Float> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_USER_CONTENT_PADDING_RIGHT] ?: 12f
-        }
-
-    val bubbleAiContentPaddingLeft: Flow<Float> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_AI_CONTENT_PADDING_LEFT] ?: 12f
-        }
-
-    val bubbleAiContentPaddingRight: Flow<Float> =
-        context.userPreferencesDataStore.data.map { preferences ->
-            preferences[BUBBLE_AI_CONTENT_PADDING_RIGHT] ?: 12f
         }
 
     val showThinkingProcess: Flow<Boolean> =
@@ -1182,10 +809,6 @@ class UserPreferencesManager private constructor(private val context: Context) {
             statusBarTransparent: Boolean? = null,
             statusBarHidden: Boolean? = null,
             chatHeaderTransparent: Boolean? = null,
-            chatInputTransparent: Boolean? = null,
-            chatInputFloating: Boolean? = null,
-            chatInputLiquidGlass: Boolean? = null,
-            chatInputWaterGlass: Boolean? = null,
             forceAppBarContentColor: Boolean? = null,
             appBarContentColorMode: String? = null,
             chatHeaderHistoryIconColor: Int? = null,
@@ -1193,58 +816,8 @@ class UserPreferencesManager private constructor(private val context: Context) {
             chatHeaderOverlayMode: Boolean? = null,
             useBackgroundBlur: Boolean? = null,
             backgroundBlurRadius: Float? = null,
-            chatStyle: String? = null,
             bubbleShowAvatar: Boolean? = null,
             bubbleWideLayoutEnabled: Boolean? = null,
-            cursorUserBubbleFollowTheme: Boolean? = null,
-            cursorUserBubbleLiquidGlass: Boolean? = null,
-            cursorUserBubbleWaterGlass: Boolean? = null,
-            cursorUserBubbleColor: Int? = null,
-            bubbleUserBubbleLiquidGlass: Boolean? = null,
-            bubbleUserBubbleWaterGlass: Boolean? = null,
-            bubbleUserBubbleColor: Int? = null,
-            bubbleAiBubbleLiquidGlass: Boolean? = null,
-            bubbleAiBubbleWaterGlass: Boolean? = null,
-            bubbleAiBubbleColor: Int? = null,
-            bubbleUserTextColor: Int? = null,
-            bubbleAiTextColor: Int? = null,
-            bubbleUserUseCustomFont: Boolean? = null,
-            bubbleUserFontType: String? = null,
-            bubbleUserSystemFontName: String? = null,
-            bubbleUserCustomFontPath: String? = null,
-            bubbleAiUseCustomFont: Boolean? = null,
-            bubbleAiFontType: String? = null,
-            bubbleAiSystemFontName: String? = null,
-            bubbleAiCustomFontPath: String? = null,
-            bubbleUserUseImage: Boolean? = null,
-            bubbleAiUseImage: Boolean? = null,
-            bubbleUserImageUri: String? = null,
-            bubbleAiImageUri: String? = null,
-            bubbleUserImageCropLeft: Float? = null,
-            bubbleUserImageCropTop: Float? = null,
-            bubbleUserImageCropRight: Float? = null,
-            bubbleUserImageCropBottom: Float? = null,
-            bubbleUserImageRepeatStart: Float? = null,
-            bubbleUserImageRepeatEnd: Float? = null,
-            bubbleUserImageRepeatYStart: Float? = null,
-            bubbleUserImageRepeatYEnd: Float? = null,
-            bubbleUserImageScale: Float? = null,
-            bubbleAiImageCropLeft: Float? = null,
-            bubbleAiImageCropTop: Float? = null,
-            bubbleAiImageCropRight: Float? = null,
-            bubbleAiImageCropBottom: Float? = null,
-            bubbleAiImageRepeatStart: Float? = null,
-            bubbleAiImageRepeatEnd: Float? = null,
-            bubbleAiImageRepeatYStart: Float? = null,
-            bubbleAiImageRepeatYEnd: Float? = null,
-            bubbleAiImageScale: Float? = null,
-            bubbleImageRenderMode: String? = null,
-            bubbleUserRoundedCornersEnabled: Boolean? = null,
-            bubbleAiRoundedCornersEnabled: Boolean? = null,
-            bubbleUserContentPaddingLeft: Float? = null,
-            bubbleUserContentPaddingRight: Float? = null,
-            bubbleAiContentPaddingLeft: Float? = null,
-            bubbleAiContentPaddingRight: Float? = null,
             showThinkingProcess: Boolean? = null,
             showStatusTags: Boolean? = null,
             showModelProvider: Boolean? = null,
@@ -1262,7 +835,6 @@ class UserPreferencesManager private constructor(private val context: Context) {
             customChatTitle: String? = null,
             showInputProcessingStatus: Boolean? = null,
             showChatFloatingDotsAnimation: Boolean? = null,
-            inputStyle: String? = null,
             useCustomFont: Boolean? = null,
             fontType: String? = null,
             systemFontName: String? = null,
@@ -1309,20 +881,6 @@ class UserPreferencesManager private constructor(private val context: Context) {
             statusBarTransparent?.let { preferences[STATUS_BAR_TRANSPARENT] = it }
             statusBarHidden?.let { preferences[STATUS_BAR_HIDDEN] = it }
             chatHeaderTransparent?.let { preferences[CHAT_HEADER_TRANSPARENT] = it }
-            chatInputTransparent?.let { preferences[CHAT_INPUT_TRANSPARENT] = it }
-            chatInputFloating?.let { preferences[CHAT_INPUT_FLOATING] = it }
-            chatInputLiquidGlass?.let {
-                preferences[CHAT_INPUT_LIQUID_GLASS] = it
-                if (it) {
-                    preferences[CHAT_INPUT_WATER_GLASS] = false
-                }
-            }
-            chatInputWaterGlass?.let {
-                preferences[CHAT_INPUT_WATER_GLASS] = it
-                if (it) {
-                    preferences[CHAT_INPUT_LIQUID_GLASS] = false
-                }
-            }
             forceAppBarContentColor?.let { preferences[FORCE_APP_BAR_CONTENT_COLOR_ENABLED] = it }
             appBarContentColorMode?.let { preferences[APP_BAR_CONTENT_COLOR_MODE] = it }
             chatHeaderHistoryIconColor?.let { preferences[CHAT_HEADER_HISTORY_ICON_COLOR] = it }
@@ -1330,92 +888,8 @@ class UserPreferencesManager private constructor(private val context: Context) {
             chatHeaderOverlayMode?.let { preferences[CHAT_HEADER_OVERLAY_MODE] = it }
             useBackgroundBlur?.let { preferences[USE_BACKGROUND_BLUR] = it }
             backgroundBlurRadius?.let { preferences[BACKGROUND_BLUR_RADIUS] = it }
-            chatStyle?.let { preferences[CHAT_STYLE] = it }
             bubbleShowAvatar?.let { preferences[BUBBLE_SHOW_AVATAR] = it }
             bubbleWideLayoutEnabled?.let { preferences[BUBBLE_WIDE_LAYOUT_ENABLED] = it }
-            cursorUserBubbleFollowTheme?.let { preferences[CURSOR_USER_BUBBLE_FOLLOW_THEME] = it }
-            cursorUserBubbleLiquidGlass?.let {
-                preferences[CURSOR_USER_BUBBLE_LIQUID_GLASS] = it
-                if (it) {
-                    preferences[CURSOR_USER_BUBBLE_WATER_GLASS] = false
-                }
-            }
-            cursorUserBubbleWaterGlass?.let {
-                preferences[CURSOR_USER_BUBBLE_WATER_GLASS] = it
-                if (it) {
-                    preferences[CURSOR_USER_BUBBLE_LIQUID_GLASS] = false
-                }
-            }
-            cursorUserBubbleColor?.let { preferences[CURSOR_USER_BUBBLE_COLOR] = it }
-            bubbleUserBubbleLiquidGlass?.let {
-                preferences[BUBBLE_USER_BUBBLE_LIQUID_GLASS] = it
-                if (it) {
-                    preferences[BUBBLE_USER_BUBBLE_WATER_GLASS] = false
-                    preferences[BUBBLE_USER_USE_IMAGE] = false
-                }
-            }
-            bubbleUserBubbleWaterGlass?.let {
-                preferences[BUBBLE_USER_BUBBLE_WATER_GLASS] = it
-                if (it) {
-                    preferences[BUBBLE_USER_BUBBLE_LIQUID_GLASS] = false
-                    preferences[BUBBLE_USER_USE_IMAGE] = false
-                }
-            }
-            bubbleUserBubbleColor?.let { preferences[BUBBLE_USER_BUBBLE_COLOR] = it }
-            bubbleAiBubbleLiquidGlass?.let {
-                preferences[BUBBLE_AI_BUBBLE_LIQUID_GLASS] = it
-                if (it) {
-                    preferences[BUBBLE_AI_BUBBLE_WATER_GLASS] = false
-                    preferences[BUBBLE_AI_USE_IMAGE] = false
-                }
-            }
-            bubbleAiBubbleWaterGlass?.let {
-                preferences[BUBBLE_AI_BUBBLE_WATER_GLASS] = it
-                if (it) {
-                    preferences[BUBBLE_AI_BUBBLE_LIQUID_GLASS] = false
-                    preferences[BUBBLE_AI_USE_IMAGE] = false
-                }
-            }
-            bubbleAiBubbleColor?.let { preferences[BUBBLE_AI_BUBBLE_COLOR] = it }
-            bubbleUserTextColor?.let { preferences[BUBBLE_USER_TEXT_COLOR] = it }
-            bubbleAiTextColor?.let { preferences[BUBBLE_AI_TEXT_COLOR] = it }
-            bubbleUserUseCustomFont?.let { preferences[BUBBLE_USER_USE_CUSTOM_FONT] = it }
-            bubbleUserFontType?.let { preferences[BUBBLE_USER_FONT_TYPE] = it }
-            bubbleUserSystemFontName?.let { preferences[BUBBLE_USER_SYSTEM_FONT_NAME] = it }
-            bubbleUserCustomFontPath?.let { preferences[BUBBLE_USER_CUSTOM_FONT_PATH] = it }
-            bubbleAiUseCustomFont?.let { preferences[BUBBLE_AI_USE_CUSTOM_FONT] = it }
-            bubbleAiFontType?.let { preferences[BUBBLE_AI_FONT_TYPE] = it }
-            bubbleAiSystemFontName?.let { preferences[BUBBLE_AI_SYSTEM_FONT_NAME] = it }
-            bubbleAiCustomFontPath?.let { preferences[BUBBLE_AI_CUSTOM_FONT_PATH] = it }
-            bubbleUserUseImage?.let { preferences[BUBBLE_USER_USE_IMAGE] = it }
-            bubbleAiUseImage?.let { preferences[BUBBLE_AI_USE_IMAGE] = it }
-            bubbleUserImageUri?.let { preferences[BUBBLE_USER_IMAGE_URI] = it }
-            bubbleAiImageUri?.let { preferences[BUBBLE_AI_IMAGE_URI] = it }
-            bubbleUserImageCropLeft?.let { preferences[BUBBLE_USER_IMAGE_CROP_LEFT] = it }
-            bubbleUserImageCropTop?.let { preferences[BUBBLE_USER_IMAGE_CROP_TOP] = it }
-            bubbleUserImageCropRight?.let { preferences[BUBBLE_USER_IMAGE_CROP_RIGHT] = it }
-            bubbleUserImageCropBottom?.let { preferences[BUBBLE_USER_IMAGE_CROP_BOTTOM] = it }
-            bubbleUserImageRepeatStart?.let { preferences[BUBBLE_USER_IMAGE_REPEAT_START] = it }
-            bubbleUserImageRepeatEnd?.let { preferences[BUBBLE_USER_IMAGE_REPEAT_END] = it }
-            bubbleUserImageRepeatYStart?.let { preferences[BUBBLE_USER_IMAGE_REPEAT_Y_START] = it }
-            bubbleUserImageRepeatYEnd?.let { preferences[BUBBLE_USER_IMAGE_REPEAT_Y_END] = it }
-            bubbleUserImageScale?.let { preferences[BUBBLE_USER_IMAGE_SCALE] = it }
-            bubbleAiImageCropLeft?.let { preferences[BUBBLE_AI_IMAGE_CROP_LEFT] = it }
-            bubbleAiImageCropTop?.let { preferences[BUBBLE_AI_IMAGE_CROP_TOP] = it }
-            bubbleAiImageCropRight?.let { preferences[BUBBLE_AI_IMAGE_CROP_RIGHT] = it }
-            bubbleAiImageCropBottom?.let { preferences[BUBBLE_AI_IMAGE_CROP_BOTTOM] = it }
-            bubbleAiImageRepeatStart?.let { preferences[BUBBLE_AI_IMAGE_REPEAT_START] = it }
-            bubbleAiImageRepeatEnd?.let { preferences[BUBBLE_AI_IMAGE_REPEAT_END] = it }
-            bubbleAiImageRepeatYStart?.let { preferences[BUBBLE_AI_IMAGE_REPEAT_Y_START] = it }
-            bubbleAiImageRepeatYEnd?.let { preferences[BUBBLE_AI_IMAGE_REPEAT_Y_END] = it }
-            bubbleAiImageScale?.let { preferences[BUBBLE_AI_IMAGE_SCALE] = it }
-            bubbleImageRenderMode?.let { preferences[BUBBLE_IMAGE_RENDER_MODE] = it }
-            bubbleUserRoundedCornersEnabled?.let { preferences[BUBBLE_USER_ROUNDED_CORNERS_ENABLED] = it }
-            bubbleAiRoundedCornersEnabled?.let { preferences[BUBBLE_AI_ROUNDED_CORNERS_ENABLED] = it }
-            bubbleUserContentPaddingLeft?.let { preferences[BUBBLE_USER_CONTENT_PADDING_LEFT] = it }
-            bubbleUserContentPaddingRight?.let { preferences[BUBBLE_USER_CONTENT_PADDING_RIGHT] = it }
-            bubbleAiContentPaddingLeft?.let { preferences[BUBBLE_AI_CONTENT_PADDING_LEFT] = it }
-            bubbleAiContentPaddingRight?.let { preferences[BUBBLE_AI_CONTENT_PADDING_RIGHT] = it }
             showThinkingProcess?.let { preferences[KEY_SHOW_THINKING_PROCESS] = it }
             showStatusTags?.let { preferences[KEY_SHOW_STATUS_TAGS] = it }
             showModelProvider?.let { preferences[KEY_SHOW_MODEL_PROVIDER] = it }
@@ -1433,8 +907,6 @@ class UserPreferencesManager private constructor(private val context: Context) {
             customChatTitle?.let { preferences[KEY_CUSTOM_CHAT_TITLE] = it }
             showInputProcessingStatus?.let { preferences[KEY_SHOW_INPUT_PROCESSING_STATUS] = it }
             showChatFloatingDotsAnimation?.let { preferences[KEY_SHOW_CHAT_FLOATING_DOTS_ANIMATION] = it }
-            inputStyle?.let { preferences[INPUT_STYLE] = it }
-            // 字体设置
             useCustomFont?.let { preferences[USE_CUSTOM_FONT] = it }
             fontType?.let { preferences[FONT_TYPE] = it }
             systemFontName?.let { preferences[SYSTEM_FONT_NAME] = it }
@@ -2115,37 +1587,8 @@ class UserPreferencesManager private constructor(private val context: Context) {
             backgroundImageOpacity = floatValue(BACKGROUND_IMAGE_OPACITY, 0.3f),
             chatHeaderTransparent = booleanValue(CHAT_HEADER_TRANSPARENT, false),
             chatHeaderOverlayMode = booleanValue(CHAT_HEADER_OVERLAY_MODE, false),
-            chatInputTransparent = booleanValue(CHAT_INPUT_TRANSPARENT, false),
-            chatInputFloating = booleanValue(CHAT_INPUT_FLOATING, false),
-            chatInputLiquidGlass = booleanValue(CHAT_INPUT_LIQUID_GLASS, false),
-            chatInputWaterGlass = booleanValue(CHAT_INPUT_WATER_GLASS, false),
-            chatStyle = stringValue(CHAT_STYLE, CHAT_STYLE_CURSOR) ?: CHAT_STYLE_CURSOR,
-            inputStyle = stringValue(INPUT_STYLE, INPUT_STYLE_AGENT) ?: INPUT_STYLE_AGENT,
             bubbleShowAvatar = booleanValue(BUBBLE_SHOW_AVATAR, true),
             bubbleWideLayoutEnabled = booleanValue(BUBBLE_WIDE_LAYOUT_ENABLED, false),
-            cursorUserBubbleFollowTheme = booleanValue(CURSOR_USER_BUBBLE_FOLLOW_THEME, true),
-            cursorUserBubbleColor = intValue(CURSOR_USER_BUBBLE_COLOR),
-            bubbleUserBubbleColor = intValue(BUBBLE_USER_BUBBLE_COLOR),
-            bubbleAiBubbleColor = intValue(BUBBLE_AI_BUBBLE_COLOR),
-            bubbleUserTextColor = intValue(BUBBLE_USER_TEXT_COLOR),
-            bubbleAiTextColor = intValue(BUBBLE_AI_TEXT_COLOR),
-            bubbleUserUseImage = booleanValue(BUBBLE_USER_USE_IMAGE, false),
-            bubbleAiUseImage = booleanValue(BUBBLE_AI_USE_IMAGE, false),
-            bubbleUserImageUri = stringValue(BUBBLE_USER_IMAGE_URI),
-            bubbleAiImageUri = stringValue(BUBBLE_AI_IMAGE_URI),
-            bubbleImageRenderMode =
-                stringValue(
-                    BUBBLE_IMAGE_RENDER_MODE,
-                    BUBBLE_IMAGE_RENDER_MODE_TILED_NINE_SLICE
-                ) ?: BUBBLE_IMAGE_RENDER_MODE_TILED_NINE_SLICE,
-            bubbleUserRoundedCornersEnabled =
-                booleanValue(BUBBLE_USER_ROUNDED_CORNERS_ENABLED, true),
-            bubbleAiRoundedCornersEnabled =
-                booleanValue(BUBBLE_AI_ROUNDED_CORNERS_ENABLED, true),
-            bubbleUserContentPaddingLeft = floatValue(BUBBLE_USER_CONTENT_PADDING_LEFT, 12f),
-            bubbleUserContentPaddingRight = floatValue(BUBBLE_USER_CONTENT_PADDING_RIGHT, 12f),
-            bubbleAiContentPaddingLeft = floatValue(BUBBLE_AI_CONTENT_PADDING_LEFT, 12f),
-            bubbleAiContentPaddingRight = floatValue(BUBBLE_AI_CONTENT_PADDING_RIGHT, 12f),
             customUserAvatarUri = stringValue(KEY_CUSTOM_USER_AVATAR_URI),
             customAiAvatarUri = stringValue(KEY_CUSTOM_AI_AVATAR_URI),
             avatarShape = stringValue(KEY_AVATAR_SHAPE, AVATAR_SHAPE_CIRCLE) ?: AVATAR_SHAPE_CIRCLE,

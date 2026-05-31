@@ -330,10 +330,6 @@ dependencies {
     // Navigation Compose
     implementation(libs.navigation.compose)
 
-    // Shizuku dependencies
-    implementation(libs.shizuku.api)
-    implementation(libs.shizuku.provider)
-
     // Tasker Plugin Library
     implementation("com.joaomgcd:taskerpluginlibrary:0.4.10")
     

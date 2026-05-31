@@ -18,6 +18,7 @@ import com.ai.assistance.operit.data.model.ParameterValueType
 import com.ai.assistance.operit.data.model.StandardModelParameters
 import com.ai.assistance.operit.data.model.ApiProviderType
 import com.ai.assistance.operit.data.model.ApiKeyInfo
+import com.ai.assistance.operit.data.model.SimplifiedModelConfig
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -755,6 +756,60 @@ class ModelConfigManager(private val context: Context) {
         } catch (e: Exception) {
             AppLogger.e("ModelConfigManager", "导入配置失败", e)
             throw Exception(context.getString(R.string.model_config_import_failed, e.localizedMessage ?: e.message))
+        }
+    }
+
+    suspend fun getSimplifiedConfig(configId: String): SimplifiedModelConfig {
+        val config = getModelConfigFlow(configId).first()
+        return SimplifiedModelConfig(
+            configId = config.id,
+            configName = config.name,
+            apiUrl = config.apiEndpoint,
+            apiKey = config.apiKey,
+            modelName = config.modelName,
+            temperature = config.temperature
+        )
+    }
+
+    suspend fun updateSimplifiedConfig(
+        configId: String,
+        apiUrl: String,
+        apiKey: String,
+        modelName: String,
+        temperature: Float
+    ): ModelConfigData {
+        return updateConfigInternal(configId) {
+            it.copy(
+                apiEndpoint = apiUrl,
+                apiKey = apiKey,
+                modelName = modelName,
+                temperature = temperature,
+                temperatureEnabled = temperature != StandardModelParameters.DEFAULT_TEMPERATURE
+            )
+        }
+    }
+
+    fun getSimplifiedConfigFlow(configId: String): Flow<SimplifiedModelConfig> {
+        return context.modelConfigDataStore.data.map { preferences ->
+            val configKey = stringPreferencesKey("config_${configId}")
+            val configJson = preferences[configKey]
+            val config = if (configJson != null) {
+                try {
+                    json.decodeFromString<ModelConfigData>(configJson)
+                } catch (e: Exception) {
+                    createFreshDefaultConfig()
+                }
+            } else {
+                createFreshDefaultConfig()
+            }
+            SimplifiedModelConfig(
+                configId = config.id,
+                configName = config.name,
+                apiUrl = config.apiEndpoint,
+                apiKey = config.apiKey,
+                modelName = config.modelName,
+                temperature = config.temperature
+            )
         }
     }
 }

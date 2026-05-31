@@ -57,7 +57,6 @@ import com.ai.assistance.operit.ui.features.settings.screens.ModelConfigScreen
 import com.ai.assistance.operit.ui.features.settings.screens.ModelPromptsSettingsScreen
 import com.ai.assistance.operit.ui.features.settings.screens.TagMarketScreen
 import com.ai.assistance.operit.ui.features.settings.screens.SettingsScreen
-import com.ai.assistance.operit.ui.features.settings.screens.ThemeSettingsScreen
 import com.ai.assistance.operit.ui.features.settings.screens.ToolPermissionSettingsScreen
 import com.ai.assistance.operit.ui.features.settings.screens.UserPreferencesGuideScreen
 import com.ai.assistance.operit.ui.features.settings.screens.UserPreferencesSettingsScreen
@@ -69,7 +68,6 @@ import com.ai.assistance.operit.ui.features.toolbox.screens.FileManagerToolScree
 import com.ai.assistance.operit.ui.features.toolbox.screens.LogcatToolScreen
 import com.ai.assistance.operit.ui.features.toolbox.screens.ShellExecutorToolScreen
 import com.ai.assistance.operit.ui.features.toolbox.screens.StreamMarkdownDemoScreen
-import com.ai.assistance.operit.ui.features.toolbox.screens.TerminalAutoConfigToolScreen
 import com.ai.assistance.operit.ui.features.toolbox.screens.TerminalToolScreen
 import com.ai.assistance.operit.ui.features.toolbox.screens.ToolboxScreen
 import com.ai.assistance.operit.ui.common.composedsl.ToolPkgComposeDslToolScreen
@@ -85,6 +83,7 @@ import com.ai.assistance.operit.ui.features.toolbox.screens.autoglm.AutoGlmToolS
 import com.ai.assistance.operit.ui.features.update.screens.UpdateScreen
 import com.ai.assistance.operit.ui.features.workflow.screens.WorkflowListScreen
 import com.ai.assistance.operit.ui.features.workflow.screens.WorkflowDetailScreen
+import com.ai.assistance.operit.ui.features.todo.screens.TodoScreen
 import com.ai.assistance.operit.ui.main.PendingChatDraftHandler
 import com.ai.assistance.operit.ui.main.navigation.AppRouteCatalog
 import com.ai.assistance.operit.ui.main.navigation.AppRouterGateway
@@ -544,21 +543,11 @@ sealed class Screen(
                 onGestureConsumed: (Boolean) -> Unit
         ) {
             SettingsScreen(
-                    navigateToToolPermissions = { navigateTo(ToolPermission) },
-                    onNavigateToUserPreferences = { navigateTo(UserPreferencesSettings) },
-                    navigateToGitHubAccount = { navigateTo(GitHubAccount) },
                     navigateToModelConfig = { navigateTo(ModelConfig) },
-                    navigateToThemeSettings = { navigateTo(ThemeSettings) },
                     navigateToGlobalDisplaySettings = { navigateTo(GlobalDisplaySettings) },
-                    navigateToModelPrompts = { navigateTo(ModelPromptsSettings) },
-                    navigateToFunctionalConfig = { navigateTo(FunctionalConfig) },
-                    navigateToChatHistorySettings = { navigateTo(ChatHistorySettings) },
+                    navigateToToolbox = { navigateTo(Packages) },
                     navigateToChatBackupSettings = { navigateTo(ChatBackupSettings) },
-                    navigateToLanguageSettings = { navigateTo(LanguageSettings) },
-                    navigateToExternalHttpChatSettings = { navigateTo(ExternalHttpChatSettings) },
-                    navigateToTokenUsageStatistics = { navigateTo(TokenUsageStatistics) },
-                    navigateToContextSummarySettings = { navigateTo(ContextSummarySettings) },
-                    navigateToLayoutAdjustmentSettings = { navigateTo(LayoutAdjustmentSettings) }
+                    navigateToAbout = { navigateTo(About) }
             )
         }
     }
@@ -644,7 +633,7 @@ sealed class Screen(
             onError: (String) -> Unit,
             onGestureConsumed: (Boolean) -> Unit
         ) {
-            UpdateScreen(onNavigateToThemeSettings = { navigateTo(ThemeSettings) })
+            UpdateScreen()
         }
     }
 
@@ -682,6 +671,36 @@ sealed class Screen(
                 workflowId = workflowId,
                 onNavigateBack = onGoBack
             )
+        }
+    }
+
+    data object Todo : Screen(navItem = NavItem.Todo, titleRes = R.string.screen_title_todo) {
+        @Composable
+        override fun Content(
+                navController: NavController,
+                navigateTo: ScreenNavigationHandler,
+                onGoBack: () -> Unit,
+                hasBackgroundImage: Boolean,
+                onLoading: (Boolean) -> Unit,
+                onError: (String) -> Unit,
+                onGestureConsumed: (Boolean) -> Unit
+        ) {
+            TodoScreen()
+        }
+    }
+
+    data object Schedule : Screen(navItem = NavItem.Schedule, titleRes = R.string.screen_title_schedule) {
+        @Composable
+        override fun Content(
+                navController: NavController,
+                navigateTo: ScreenNavigationHandler,
+                onGoBack: () -> Unit,
+                hasBackgroundImage: Boolean,
+                onLoading: (Boolean) -> Unit,
+                onError: (String) -> Unit,
+                onGestureConsumed: (Boolean) -> Unit
+        ) {
+            com.ai.assistance.operit.ui.features.schedule.screens.ScheduleScreen()
         }
     }
 
@@ -862,22 +881,6 @@ sealed class Screen(
                     onBackPressed = onGoBack,
                     onNavigateToModelConfig = { navigateTo(ModelConfig) }
             )
-        }
-    }
-
-    data object ThemeSettings :
-            Screen(navItem = NavItem.Settings, titleRes = R.string.screen_title_theme_settings) {
-        @Composable
-        override fun Content(
-                navController: NavController,
-                navigateTo: ScreenNavigationHandler,
-                onGoBack: () -> Unit,
-                hasBackgroundImage: Boolean,
-                onLoading: (Boolean) -> Unit,
-                onError: (String) -> Unit,
-                onGestureConsumed: (Boolean) -> Unit
-        ) {
-            ThemeSettingsScreen()
         }
     }
 
@@ -1107,21 +1110,7 @@ sealed class Screen(
         }
     }
 
-    data object TerminalAutoConfig :
-            Screen(navItem = NavItem.Toolbox, titleRes = R.string.screen_title_terminal_auto_config) {
-        @Composable
-        override fun Content(
-                navController: NavController,
-                navigateTo: ScreenNavigationHandler,
-                onGoBack: () -> Unit,
-                hasBackgroundImage: Boolean,
-                onLoading: (Boolean) -> Unit,
-                onError: (String) -> Unit,
-                onGestureConsumed: (Boolean) -> Unit
-        ) {
-            TerminalAutoConfigToolScreen(navController = navController)
-        }
-    }
+
 
     data object AppPermissions :
             Screen(navItem = NavItem.Toolbox, titleRes = R.string.screen_title_app_permissions) {

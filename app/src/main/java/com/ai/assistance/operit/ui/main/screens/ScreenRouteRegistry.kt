@@ -142,6 +142,22 @@ object ScreenRouteRegistry {
                 order = 30
             ),
             hostEntryDefinition(
+                entryId = "main.todo",
+                screen = Screen.Todo,
+                surface = NavigationSurface.MAIN_SIDEBAR_AI,
+                launchNavItem = NavItem.Todo,
+                icon = NavItem.Todo.icon,
+                order = 35
+            ),
+            hostEntryDefinition(
+                entryId = "main.schedule",
+                screen = Screen.Schedule,
+                surface = NavigationSurface.MAIN_SIDEBAR_AI,
+                launchNavItem = NavItem.Schedule,
+                icon = NavItem.Schedule.icon,
+                order = 36
+            ),
+            hostEntryDefinition(
                 entryId = "main.settings",
                 screen = Screen.Settings,
                 surface = NavigationSurface.MAIN_SIDEBAR_SYSTEM,

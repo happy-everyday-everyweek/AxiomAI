@@ -13,53 +13,28 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.text.style.TextOverflow
-import java.text.DecimalFormat
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.ai.assistance.operit.R
-import com.ai.assistance.operit.data.model.FunctionType
 import com.ai.assistance.operit.data.preferences.GitHubAuthPreferences
 import com.ai.assistance.operit.data.preferences.UserPreferencesManager
-import com.ai.assistance.operit.data.repository.ChatHistoryManager
 import com.ai.assistance.operit.ui.features.github.GitHubLoginWebViewDialog
 import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.Color
 
-// 保存滑动状态变量，使其跨重组保持
 private val SettingsScreenScrollPosition = mutableStateOf(0)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-        onNavigateToUserPreferences: () -> Unit,
-        navigateToGitHubAccount: () -> Unit,
-        navigateToToolPermissions: () -> Unit,
         navigateToModelConfig: () -> Unit,
-        navigateToThemeSettings: () -> Unit,
         navigateToGlobalDisplaySettings: () -> Unit,
-        navigateToModelPrompts: () -> Unit,
-        navigateToFunctionalConfig: () -> Unit,
-        navigateToChatHistorySettings: () -> Unit,
+        navigateToToolbox: () -> Unit,
         navigateToChatBackupSettings: () -> Unit,
-        navigateToLanguageSettings: () -> Unit,
-        navigateToExternalHttpChatSettings: () -> Unit,
-        navigateToTokenUsageStatistics: () -> Unit,
-        navigateToContextSummarySettings: () -> Unit,
-        navigateToLayoutAdjustmentSettings: () -> Unit
+        navigateToAbout: () -> Unit
 ) {
         val context = LocalContext.current
         val userPreferences = remember { UserPreferencesManager.getInstance(context) }
@@ -70,10 +45,8 @@ fun SettingsScreen(
         val isGitHubLoggedIn = githubAuth.isLoggedInFlow.collectAsState(initial = false).value
         val gitHubUser = githubAuth.userInfoFlow.collectAsState(initial = null).value
 
-        // 创建和记住滚动状态，设置为上次保存的位置
         val scrollState = rememberScrollState(SettingsScreenScrollPosition.value)
 
-        // 当滚动状态改变时更新保存的位置
         LaunchedEffect(scrollState) {
                 snapshotFlow { scrollState.value }.collect { position ->
                         SettingsScreenScrollPosition.value = position
@@ -81,7 +54,7 @@ fun SettingsScreen(
         }
 
         val hasBackgroundImage = userPreferences.useBackgroundImage.collectAsState(initial = false).value
-        
+
         val cardContainerColor = if (hasBackgroundImage) {
                 MaterialTheme.colorScheme.surface
         } else {
@@ -93,27 +66,72 @@ fun SettingsScreen(
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                         .verticalScroll(scrollState)
         ) {
-                // ======= 账号 =======
+                // ======= Model + API Config =======
                 SettingsSection(
-                        title = stringResource(id = R.string.settings_section_account),
-                        icon = Icons.Default.AccountCircle,
+                        title = stringResource(id = R.string.settings_section_ai_model),
+                        icon = Icons.Default.Api,
                         containerColor = cardContainerColor
                 ) {
                         CompactSettingsItem(
-                                title = stringResource(R.string.github_account),
-                                subtitle = if (isGitHubLoggedIn && gitHubUser != null) {
-                                        "@${gitHubUser!!.login}"
-                                } else {
-                                        stringResource(R.string.github_account_not_logged_in)
-                                },
-                                icon = Icons.Default.Person,
-                                onClick = navigateToGitHubAccount
+                                title = stringResource(id = R.string.settings_model_parameters),
+                                subtitle = stringResource(id = R.string.settings_model_params_subtitle),
+                                icon = Icons.Default.Api,
+                                onClick = navigateToModelConfig
+                        )
+                }
+
+                // ======= Display Settings =======
+                SettingsSection(
+                        title = stringResource(id = R.string.settings_section_personalization),
+                        icon = Icons.Default.Palette,
+                        containerColor = cardContainerColor
+                ) {
+                        CompactSettingsItem(
+                                title = stringResource(R.string.settings_global_display),
+                                subtitle = stringResource(R.string.settings_global_display_subtitle),
+                                icon = Icons.Default.Visibility,
+                                onClick = navigateToGlobalDisplaySettings
+                        )
+                }
+
+                // ======= Toolbox =======
+                SettingsSection(
+                        title = stringResource(id = R.string.settings_data_permissions),
+                        icon = Icons.Default.Extension,
+                        containerColor = cardContainerColor
+                ) {
+                        CompactSettingsItem(
+                                title = stringResource(id = R.string.settings_tool_permissions),
+                                subtitle = stringResource(id = R.string.settings_tool_permissions_subtitle),
+                                icon = Icons.Default.Extension,
+                                onClick = navigateToToolbox
+                        )
+                }
+
+                // ======= Backup + About =======
+                SettingsSection(
+                        title = stringResource(id = R.string.settings_data_backup),
+                        icon = Icons.Default.Info,
+                        containerColor = cardContainerColor
+                ) {
+                        CompactSettingsItem(
+                                title = stringResource(id = R.string.settings_data_backup),
+                                subtitle = stringResource(id = R.string.settings_data_backup_desc),
+                                icon = Icons.Default.CloudUpload,
+                                onClick = navigateToChatBackupSettings
+                        )
+
+                        CompactSettingsItem(
+                                title = stringResource(id = R.string.about),
+                                subtitle = stringResource(id = R.string.settings_section_about_subtitle),
+                                icon = Icons.Default.Info,
+                                onClick = navigateToAbout
                         )
 
                         if (isGitHubLoggedIn) {
                                 CompactSettingsItem(
                                         title = stringResource(R.string.logout),
-                                        subtitle = stringResource(R.string.github_account_logout_desc),
+                                        subtitle = "@${gitHubUser?.login ?: ""}",
                                         icon = Icons.Default.Logout,
                                         onClick = {
                                                 scope.launch { githubAuth.logout() }
@@ -135,148 +153,6 @@ fun SettingsScreen(
                         )
                 }
 
-                // ======= 个性化配置 =======
-                SettingsSection(
-                        title = stringResource(id = R.string.settings_section_personalization),
-                        icon = Icons.Default.Person,
-                        containerColor = cardContainerColor
-                ) {
-                        CompactSettingsItem(
-                                title = stringResource(id = R.string.settings_user_preferences),
-                                subtitle = stringResource(id = R.string.settings_user_preferences_subtitle),
-                                icon = Icons.Default.Face,
-                                onClick = onNavigateToUserPreferences
-                        )
-                        
-                        CompactSettingsItem(
-                                title = stringResource(R.string.language_settings),
-                                subtitle = stringResource(id = R.string.settings_language_subtitle),
-                                icon = Icons.Default.Language,
-                                onClick = navigateToLanguageSettings
-                        )
-                        
-                        CompactSettingsItem(
-                                title = stringResource(id = R.string.settings_theme_appearance),
-                                subtitle = stringResource(id = R.string.settings_theme_subtitle),
-                                icon = Icons.Default.Palette,
-                                onClick = navigateToThemeSettings
-                        )
-                        
-                        CompactSettingsItem(
-                                title = stringResource(R.string.settings_global_display),
-                                subtitle = stringResource(R.string.settings_global_display_subtitle),
-                                icon = Icons.Default.Visibility,
-                                onClick = navigateToGlobalDisplaySettings
-                        )
-                        
-                        CompactSettingsItem(
-                                title = stringResource(R.string.layout_adjustment),
-                                subtitle = stringResource(R.string.layout_adjustment_subtitle),
-                                icon = Icons.Default.AspectRatio,
-                                onClick = navigateToLayoutAdjustmentSettings
-                        )
-                }
-
-                // ======= AI模型配置 =======
-                SettingsSection(
-                        title = stringResource(id = R.string.settings_section_ai_model),
-                        icon = Icons.Default.Settings,
-                        containerColor = cardContainerColor
-                ) {
-                        CompactSettingsItem(
-                                title = stringResource(id = R.string.settings_model_parameters),
-                                subtitle = stringResource(id = R.string.settings_model_params_subtitle),
-                                icon = Icons.Default.Api,
-                                onClick = navigateToModelConfig
-                        )
-                        
-                        CompactSettingsItem(
-                                title = stringResource(id = R.string.settings_functional_model),
-                                subtitle = stringResource(id = R.string.settings_functional_model_subtitle),
-                                icon = Icons.Default.Tune,
-                                onClick = navigateToFunctionalConfig
-                        )
-                        
-                }
-
-                // ======= 提示词配置 =======
-                SettingsSection(
-                        title = stringResource(R.string.settings_prompt_section),
-                        icon = Icons.Default.Message,
-                        containerColor = cardContainerColor
-                ) {
-                        CompactSettingsItem(
-                                title = stringResource(R.string.settings_prompt_title),
-                                subtitle = stringResource(id = R.string.settings_system_prompts_subtitle),
-                                icon = Icons.Default.ChatBubble,
-                                onClick = navigateToModelPrompts
-                        )
-                }
-
-                // ======= 上下文和总结设置 =======
-                SettingsSection(
-                        title = stringResource(id = R.string.settings_section_context_summary),
-                        icon = Icons.Default.Analytics,
-                        containerColor = cardContainerColor
-                ) {
-                        CompactSettingsItem(
-                                title = stringResource(id = R.string.settings_section_context_summary),
-                                subtitle = stringResource(id = R.string.settings_context_summary_subtitle),
-                                icon = Icons.Default.Tune,
-                                onClick = navigateToContextSummarySettings
-                        )
-                }
-
-                // ======= 数据和权限 =======
-                SettingsSection(
-                        title = stringResource(id = R.string.settings_data_permissions),
-                        icon = Icons.Default.Security,
-                        containerColor = cardContainerColor
-                ) {
-                        CompactSettingsItem(
-                                title = stringResource(id = R.string.settings_tool_permissions),
-                                subtitle = stringResource(id = R.string.settings_tool_permissions_subtitle),
-                                icon = Icons.Default.AdminPanelSettings,
-                                onClick = navigateToToolPermissions
-                        )
-
-                        CompactSettingsItem(
-                                title = stringResource(id = R.string.settings_data_backup),
-                                subtitle = stringResource(id = R.string.settings_data_backup_desc),
-                                icon = Icons.Default.CloudUpload,
-                                onClick = navigateToChatBackupSettings
-                        )
-                        
-                        CompactSettingsItem(
-                                title = stringResource(id = R.string.settings_chat_history_management),
-                                subtitle = stringResource(id = R.string.settings_chat_history_management_subtitle),
-                                icon = Icons.Default.ManageHistory,
-                                onClick = navigateToChatHistorySettings
-                        )
-
-                        CompactSettingsItem(
-                                title = stringResource(id = R.string.settings_token_usage_stats),
-                                subtitle = stringResource(id = R.string.settings_token_usage_subtitle),
-                                icon = Icons.Default.Analytics,
-                                onClick = navigateToTokenUsageStatistics
-                        )
-                }
-
-                // ======= 外部调用 =======
-                SettingsSection(
-                        title = stringResource(id = R.string.settings_section_external_calls),
-                        icon = Icons.Default.SettingsEthernet,
-                        containerColor = cardContainerColor
-                ) {
-                        CompactSettingsItem(
-                                title = stringResource(id = R.string.settings_external_http_chat),
-                                subtitle = stringResource(id = R.string.settings_external_http_chat_subtitle),
-                                icon = Icons.Default.SettingsEthernet,
-                                onClick = navigateToExternalHttpChatSettings
-                        )
-                }
-
-                // 底部间距
                 Spacer(modifier = Modifier.height(16.dp))
         }
 }
@@ -371,140 +247,6 @@ private fun CompactSettingsItem(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(16.dp)
                 )
-        }
-}
-
-@Composable
-private fun CompactToggleWithDescription(
-        title: String,
-        description: String,
-        checked: Boolean,
-        onCheckedChange: (Boolean) -> Unit
-) {
-        Row(
-                modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-                Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                        Text(
-                                text = title,
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                                text = description,
-                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                        )
-                }
-                Switch(
-                        checked = checked,
-                        onCheckedChange = onCheckedChange,
-                        modifier = Modifier.scale(0.8f)
-                )
-        }
-}
-
-@Composable
-private fun CompactSlider(
-        title: String,
-        subtitle: String,
-        value: Float,
-        onValueChange: (Float) -> Unit,
-        valueRange: ClosedFloatingPointRange<Float>,
-        steps: Int,
-        decimalFormatPattern: String,
-        unitText: String? = null,
-        backgroundColor: Color
-) {
-        val focusManager = LocalFocusManager.current
-        val df = remember(decimalFormatPattern) { DecimalFormat(decimalFormatPattern) }
-
-        var sliderValue by remember(value) { mutableStateOf(value) }
-        var textValue by remember(value) { mutableStateOf(df.format(value)) }
-
-        Column(
-                modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 4.dp)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(backgroundColor)
-                        .padding(8.dp)
-        ) {
-                Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                        text = title,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = FontWeight.Medium
-                                )
-                                Text(
-                                        text = subtitle,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        fontSize = 10.sp
-                                )
-                        }
-
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                BasicTextField(
-                                        value = textValue,
-                                        onValueChange = { newText ->
-                                                textValue = newText
-                                                newText.toFloatOrNull()?.let {
-                                                        sliderValue = it.coerceIn(valueRange)
-                                                }
-                                        },
-                                        modifier = Modifier
-                                                .width(40.dp)
-                                                .background(
-                                                        MaterialTheme.colorScheme.surfaceVariant,
-                                                        RoundedCornerShape(4.dp)
-                                                )
-                                                .padding(horizontal = 4.dp, vertical = 2.dp),
-                                        textStyle = TextStyle(
-                                                color = MaterialTheme.colorScheme.primary,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 11.sp,
-                                                textAlign = TextAlign.Center
-                                        ),
-                                        keyboardOptions = KeyboardOptions(
-                                                keyboardType = KeyboardType.Number,
-                                                imeAction = ImeAction.Done
-                                        ),
-                                        keyboardActions = KeyboardActions(
-                                                onDone = {
-                                                        val finalValue = textValue.toFloatOrNull()?.coerceIn(valueRange) ?: sliderValue
-                                                        onValueChange(finalValue)
-                                                        textValue = df.format(finalValue)
-                                                        focusManager.clearFocus()
-                                                }
-                                        ),
-                                        singleLine = true
-                                )
-
-                                if (unitText != null) {
-                                        Text(
-                                                text = unitText,
-                                                style = MaterialTheme.typography.bodySmall.copy(
-                                                        color = MaterialTheme.colorScheme.primary,
-                                                        fontWeight = FontWeight.Bold,
-                                                        fontSize = 10.sp
-                                                ),
-                                                modifier = Modifier.padding(start = 2.dp)
-                                        )
-                                }
-                        }
-                }
         }
 }
 

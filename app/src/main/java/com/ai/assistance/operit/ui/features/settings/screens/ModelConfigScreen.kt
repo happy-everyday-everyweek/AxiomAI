@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -28,6 +30,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.PopupProperties
@@ -40,12 +43,14 @@ import com.ai.assistance.operit.api.chat.llmprovider.ModelConfigConnectionTester
 import com.ai.assistance.operit.api.chat.llmprovider.ModelConnectionTestType
 import com.ai.assistance.operit.data.model.FunctionType
 import com.ai.assistance.operit.data.model.ModelConfigData
+import com.ai.assistance.operit.data.preferences.ApiPreferences
 import com.ai.assistance.operit.data.preferences.FunctionalConfigManager
 import com.ai.assistance.operit.data.preferences.ModelConfigManager
 import com.ai.assistance.operit.ui.features.settings.DebouncedModelConfigAutoSaveEffect
 import com.ai.assistance.operit.ui.features.settings.RegisterModelConfigSaveAction
 import com.ai.assistance.operit.ui.features.settings.rememberModelConfigSaveCoordinator
 import com.ai.assistance.operit.ui.features.settings.sections.AdvancedSettingsSection
+import com.ai.assistance.operit.ui.features.settings.sections.ApiKeyVisualTransformation
 import com.ai.assistance.operit.ui.features.settings.sections.ModelApiSettingsSection
 import com.ai.assistance.operit.ui.features.settings.sections.ModelParametersSection
 import com.ai.assistance.operit.ui.features.settings.sections.SettingsInfoBanner
@@ -628,7 +633,7 @@ fun ModelConfigScreen(
 
             selectedConfig.value?.let { config ->
                 item {
-                    ModelApiSettingsSection(
+                    SimplifiedModelConfigSection(
                         config = config,
                         configManager = configManager,
                         saveCoordinator = saveCoordinator,
@@ -638,36 +643,13 @@ fun ModelConfigScreen(
                 }
 
                 item {
-                    ContextSummarySettingsSection(
-                        config = config,
-                        configManager = configManager,
-                        scope = scope,
-                        showNotification = { message -> showNotification(message) }
-                    )
-                }
-
-                item {
-                    ModelParametersSection(
-                        config = config,
-                        configManager = configManager,
-                        showNotification = { message -> showNotification(message) }
-                    )
-                }
-
-                item {
-                    CustomHeadersSettingsSection(
+                    AdvancedModelConfigSection(
                         config = config,
                         configManager = configManager,
                         saveCoordinator = saveCoordinator,
-                        showNotification = { message -> showNotification(message) }
-                    )
-                }
-
-                item {
-                    AdvancedSettingsSection(
-                        config = config,
-                        configManager = configManager,
-                        showNotification = { message -> showNotification(message) }
+                        scope = scope,
+                        showNotification = { message -> showNotification(message) },
+                        navigateToMnnModelDownload = navigateToMnnModelDownload
                     )
                 }
             }
@@ -1430,4 +1412,236 @@ private fun ModelConnectionTestType.toLabelResId(): Int {
 
 private fun formatFloatValue(value: Float): String {
     return if (value % 1f == 0f) value.toInt().toString() else String.format("%.2f", value)
+}
+
+@Composable
+private fun SimplifiedModelConfigSection(
+    config: ModelConfigData,
+    configManager: ModelConfigManager,
+    saveCoordinator: com.ai.assistance.operit.ui.features.settings.ModelConfigSaveCoordinator,
+    showNotification: (String) -> Unit,
+    navigateToMnnModelDownload: (() -> Unit)? = null
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    var apiUrlInput by remember(config.id) { mutableStateOf(config.apiEndpoint) }
+    var apiKeyInput by remember(config.id) { mutableStateOf(config.apiKey) }
+    var modelNameInput by remember(config.id) { mutableStateOf(config.modelName) }
+    var temperatureInput by remember(config.id) { mutableStateOf(formatFloatValue(config.temperature)) }
+
+    LaunchedEffect(config.id, config.apiEndpoint) { apiUrlInput = config.apiEndpoint }
+    LaunchedEffect(config.id, config.apiKey) { apiKeyInput = config.apiKey }
+    LaunchedEffect(config.id, config.modelName) { modelNameInput = config.modelName }
+    LaunchedEffect(config.id, config.temperature) { temperatureInput = formatFloatValue(config.temperature) }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            SettingsSectionHeader(
+                icon = Icons.Default.Api,
+                title = stringResource(R.string.api_settings)
+            )
+
+            SettingsTextField(
+                title = stringResource(R.string.api_endpoint),
+                subtitle = stringResource(R.string.api_endpoint_placeholder),
+                value = apiUrlInput,
+                onValueChange = {
+                    apiUrlInput = it.replace("\n", "").replace("\r", "").replace(" ", "")
+                },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Uri,
+                    imeAction = ImeAction.Next
+                )
+            )
+
+            val apiKeyInteractionSource = remember { MutableInteractionSource() }
+            val isApiKeyFocused by apiKeyInteractionSource.collectIsFocusedAsState()
+            val isUsingDefaultApiKey = apiKeyInput == ApiPreferences.DEFAULT_API_KEY
+
+            SettingsTextField(
+                title = stringResource(R.string.api_key),
+                subtitle = if (isUsingDefaultApiKey)
+                    stringResource(R.string.api_key_placeholder_default)
+                else
+                    stringResource(R.string.api_key_placeholder_custom),
+                value = if (isUsingDefaultApiKey) "" else apiKeyInput,
+                onValueChange = {
+                    apiKeyInput = it.replace("\n", "").replace("\r", "").replace(" ", "")
+                },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Text,
+                    imeAction = ImeAction.Next
+                ),
+                visualTransformation = if (isApiKeyFocused || apiKeyInput.isEmpty()) VisualTransformation.None else ApiKeyVisualTransformation(),
+                interactionSource = apiKeyInteractionSource
+            )
+
+            SettingsTextField(
+                title = stringResource(R.string.model_name),
+                subtitle = stringResource(R.string.model_name_placeholder),
+                value = modelNameInput,
+                onValueChange = {
+                    modelNameInput = it.replace("\n", "").replace("\r", "")
+                },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Text,
+                    imeAction = ImeAction.Next
+                )
+            )
+
+            SettingsTextField(
+                title = stringResource(R.string.model_param_temperature),
+                subtitle = stringResource(R.string.model_param_temperature_desc),
+                value = temperatureInput,
+                onValueChange = {
+                    temperatureInput = it
+                },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Decimal,
+                    imeAction = ImeAction.Done
+                )
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                Button(
+                    onClick = {
+                        scope.launch {
+                            try {
+                                val tempValue = temperatureInput.toFloatOrNull() ?: config.temperature
+                                configManager.updateSimplifiedConfig(
+                                    configId = config.id,
+                                    apiUrl = apiUrlInput,
+                                    apiKey = apiKeyInput,
+                                    modelName = modelNameInput,
+                                    temperature = tempValue.coerceIn(0f, 2f)
+                                )
+                                EnhancedAIService.refreshAllServices(configManager.appContext)
+                                showNotification(context.getString(R.string.api_settings_saved))
+                            } catch (e: Exception) {
+                                showNotification(e.message ?: context.getString(R.string.save_failed))
+                            }
+                        }
+                    },
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(stringResource(R.string.save_parameters), fontSize = 13.sp)
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun AdvancedModelConfigSection(
+    config: ModelConfigData,
+    configManager: ModelConfigManager,
+    saveCoordinator: com.ai.assistance.operit.ui.features.settings.ModelConfigSaveCoordinator,
+    scope: CoroutineScope,
+    showNotification: (String) -> Unit,
+    navigateToMnnModelDownload: (() -> Unit)? = null
+) {
+    var advancedExpanded by rememberSaveable { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { advancedExpanded = !advancedExpanded }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.advanced_settings),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = stringResource(R.string.model_config_expand),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Icon(
+                    imageVector = if (advancedExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            AnimatedVisibility(
+                visible = advancedExpanded,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    ModelApiSettingsSection(
+                        config = config,
+                        configManager = configManager,
+                        saveCoordinator = saveCoordinator,
+                        showNotification = showNotification,
+                        navigateToMnnModelDownload = navigateToMnnModelDownload
+                    )
+
+                    ContextSummarySettingsSection(
+                        config = config,
+                        configManager = configManager,
+                        scope = scope,
+                        showNotification = showNotification
+                    )
+
+                    ModelParametersSection(
+                        config = config,
+                        configManager = configManager,
+                        showNotification = showNotification
+                    )
+
+                    CustomHeadersSettingsSection(
+                        config = config,
+                        configManager = configManager,
+                        saveCoordinator = saveCoordinator,
+                        showNotification = showNotification
+                    )
+
+                    AdvancedSettingsSection(
+                        config = config,
+                        configManager = configManager,
+                        showNotification = showNotification
+                    )
+                }
+            }
+        }
+    }
 }

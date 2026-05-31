@@ -50,6 +50,8 @@ import com.ai.assistance.operit.data.preferences.UserPreferencesManager
 import com.ai.assistance.operit.data.preferences.UserPreferencesManager.Companion.ON_COLOR_MODE_AUTO
 import com.ai.assistance.operit.data.preferences.UserPreferencesManager.Companion.ON_COLOR_MODE_DARK
 import com.ai.assistance.operit.data.preferences.UserPreferencesManager.Companion.ON_COLOR_MODE_LIGHT
+import com.ai.assistance.operit.data.preferences.DisplayPreferencesManager
+import com.ai.assistance.operit.data.preferences.ThemeStyle
 import com.google.android.exoplayer2.DefaultLoadControl
 import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.MediaItem
@@ -61,10 +63,6 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import com.kyant.backdrop.backdrops.layerBackdrop
-import com.kyant.backdrop.backdrops.rememberLayerBackdrop
-import io.github.fletchmckee.liquid.liquefiable
-import io.github.fletchmckee.liquid.rememberLiquidState
 
 private val DarkColorScheme =
         darkColorScheme(primary = Purple80, secondary = PurpleGrey80, tertiary = Pink80)
@@ -74,17 +72,55 @@ private val LightColorScheme =
                 primary = Purple40,
                 secondary = PurpleGrey40,
                 tertiary = Pink40,
+        )
 
-                /* Other default colors to override
-                background = Color(0xFFFFFBFE),
-                surface = Color(0xFFFFFBFE),
-                onPrimary = Color.White,
-                onSecondary = Color.White,
-                onTertiary = Color.White,
-                onBackground = Color(0xFF1C1B1F),
-                onSurface = Color(0xFF1C1B1F),
-                */
-                )
+private val WarmLightColorScheme =
+        lightColorScheme(
+                primary = WarmPrimary,
+                onPrimary = WarmOnPrimary,
+                primaryContainer = WarmPrimaryContainer,
+                onPrimaryContainer = WarmOnPrimaryContainer,
+                secondary = WarmSecondary,
+                onSecondary = WarmOnSecondary,
+                secondaryContainer = WarmSecondaryContainer,
+                onSecondaryContainer = WarmOnSecondaryContainer,
+                tertiary = WarmTertiary,
+                onTertiary = WarmOnTertiary,
+                tertiaryContainer = WarmTertiaryContainer,
+                onTertiaryContainer = WarmOnTertiaryContainer,
+                background = WarmBackground,
+                onBackground = WarmOnBackground,
+                surface = WarmSurface,
+                onSurface = WarmOnSurface,
+                surfaceVariant = WarmSurfaceVariant,
+                onSurfaceVariant = WarmOnSurfaceVariant,
+                outline = WarmOutline,
+                outlineVariant = WarmOutlineVariant,
+        )
+
+private val WarmDarkColorScheme =
+        darkColorScheme(
+                primary = WarmDarkPrimary,
+                onPrimary = WarmDarkOnPrimary,
+                primaryContainer = WarmDarkPrimaryContainer,
+                onPrimaryContainer = WarmDarkOnPrimaryContainer,
+                secondary = WarmDarkSecondary,
+                onSecondary = WarmDarkOnSecondary,
+                secondaryContainer = WarmDarkSecondaryContainer,
+                onSecondaryContainer = WarmDarkOnSecondaryContainer,
+                tertiary = WarmDarkTertiary,
+                onTertiary = WarmDarkOnTertiary,
+                tertiaryContainer = WarmDarkTertiaryContainer,
+                onTertiaryContainer = WarmDarkOnTertiaryContainer,
+                background = WarmDarkBackground,
+                onBackground = WarmDarkOnBackground,
+                surface = WarmDarkSurface,
+                onSurface = WarmDarkOnSurface,
+                surfaceVariant = WarmDarkSurfaceVariant,
+                onSurfaceVariant = WarmDarkOnSurfaceVariant,
+                outline = WarmDarkOutline,
+                outlineVariant = WarmDarkOutlineVariant,
+        )
 
 
 @SuppressLint("UnusedBoxWithConstraintsScope")
@@ -92,6 +128,7 @@ private val LightColorScheme =
 fun OperitTheme(content: @Composable () -> Unit) {
     val context = LocalContext.current
     val preferencesManager = remember { UserPreferencesManager.getInstance(context) }
+    val displayPreferencesManager = remember { DisplayPreferencesManager.getInstance(context) }
     val coroutineScope = rememberCoroutineScope()
 
     // 获取主题设置
@@ -105,6 +142,7 @@ fun OperitTheme(content: @Composable () -> Unit) {
     val customSecondaryColor by
             preferencesManager.customSecondaryColor.collectAsState(initial = null)
     val onColorMode by preferencesManager.onColorMode.collectAsState(initial = ON_COLOR_MODE_AUTO)
+    val themeStyle by displayPreferencesManager.themeStyle.collectAsState(initial = ThemeStyle.BRIGHT)
 
     // 获取背景图片设置
     val useBackgroundImage by preferencesManager.useBackgroundImage.collectAsState(initial = false)
@@ -169,12 +207,18 @@ fun OperitTheme(content: @Composable () -> Unit) {
     // 基础主题色调
     var colorScheme =
             when {
-                dynamicColor -> {
+                dynamicColor && themeStyle == ThemeStyle.BRIGHT -> {
                     if (darkTheme) dynamicDarkColorScheme(context)
                     else dynamicLightColorScheme(context)
                 }
-                darkTheme -> DarkColorScheme
-                else -> LightColorScheme
+                darkTheme -> {
+                    if (themeStyle == ThemeStyle.WARM) WarmDarkColorScheme
+                    else DarkColorScheme
+                }
+                else -> {
+                    if (themeStyle == ThemeStyle.WARM) WarmLightColorScheme
+                    else LightColorScheme
+                }
             }
 
     // 应用自定义颜色和文本颜色
@@ -351,28 +395,18 @@ fun OperitTheme(content: @Composable () -> Unit) {
 
     // 应用主题和自定义背景
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        val liquidGlassBackdrop = rememberLayerBackdrop()
-        val waterGlassState = if (isWaterGlassSupported()) rememberLiquidState() else null
-
         CompositionLocalProvider(
-            LocalLiquidGlassBackdrop provides liquidGlassBackdrop,
-            LocalWaterGlassState provides waterGlassState,
+            LocalLiquidGlassBackdrop provides null,
+            LocalWaterGlassState provides null,
         ) {
             Box(
-                modifier = Modifier.fillMaxSize().layerBackdrop(liquidGlassBackdrop)
+                modifier = Modifier.fillMaxSize()
             ) {
                 Box(
                     modifier =
                         Modifier
                             .fillMaxSize()
                             .background(if (darkTheme) Color.Black else Color.White)
-                            .then(
-                                if (waterGlassState != null) {
-                                    Modifier.liquefiable(waterGlassState)
-                                } else {
-                                    Modifier
-                                },
-                            )
                 )
 
                 if (useBackgroundImage && backgroundImageUri != null) {
@@ -430,11 +464,7 @@ fun OperitTheme(content: @Composable () -> Unit) {
                                             Modifier
                                         },
                                     ).then(
-                                        if (waterGlassState != null) {
-                                            Modifier.liquefiable(waterGlassState)
-                                        } else {
-                                            Modifier
-                                        },
+                                        Modifier
                                     ),
                             contentScale = ContentScale.Crop,
                         )
@@ -492,11 +522,7 @@ fun OperitTheme(content: @Composable () -> Unit) {
                                 },
                                 modifier =
                                     Modifier.fillMaxSize().then(
-                                        if (waterGlassState != null) {
-                                            Modifier.liquefiable(waterGlassState)
-                                        } else {
-                                            Modifier
-                                        },
+                                        Modifier
                                     ),
                             )
                         }

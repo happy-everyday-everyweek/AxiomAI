@@ -2,6 +2,16 @@ package com.ai.assistance.operit.data.model
 
 import kotlinx.serialization.Serializable
 
+@Serializable
+data class SimplifiedModelConfig(
+    val configId: String,
+    val configName: String,
+    val apiUrl: String,
+    val apiKey: String,
+    val modelName: String,
+    val temperature: Float
+)
+
 /** API提供商类型枚举 */
 @Serializable
 enum class ApiProviderType {

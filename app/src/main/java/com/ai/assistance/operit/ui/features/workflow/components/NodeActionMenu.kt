@@ -2,7 +2,6 @@ package com.ai.assistance.operit.ui.features.workflow.components
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Link
@@ -14,15 +13,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.ai.assistance.operit.R
 
-/**
- * 节点操作菜单对话框
- * 长按节点时显示，提供编辑和连接选项
- */
 @Composable
 fun NodeActionMenuDialog(
     nodeName: String,
     onEdit: () -> Unit,
-    onViewLogs: () -> Unit,
     onConnect: () -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit
@@ -42,8 +36,7 @@ fun NodeActionMenuDialog(
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
-                
-                // 编辑按钮
+
                 TextButton(
                     onClick = {
                         onDismiss()
@@ -60,23 +53,6 @@ fun NodeActionMenuDialog(
                     Text(stringResource(R.string.workflow_action_edit_node))
                 }
 
-                TextButton(
-                    onClick = {
-                        onDismiss()
-                        onViewLogs()
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Call,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.workflow_view_logs))
-                }
-                
-                // 连接按钮
                 TextButton(
                     onClick = {
                         onDismiss()
@@ -111,8 +87,7 @@ fun NodeActionMenuDialog(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(stringResource(R.string.workflow_action_delete_node))
                 }
-                
-                // 取消按钮
+
                 TextButton(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth()
@@ -123,4 +98,3 @@ fun NodeActionMenuDialog(
         }
     }
 }
-

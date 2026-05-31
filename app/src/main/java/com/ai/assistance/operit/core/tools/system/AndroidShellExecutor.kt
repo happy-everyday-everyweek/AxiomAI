@@ -7,7 +7,6 @@ import com.ai.assistance.operit.core.tools.system.shell.ShellExecutorFactory
 import com.ai.assistance.operit.core.tools.system.shell.ShellProcess
 import com.ai.assistance.operit.data.preferences.androidPermissionPreferences
 
-/** 向后兼容的Shell命令执行工具类 通过权限级别委托到相应的Shell执行器 */
 class AndroidShellExecutor {
     companion object {
         private const val TAG = "AndroidShellExecutor"
@@ -16,10 +15,6 @@ class AndroidShellExecutor {
         @Volatile private var hasCachedPreferredPermissionLevel = false
         @Volatile private var cachedPreferredPermissionLevel: AndroidPermissionLevel? = null
 
-        /**
-         * 设置全局上下文引用
-         * @param appContext 应用上下文
-         */
         fun setContext(appContext: Context) {
             context = appContext.applicationContext
         }
@@ -50,9 +45,6 @@ class AndroidShellExecutor {
             return when (level) {
                 AndroidPermissionLevel.STANDARD -> "STANDARD"
                 AndroidPermissionLevel.ACCESSIBILITY -> "ACCESSIBILITY"
-                AndroidPermissionLevel.DEBUGGER -> "DEBUGGER"
-                AndroidPermissionLevel.ADMIN -> "ADMIN"
-                AndroidPermissionLevel.ROOT -> "ROOT"
             }
         }
 
@@ -74,11 +66,6 @@ class AndroidShellExecutor {
             return "Current ${getPermissionLevelLabel(level)} unavailable: $reasonText"
         }
 
-        /**
-         * 封装执行命令的函数
-         * @param command 要执行的命令
-         * @return 命令执行结果
-         */
         suspend fun executeShellCommand(command: String): CommandResult {
             return executeShellCommand(command, null)
         }
@@ -86,7 +73,6 @@ class AndroidShellExecutor {
         suspend fun executeShellCommand(command: String, identityOverride: ShellIdentity?): CommandResult {
             val ctx = context ?: return CommandResult(false, "", "Context not initialized")
 
-            // 如果调用方显式指定了身份，就直接向下传递；否则使用默认身份
             val identity = identityOverride ?: ShellIdentity.DEFAULT
 
             val preferredLevel = getPreferredPermissionLevelCached()
@@ -127,7 +113,6 @@ class AndroidShellExecutor {
         }
     }
 
-    /** 命令执行结果数据类 */
     data class CommandResult(
             val success: Boolean,
             val stdout: String,

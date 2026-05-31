@@ -13,6 +13,17 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 
+enum class ThemeStyle(val value: String) {
+    BRIGHT("bright"),
+    WARM("warm");
+
+    companion object {
+        fun fromValue(value: String?): ThemeStyle {
+            return entries.find { it.value == value } ?: BRIGHT
+        }
+    }
+}
+
 // DataStore 实例
 private val Context.displayPreferencesDataStore: DataStore<Preferences> by preferencesDataStore(
     name = "display_preferences"
@@ -70,6 +81,9 @@ class DisplayPreferencesManager private constructor(private val context: Context
 
         // 工具折叠设置（多个只读工具 / 多个任意工具 / 全部工具）
         private val KEY_TOOL_COLLAPSE_MODE = stringPreferencesKey("tool_collapse_mode")
+
+        // 主题风格设置（明快 / 温暖）
+        private val KEY_THEME_STYLE = stringPreferencesKey("theme_style")
     }
 
     /**
@@ -187,6 +201,11 @@ class DisplayPreferencesManager private constructor(private val context: Context
             ToolCollapseMode.fromValue(preferences[KEY_TOOL_COLLAPSE_MODE])
         }
 
+    val themeStyle: Flow<ThemeStyle> =
+        context.displayPreferencesDataStore.data.map { preferences ->
+            ThemeStyle.fromValue(preferences[KEY_THEME_STYLE])
+        }
+
     /**
      * 保存显示设置
      */
@@ -207,7 +226,8 @@ class DisplayPreferencesManager private constructor(private val context: Context
         screenshotScalePercent: Int? = null,
         visitWebWaitSeconds: Int? = null,
         virtualDisplayBitrateKbps: Int? = null,
-        toolCollapseMode: ToolCollapseMode? = null
+        toolCollapseMode: ToolCollapseMode? = null,
+        themeStyle: ThemeStyle? = null
     ) {
         context.displayPreferencesDataStore.edit { preferences ->
             showFpsCounter?.let { preferences[KEY_SHOW_FPS_COUNTER] = it }
@@ -239,6 +259,7 @@ class DisplayPreferencesManager private constructor(private val context: Context
             visitWebWaitSeconds?.let { preferences[KEY_VISIT_WEB_WAIT_SECONDS] = it.coerceAtLeast(0) }
             virtualDisplayBitrateKbps?.let { preferences[KEY_VIRTUAL_DISPLAY_BITRATE_KBPS] = it }
             toolCollapseMode?.let { preferences[KEY_TOOL_COLLAPSE_MODE] = it.value }
+            themeStyle?.let { preferences[KEY_THEME_STYLE] = it.value }
         }
     }
 
@@ -300,6 +321,7 @@ class DisplayPreferencesManager private constructor(private val context: Context
             preferences.remove(KEY_VISIT_WEB_WAIT_SECONDS)
             preferences.remove(KEY_VIRTUAL_DISPLAY_BITRATE_KBPS)
             preferences.remove(KEY_TOOL_COLLAPSE_MODE)
+            preferences.remove(KEY_THEME_STYLE)
         }
     }
 }

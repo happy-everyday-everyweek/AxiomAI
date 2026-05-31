@@ -61,6 +61,8 @@ import android.net.Uri
 import androidx.compose.ui.res.stringResource
 import com.ai.assistance.operit.data.preferences.GitHubAuthPreferences
 import com.ai.assistance.operit.ui.features.github.GitHubOAuthCoordinator
+import com.ai.assistance.operit.ui.features.onboarding.OnboardingChatScreen
+import com.ai.assistance.operit.ui.features.onboarding.OnboardingViewModel
 import com.ai.assistance.operit.widget.ToolPkgDesktopWidgetHost
 import org.json.JSONObject
 
@@ -100,6 +102,9 @@ class MainActivity : ComponentActivity() {
 
     // 是否显示权限引导界面
     private var showPermissionGuide by mutableStateOf(false)
+
+    // 是否显示首次使用引导
+    private var showOnboarding by mutableStateOf(false)
 
     // 是否已完成初始检查
     private var initialChecksDone = false
@@ -432,6 +437,11 @@ class MainActivity : ComponentActivity() {
     // ======== 执行初始化检查 ========
     private fun performInitialChecks() {
         lifecycleScope.launch {
+            // 0. 检查是否需要首次使用引导
+            val onboardingCompleted = OnboardingViewModel.isOnboardingCompleted(this@MainActivity)
+            showOnboarding = !onboardingCompleted
+            AppLogger.d(TAG, "首次使用引导检查: 已完成=$onboardingCompleted, 显示引导=$showOnboarding")
+
             // 1. 检查通知权限（Android 13+）
             checkNotificationPermission()
 
@@ -439,7 +449,7 @@ class MainActivity : ComponentActivity() {
             checkPermissionLevelSet()
 
             // 3. 在协议已接受且无需权限引导时，启动插件加载
-            if (!showPermissionGuide && agreementPreferences.isAgreementAccepted()) {
+            if (!showPermissionGuide && agreementPreferences.isAgreementAccepted() && onboardingCompleted) {
                 startPluginLoading()
             }
 
@@ -701,18 +711,29 @@ class MainActivity : ComponentActivity() {
                             AgreementScreen(
                                     onAgreementAccepted = {
                                         agreementPreferences.setAgreementAccepted(true)
-                                        // 协议接受后，检查权限级别设置
                                         lifecycleScope.launch {
-                                            // 确保使用非阻塞方式更新UI
-                                            delay(300) // 短暂延迟确保UI状态更新
-                                            checkPermissionLevelSet()
-                                            if (!showPermissionGuide) {
-                                                startPluginLoading()
+                                            delay(300)
+                                            if (showOnboarding) {
+                                                setAppContent()
+                                            } else {
+                                                checkPermissionLevelSet()
+                                                if (!showPermissionGuide) {
+                                                    startPluginLoading()
+                                                }
+                                                setAppContent()
                                             }
-                                            // 重新设置应用内容
-                                            setAppContent()
                                         }
                                     }
+                            )
+                        }
+                        // 检查是否需要显示权限引导界面
+                        else if (showOnboarding) {
+                            OnboardingChatScreen(
+                                onComplete = {
+                                    showOnboarding = false
+                                    startPluginLoading()
+                                    setAppContent()
+                                }
                             )
                         }
                         // 检查是否需要显示权限引导界面

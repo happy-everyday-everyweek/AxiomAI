@@ -1682,6 +1682,109 @@ object SystemToolPromptsInternal {
                                         required = false
                                     )
                                 )
+                        ),
+                        ToolPrompt(
+                            name = "run_subagent_main",
+                            description = "Run the UI sub-agent on the main screen (forced main screen).",
+                            parametersStructured =
+                                listOf(
+                                    ToolParameterSchema(
+                                        name = "intent",
+                                        type = "string",
+                                        description = "Task intent description",
+                                        required = true
+                                    ),
+                                    ToolParameterSchema(
+                                        name = "target_app",
+                                        type = "string",
+                                        description = "optional, target app name/package",
+                                        required = false
+                                    ),
+                                    ToolParameterSchema(
+                                        name = "max_steps",
+                                        type = "integer",
+                                        description = "Maximum execution steps (default: 20)",
+                                        required = false,
+                                        default = "20"
+                                    )
+                                ),
+                            details = """
+  - Launch first (very important): when you need to operate an app for the first time, the intent must start with "Launch <app> ..." so the sub-agent performs Launch directly.
+  - Stateless per call (important): each call is a new conversation; include all context. Recommended template: Completed so far / Next objective / Useful info.
+  - Self-contained intent (important): do not use references like "those five / continue / same as above".
+  - Strictly serial (important): main-screen mode does not support parallel tools; do one clear sub-goal per call.
+  - Failure vs done (important): partial success is not done; keep progressing. Only stop after 2-3 consecutive failures with a clear reason and alternatives.
+"""
+                        ),
+                        ToolPrompt(
+                            name = "run_subagent_virtual",
+                            description = "Run the UI sub-agent on a virtual-display session (forced virtual screen).",
+                            parametersStructured =
+                                listOf(
+                                    ToolParameterSchema(
+                                        name = "intent",
+                                        type = "string",
+                                        description = "Task intent description",
+                                        required = true
+                                    ),
+                                    ToolParameterSchema(
+                                        name = "target_app",
+                                        type = "string",
+                                        description = "optional, target app name/package",
+                                        required = false
+                                    ),
+                                    ToolParameterSchema(
+                                        name = "max_steps",
+                                        type = "integer",
+                                        description = "Maximum execution steps (default: 20)",
+                                        required = false,
+                                        default = "20"
+                                    ),
+                                    ToolParameterSchema(
+                                        name = "agent_id",
+                                        type = "string",
+                                        description = "Virtual-screen session agent_id (must be non-'default'; pass to reuse, or omit to reuse returned data.agentId).",
+                                        required = false
+                                    )
+                                ),
+                            details = """
+  - Session reuse (important): reuse the same agent_id across calls when possible (use the returned data.agentId) to stay in the same virtual display and app context.
+  - Launch first (very important): when you first use an agent_id (new or changed), the intent must start with "Launch <app> ..." so the sub-agent performs Launch directly.
+  - Stateless per call (important): each call is a new conversation; include all context. Recommended template: Completed so far / Next objective / Useful info.
+  - Self-contained intent (important): do not use references like "those five / continue / same as above".
+  - Failure vs done (important): partial success is not done; keep progressing. Only stop after 2-3 consecutive failures with a clear reason and alternatives.
+"""
+                        ),
+                        ToolPrompt(
+                            name = "run_subagent_parallel_virtual",
+                            description = "Run 1-4 UI sub-agents in parallel (forced virtual screen). Each sub-agent is a new conversation, so intent_1..4 must each be self-contained. Use different agent_id per branch to avoid interference.",
+                            parametersStructured =
+                                listOf(
+                                    ToolParameterSchema(name = "intent_1", type = "string", description = "Intent for sub-agent #1 (recommended template: Completed so far / Next objective / Useful info).", required = true),
+                                    ToolParameterSchema(name = "target_app_1", type = "string", description = "Target app name for sub-agent #1 (required for conflict detection; must be different across branches).", required = true),
+                                    ToolParameterSchema(name = "max_steps_1", type = "integer", description = "Max steps for sub-agent #1 (default: 20).", required = false, default = "20"),
+                                    ToolParameterSchema(name = "agent_id_1", type = "string", description = "agent_id for sub-agent #1 (required, must not be 'default'; selects a virtual-display session; use different agent_id per branch).", required = true),
+                                    ToolParameterSchema(name = "intent_2", type = "string", description = "Intent for sub-agent #2 (optional).", required = false),
+                                    ToolParameterSchema(name = "target_app_2", type = "string", description = "Target app name for sub-agent #2 (required when intent_2 is provided; must be different across branches).", required = false),
+                                    ToolParameterSchema(name = "max_steps_2", type = "integer", description = "Max steps for sub-agent #2 (default: 20).", required = false, default = "20"),
+                                    ToolParameterSchema(name = "agent_id_2", type = "string", description = "agent_id for sub-agent #2 (required when intent_2 is provided, must not be 'default').", required = false),
+                                    ToolParameterSchema(name = "intent_3", type = "string", description = "Intent for sub-agent #3 (optional).", required = false),
+                                    ToolParameterSchema(name = "target_app_3", type = "string", description = "Target app name for sub-agent #3 (required when intent_3 is provided; must be different across branches).", required = false),
+                                    ToolParameterSchema(name = "max_steps_3", type = "integer", description = "Max steps for sub-agent #3 (default: 20).", required = false, default = "20"),
+                                    ToolParameterSchema(name = "agent_id_3", type = "string", description = "agent_id for sub-agent #3 (required when intent_3 is provided, must not be 'default').", required = false),
+                                    ToolParameterSchema(name = "intent_4", type = "string", description = "Intent for sub-agent #4 (optional).", required = false),
+                                    ToolParameterSchema(name = "target_app_4", type = "string", description = "Target app name for sub-agent #4 (required when intent_4 is provided; must be different across branches).", required = false),
+                                    ToolParameterSchema(name = "max_steps_4", type = "integer", description = "Max steps for sub-agent #4 (default: 20).", required = false, default = "20"),
+                                    ToolParameterSchema(name = "agent_id_4", type = "string", description = "agent_id for sub-agent #4 (required when intent_4 is provided, must not be 'default').", required = false)
+                                ),
+                            details = """
+  - Parallel resource constraints (important): parallel branches are limited by available independent apps / virtual displays.
+  - The same app/package must not be operated in parallel across two virtual displays / agent_id (it can break app state).
+  - Branch count must not exceed available independent apps.
+  - Parallel calls must provide target_app_i for each enabled intent_i; all target_app_i must be different.
+  - Do not increase parallelism in later rounds; keep the same upper bound and only retry failed branches, or switch to serial.
+  - Only retry failed branches; do not re-run successful ones.
+"""
                         )
                     )
             ),
@@ -2929,6 +3032,120 @@ object SystemToolPromptsInternal {
                                         description = "optional, use h264 for H.264 encoding",
                                         required = false
                                     )
+                                )
+                        )
+                    )
+            ),
+            SystemToolPromptCategory(
+                categoryName = "Todo Tools",
+                tools =
+                    listOf(
+                        ToolPrompt(
+                            name = "create_todo",
+                            description = "Create a new todo item.",
+                            parametersStructured =
+                                listOf(
+                                    ToolParameterSchema("title", "string", "Todo title", true),
+                                    ToolParameterSchema("description", "string", "Todo description", false),
+                                    ToolParameterSchema("due_date", "integer", "Due date as unix timestamp in milliseconds", false),
+                                    ToolParameterSchema("priority", "string", "Priority: LOW, MEDIUM, HIGH, URGENT", false, "MEDIUM"),
+                                    ToolParameterSchema("status", "string", "Status: PENDING, IN_PROGRESS, COMPLETED, CANCELLED", false, "PENDING")
+                                )
+                        ),
+                        ToolPrompt(
+                            name = "list_todos",
+                            description = "List todo items, optionally filtered by status or priority.",
+                            parametersStructured =
+                                listOf(
+                                    ToolParameterSchema("status", "string", "Filter by status: PENDING, IN_PROGRESS, COMPLETED, CANCELLED", false),
+                                    ToolParameterSchema("priority", "string", "Filter by priority: LOW, MEDIUM, HIGH, URGENT", false)
+                                )
+                        ),
+                        ToolPrompt(
+                            name = "get_todo",
+                            description = "Get a specific todo item by ID.",
+                            parametersStructured =
+                                listOf(
+                                    ToolParameterSchema("todo_id", "string", "Todo item ID", true)
+                                )
+                        ),
+                        ToolPrompt(
+                            name = "update_todo",
+                            description = "Update an existing todo item.",
+                            parametersStructured =
+                                listOf(
+                                    ToolParameterSchema("todo_id", "string", "Todo item ID", true),
+                                    ToolParameterSchema("title", "string", "New title", false),
+                                    ToolParameterSchema("description", "string", "New description", false),
+                                    ToolParameterSchema("due_date", "integer", "New due date as unix timestamp in milliseconds", false),
+                                    ToolParameterSchema("priority", "string", "New priority: LOW, MEDIUM, HIGH, URGENT", false),
+                                    ToolParameterSchema("status", "string", "New status: PENDING, IN_PROGRESS, COMPLETED, CANCELLED", false)
+                                )
+                        ),
+                        ToolPrompt(
+                            name = "delete_todo",
+                            description = "Delete a todo item by ID.",
+                            parametersStructured =
+                                listOf(
+                                    ToolParameterSchema("todo_id", "string", "Todo item ID", true)
+                                )
+                        )
+                    )
+            ),
+            SystemToolPromptCategory(
+                categoryName = "Schedule Tools",
+                tools =
+                    listOf(
+                        ToolPrompt(
+                            name = "create_schedule",
+                            description = "Create a new schedule event.",
+                            parametersStructured =
+                                listOf(
+                                    ToolParameterSchema("title", "string", "Schedule title", true),
+                                    ToolParameterSchema("description", "string", "Schedule description", false),
+                                    ToolParameterSchema("start_time", "integer", "Start time as unix timestamp in milliseconds", true),
+                                    ToolParameterSchema("end_time", "integer", "End time as unix timestamp in milliseconds", false),
+                                    ToolParameterSchema("recurrence", "string", "Recurrence: NONE, DAILY, WEEKLY, MONTHLY, YEARLY", false, "NONE"),
+                                    ToolParameterSchema("reminder", "integer", "Reminder time before event in milliseconds", false, "0")
+                                )
+                        ),
+                        ToolPrompt(
+                            name = "list_schedules",
+                            description = "List schedule events, optionally filtered by time range.",
+                            parametersStructured =
+                                listOf(
+                                    ToolParameterSchema("start_time", "integer", "Range start as unix timestamp in milliseconds", false),
+                                    ToolParameterSchema("end_time", "integer", "Range end as unix timestamp in milliseconds", false)
+                                )
+                        ),
+                        ToolPrompt(
+                            name = "get_schedule",
+                            description = "Get a specific schedule event by ID.",
+                            parametersStructured =
+                                listOf(
+                                    ToolParameterSchema("schedule_id", "string", "Schedule item ID", true)
+                                )
+                        ),
+                        ToolPrompt(
+                            name = "update_schedule",
+                            description = "Update an existing schedule event.",
+                            parametersStructured =
+                                listOf(
+                                    ToolParameterSchema("schedule_id", "string", "Schedule item ID", true),
+                                    ToolParameterSchema("title", "string", "New title", false),
+                                    ToolParameterSchema("description", "string", "New description", false),
+                                    ToolParameterSchema("start_time", "integer", "New start time as unix timestamp in milliseconds", false),
+                                    ToolParameterSchema("end_time", "integer", "New end time as unix timestamp in milliseconds", false),
+                                    ToolParameterSchema("recurrence", "string", "New recurrence: NONE, DAILY, WEEKLY, MONTHLY, YEARLY", false),
+                                    ToolParameterSchema("reminder", "integer", "New reminder time in milliseconds", false)
+                                )
+                        ),
+                        ToolPrompt(
+                            name = "delete_schedule",
+                            description = "Delete a schedule event by ID.",
+                            parametersStructured =
+                                listOf(
+                                    ToolParameterSchema("schedule_id", "string", "Schedule item ID", true)
                                 )
                         )
                     )
@@ -4611,6 +4828,108 @@ object SystemToolPromptsInternal {
                                         required = false
                                     )
                                 )
+                        ),
+                        ToolPrompt(
+                            name = "run_subagent_main",
+                            description = "在主屏幕运行 UI 子代理（强制主屏）。",
+                            parametersStructured =
+                                listOf(
+                                    ToolParameterSchema(
+                                        name = "intent",
+                                        type = "string",
+                                        description = "任务意图描述",
+                                        required = true
+                                    ),
+                                    ToolParameterSchema(
+                                        name = "target_app",
+                                        type = "string",
+                                        description = "可选，目标应用名/包名",
+                                        required = false
+                                    ),
+                                    ToolParameterSchema(
+                                        name = "max_steps",
+                                        type = "integer",
+                                        description = "最大执行步数（默认20）",
+                                        required = false,
+                                        default = "20"
+                                    )
+                                ),
+                            details = """
+  - 启动前置（非常重要）：当你第一次需要操作某个应用时，intent 开头必须写"启动XXX应用 ..."，让子代理直接执行 Launch，而不是在桌面自己找。
+  - 对话无状态（重要）：每次调用对子代理都是全新对话，intent 必须自带上下文，建议固定模板：当前任务已经完成/你需要在此基础上进一步完成/可能用到的信息。
+  - 意图必须自包含（重要）：禁止使用"这五个/继续/同上/刚才说的"等指代。
+  - 严格串行（重要）：主屏模式不支持并行工具；一次只做一个明确子目标，必要时拆成多次调用。
+  - 失败与完成（重要）：半成功不算完成；应继续纠错推进。仅在连续 2-3 次失败仍无法推进时才停止，并明确失败原因与可选替代方案。
+"""
+                        ),
+                        ToolPrompt(
+                            name = "run_subagent_virtual",
+                            description = "在虚拟屏幕会话运行 UI 子代理（强制虚拟屏）。",
+                            parametersStructured =
+                                listOf(
+                                    ToolParameterSchema(
+                                        name = "intent",
+                                        type = "string",
+                                        description = "任务意图描述",
+                                        required = true
+                                    ),
+                                    ToolParameterSchema(
+                                        name = "target_app",
+                                        type = "string",
+                                        description = "可选，目标应用名/包名",
+                                        required = false
+                                    ),
+                                    ToolParameterSchema(
+                                        name = "max_steps",
+                                        type = "integer",
+                                        description = "最大执行步数（默认20）",
+                                        required = false,
+                                        default = "20"
+                                    ),
+                                    ToolParameterSchema(
+                                        name = "agent_id",
+                                        type = "string",
+                                        description = "虚拟屏会话 agent_id（必须为非 'default'；可传入复用，或留空复用上次返回的 data.agentId）。",
+                                        required = false
+                                    )
+                                ),
+                            details = """
+  - 会话复用（重要）：多次调用尽量复用同一个 agent_id（沿用上一次返回的 data.agentId），保持在同一虚拟屏/同一应用上下文内。
+  - 启动前置（非常重要）：当你第一次使用某个 agent_id（新建或更换 agent_id）时，intent 开头必须写"启动XXX应用 ..."，让子代理直接执行 Launch，而不是在桌面自己找。
+  - 对话无状态（重要）：每次调用对子代理都是全新对话，intent 需要自带上下文，建议固定模板：当前任务已经完成/你需要在此基础上进一步完成/可能用到的信息。
+  - 意图必须自包含（重要）：禁止使用"这五个/继续/同上/刚才说的"等指代。
+  - 失败与完成（重要）：半成功不算完成；应继续纠错推进。仅在连续 2-3 次失败仍无法推进时才停止，并明确失败原因与可选替代方案。
+"""
+                        ),
+                        ToolPrompt(
+                            name = "run_subagent_parallel_virtual",
+                            description = "并行运行 1-4 个 UI 子代理（强制虚拟屏）。每个子代理对它自身都是全新对话，因此 intent_1..4 需要由主Agent分别写清楚。建议并行时每个子代理使用不同的 agent_id，避免操作同一虚拟屏幕造成冲突。",
+                            parametersStructured =
+                                listOf(
+                                    ToolParameterSchema(name = "intent_1", type = "string", description = "第1个子代理意图（推荐使用：当前任务已经完成/你需要进一步完成/可能用到的信息 三段式）", required = true),
+                                    ToolParameterSchema(name = "target_app_1", type = "string", description = "第1个子代理目标应用名（必填，用于并行冲突检测；各分支必须不同）", required = true),
+                                    ToolParameterSchema(name = "max_steps_1", type = "integer", description = "第1个子代理最大步数（默认20）", required = false, default = "20"),
+                                    ToolParameterSchema(name = "agent_id_1", type = "string", description = "第1个子代理 agent_id（必填，且不能为 'default'；用于指定虚拟屏会话；并行建议不同）", required = true),
+                                    ToolParameterSchema(name = "intent_2", type = "string", description = "第2个子代理意图（可选）", required = false),
+                                    ToolParameterSchema(name = "target_app_2", type = "string", description = "第2个子代理目标应用名（当 intent_2 存在时必填；各分支必须不同）", required = false),
+                                    ToolParameterSchema(name = "max_steps_2", type = "integer", description = "第2个子代理最大步数（默认20）", required = false, default = "20"),
+                                    ToolParameterSchema(name = "agent_id_2", type = "string", description = "第2个子代理 agent_id（当 intent_2 存在时必填，且不能为 'default'；并行建议不同）", required = false),
+                                    ToolParameterSchema(name = "intent_3", type = "string", description = "第3个子代理意图（可选）", required = false),
+                                    ToolParameterSchema(name = "target_app_3", type = "string", description = "第3个子代理目标应用名（当 intent_3 存在时必填；各分支必须不同）", required = false),
+                                    ToolParameterSchema(name = "max_steps_3", type = "integer", description = "第3个子代理最大步数（默认20）", required = false, default = "20"),
+                                    ToolParameterSchema(name = "agent_id_3", type = "string", description = "第3个子代理 agent_id（当 intent_3 存在时必填，且不能为 'default'）", required = false),
+                                    ToolParameterSchema(name = "intent_4", type = "string", description = "第4个子代理意图（可选）", required = false),
+                                    ToolParameterSchema(name = "target_app_4", type = "string", description = "第4个子代理目标应用名（当 intent_4 存在时必填；各分支必须不同）", required = false),
+                                    ToolParameterSchema(name = "max_steps_4", type = "integer", description = "第4个子代理最大步数（默认20）", required = false, default = "20"),
+                                    ToolParameterSchema(name = "agent_id_4", type = "string", description = "第4个子代理 agent_id（当 intent_4 存在时必填，且不能为 'default'）", required = false)
+                                ),
+                            details = """
+  - 并行资源约束（重要）：并行分支数必须受"可用独立App数量/可用虚拟屏数量"限制。
+  - 同一个App/同一个包名，不能同时存在于两个虚拟屏/两个 agent_id 中并行操作（会导致应用状态错乱/坏掉）。
+  - 并行调用必须传入 target_app_i=目标应用名（每个 intent_i 对应一个 target_app_i），用于冲突检测；所有启用分支的 target_app_i 必须互不相同。
+  - 第2次/第N次并行不得擅自提高并行度；应保持同样的并行上限，只重试失败分支，或改为串行。
+  - 只重试失败分支，不要让已成功的子代理重复执行。
+"""
                         )
                     )
             ),
@@ -5858,6 +6177,120 @@ object SystemToolPromptsInternal {
                                         description = "可选，H.264 编码请使用 h264",
                                         required = false
                                     )
+                                )
+                        )
+                    )
+            ),
+            SystemToolPromptCategory(
+                categoryName = "待办工具",
+                tools =
+                    listOf(
+                        ToolPrompt(
+                            name = "create_todo",
+                            description = "创建新的待办事项。",
+                            parametersStructured =
+                                listOf(
+                                    ToolParameterSchema("title", "string", "待办标题", true),
+                                    ToolParameterSchema("description", "string", "待办描述", false),
+                                    ToolParameterSchema("due_date", "integer", "截止日期，Unix 时间戳（毫秒）", false),
+                                    ToolParameterSchema("priority", "string", "优先级：LOW、MEDIUM、HIGH、URGENT", false, "MEDIUM"),
+                                    ToolParameterSchema("status", "string", "状态：PENDING、IN_PROGRESS、COMPLETED、CANCELLED", false, "PENDING")
+                                )
+                        ),
+                        ToolPrompt(
+                            name = "list_todos",
+                            description = "列出待办事项，可按状态或优先级筛选。",
+                            parametersStructured =
+                                listOf(
+                                    ToolParameterSchema("status", "string", "按状态筛选：PENDING、IN_PROGRESS、COMPLETED、CANCELLED", false),
+                                    ToolParameterSchema("priority", "string", "按优先级筛选：LOW、MEDIUM、HIGH、URGENT", false)
+                                )
+                        ),
+                        ToolPrompt(
+                            name = "get_todo",
+                            description = "根据 ID 获取特定待办事项。",
+                            parametersStructured =
+                                listOf(
+                                    ToolParameterSchema("todo_id", "string", "待办事项 ID", true)
+                                )
+                        ),
+                        ToolPrompt(
+                            name = "update_todo",
+                            description = "更新现有待办事项。",
+                            parametersStructured =
+                                listOf(
+                                    ToolParameterSchema("todo_id", "string", "待办事项 ID", true),
+                                    ToolParameterSchema("title", "string", "新标题", false),
+                                    ToolParameterSchema("description", "string", "新描述", false),
+                                    ToolParameterSchema("due_date", "integer", "新截止日期，Unix 时间戳（毫秒）", false),
+                                    ToolParameterSchema("priority", "string", "新优先级：LOW、MEDIUM、HIGH、URGENT", false),
+                                    ToolParameterSchema("status", "string", "新状态：PENDING、IN_PROGRESS、COMPLETED、CANCELLED", false)
+                                )
+                        ),
+                        ToolPrompt(
+                            name = "delete_todo",
+                            description = "根据 ID 删除待办事项。",
+                            parametersStructured =
+                                listOf(
+                                    ToolParameterSchema("todo_id", "string", "待办事项 ID", true)
+                                )
+                        )
+                    )
+            ),
+            SystemToolPromptCategory(
+                categoryName = "日程工具",
+                tools =
+                    listOf(
+                        ToolPrompt(
+                            name = "create_schedule",
+                            description = "创建新的日程事件。",
+                            parametersStructured =
+                                listOf(
+                                    ToolParameterSchema("title", "string", "日程标题", true),
+                                    ToolParameterSchema("description", "string", "日程描述", false),
+                                    ToolParameterSchema("start_time", "integer", "开始时间，Unix 时间戳（毫秒）", true),
+                                    ToolParameterSchema("end_time", "integer", "结束时间，Unix 时间戳（毫秒）", false),
+                                    ToolParameterSchema("recurrence", "string", "重复：NONE、DAILY、WEEKLY、MONTHLY、YEARLY", false, "NONE"),
+                                    ToolParameterSchema("reminder", "integer", "提前提醒时间（毫秒）", false, "0")
+                                )
+                        ),
+                        ToolPrompt(
+                            name = "list_schedules",
+                            description = "列出日程事件，可按时间范围筛选。",
+                            parametersStructured =
+                                listOf(
+                                    ToolParameterSchema("start_time", "integer", "范围开始时间，Unix 时间戳（毫秒）", false),
+                                    ToolParameterSchema("end_time", "integer", "范围结束时间，Unix 时间戳（毫秒）", false)
+                                )
+                        ),
+                        ToolPrompt(
+                            name = "get_schedule",
+                            description = "根据 ID 获取特定日程事件。",
+                            parametersStructured =
+                                listOf(
+                                    ToolParameterSchema("schedule_id", "string", "日程事件 ID", true)
+                                )
+                        ),
+                        ToolPrompt(
+                            name = "update_schedule",
+                            description = "更新现有日程事件。",
+                            parametersStructured =
+                                listOf(
+                                    ToolParameterSchema("schedule_id", "string", "日程事件 ID", true),
+                                    ToolParameterSchema("title", "string", "新标题", false),
+                                    ToolParameterSchema("description", "string", "新描述", false),
+                                    ToolParameterSchema("start_time", "integer", "新开始时间，Unix 时间戳（毫秒）", false),
+                                    ToolParameterSchema("end_time", "integer", "新结束时间，Unix 时间戳（毫秒）", false),
+                                    ToolParameterSchema("recurrence", "string", "新重复规则：NONE、DAILY、WEEKLY、MONTHLY、YEARLY", false),
+                                    ToolParameterSchema("reminder", "integer", "新提醒时间（毫秒）", false)
+                                )
+                        ),
+                        ToolPrompt(
+                            name = "delete_schedule",
+                            description = "根据 ID 删除日程事件。",
+                            parametersStructured =
+                                listOf(
+                                    ToolParameterSchema("schedule_id", "string", "日程事件 ID", true)
                                 )
                         )
                     )

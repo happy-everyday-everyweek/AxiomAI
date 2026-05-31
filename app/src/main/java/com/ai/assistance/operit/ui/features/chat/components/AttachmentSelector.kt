@@ -30,9 +30,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -172,44 +169,21 @@ fun AttachmentSelectorPanel(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                val panelItems =
+                val autoInjectItems =
                         listOf(
                                 AttachmentPanelItem(
-                                        icon = Icons.Default.Image,
-                                        label = context.getString(R.string.attachment_photo),
-                                        onClick = { imagePickerLauncher.launch("image/*") }
-                                ),
-                                AttachmentPanelItem(
-                                        icon = Icons.Default.PhotoCamera,
-                                        label = context.getString(R.string.attachment_camera),
-                                        onClick = launchCameraCapture
-                                ),
-                                AttachmentPanelItem(
-                                        icon = Icons.Default.Memory,
-                                        label = context.getString(R.string.attachment_memory),
+                                        icon = Icons.Default.Notifications,
+                                        label = context.getString(R.string.attachment_notifications),
                                         onClick = {
-                                            onAttachMemory()
+                                            onAttachNotifications()
                                             onDismiss()
                                         }
-                                ),
-                                AttachmentPanelItem(
-                                        icon = Icons.Default.Description,
-                                        label = context.getString(R.string.attachment_file),
-                                        onClick = { filePickerLauncher.launch("*/*") }
                                 ),
                                 AttachmentPanelItem(
                                         icon = Icons.Default.ScreenshotMonitor,
                                         label = context.getString(R.string.attachment_screen_content),
                                         onClick = {
                                             onAttachScreenContent()
-                                            onDismiss()
-                                        }
-                                ),
-                                AttachmentPanelItem(
-                                        icon = Icons.Default.Notifications,
-                                        label = context.getString(R.string.attachment_notifications),
-                                        onClick = {
-                                            onAttachNotifications()
                                             onDismiss()
                                         }
                                 ),
@@ -222,88 +196,84 @@ fun AttachmentSelectorPanel(
                                         }
                                 ),
                                 AttachmentPanelItem(
+                                        icon = Icons.Default.Memory,
+                                        label = context.getString(R.string.attachment_memory),
+                                        onClick = {
+                                            onAttachMemory()
+                                            onDismiss()
+                                        }
+                                )
+                        )
+
+                val manualSelectItems =
+                        listOf(
+                                AttachmentPanelItem(
+                                        icon = Icons.Default.Image,
+                                        label = context.getString(R.string.attachment_screenshot),
+                                        onClick = { imagePickerLauncher.launch("image/*") }
+                                ),
+                                AttachmentPanelItem(
+                                        icon = Icons.Default.PhotoCamera,
+                                        label = context.getString(R.string.attachment_camera),
+                                        onClick = launchCameraCapture
+                                ),
+                                AttachmentPanelItem(
+                                        icon = Icons.Default.Description,
+                                        label = context.getString(R.string.attachment_file),
+                                        onClick = { filePickerLauncher.launch("*/*") }
+                                ),
+                                AttachmentPanelItem(
                                         icon = Icons.Default.AutoAwesome,
                                         label = context.getString(R.string.attachment_package),
                                         onClick = { showPackageDialog = true }
                                 )
                         )
 
-                val pages = panelItems.chunked(8).ifEmpty { listOf(emptyList()) }
-                val pagerState = rememberPagerState(pageCount = { pages.size })
-
-                HorizontalPager(state = pagerState, modifier = Modifier.fillMaxWidth()) { pageIndex ->
-                    val pageItems = pages[pageIndex]
-                    val paddedItems = pageItems + List(8 - pageItems.size) { null }
-
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        // 第一行选项
-                        Row(
-                                modifier =
-                                        Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-                                                .heightIn(min = 96.dp),
-                                horizontalArrangement = Arrangement.SpaceEvenly,
-                                verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            paddedItems.take(4).forEach { item ->
-                                if (item == null) {
-                                    AttachmentOptionPlaceholder()
-                                } else {
-                                    AttachmentOption(
-                                            icon = item.icon,
-                                            label = item.label,
-                                            onClick = item.onClick
-                                    )
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // 第二行选项
-                        Row(
-                                modifier =
-                                        Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-                                                .heightIn(min = 96.dp),
-                                horizontalArrangement = Arrangement.SpaceEvenly,
-                                verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            paddedItems.drop(4).take(4).forEach { item ->
-                                if (item == null) {
-                                    AttachmentOptionPlaceholder()
-                                } else {
-                                    AttachmentOption(
-                                            icon = item.icon,
-                                            label = item.label,
-                                            onClick = item.onClick
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (pages.size > 1) {
-                    Spacer(modifier = Modifier.height(12.dp))
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = context.getString(R.string.attachment_auto_inject_section),
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        ),
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+                    )
                     Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Center,
+                            modifier =
+                                    Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                                            .heightIn(min = 96.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
                             verticalAlignment = Alignment.CenterVertically
                     ) {
-                        repeat(pages.size) { index ->
-                            val selected = index == pagerState.currentPage
-                            Box(
-                                    modifier =
-                                            Modifier.padding(horizontal = 4.dp)
-                                                    .size(if (selected) 7.dp else 6.dp)
-                                                    .clip(CircleShape)
-                                                    .background(
-                                                            if (selected)
-                                                                MaterialTheme.colorScheme.primary
-                                                            else
-                                                                MaterialTheme.colorScheme.onSurface.copy(
-                                                                        alpha = 0.2f
-                                                                )
-                                                    )
+                        autoInjectItems.forEach { item ->
+                            AttachmentOption(
+                                    icon = item.icon,
+                                    label = item.label,
+                                    onClick = item.onClick
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = context.getString(R.string.attachment_manual_select_section),
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        ),
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+                    )
+                    Row(
+                            modifier =
+                                    Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                                            .heightIn(min = 96.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        manualSelectItems.forEach { item ->
+                            AttachmentOption(
+                                    icon = item.icon,
+                                    label = item.label,
+                                    onClick = item.onClick
                             )
                         }
                     }
@@ -312,7 +282,6 @@ fun AttachmentSelectorPanel(
         }
     }
 
-    // 包选择对话框
     PackageSelectorDialog(
         visible = showPackageDialog,
         onDismiss = { showPackageDialog = false },
@@ -378,44 +347,21 @@ fun AttachmentSelectorPopupPanel(
         }
     }
 
-    val panelItems =
+    val autoInjectItems =
             listOf(
                     AttachmentPanelItem(
-                            icon = Icons.Default.Image,
-                            label = context.getString(R.string.attachment_photo),
-                            onClick = { imagePickerLauncher.launch("image/*") }
-                    ),
-                    AttachmentPanelItem(
-                            icon = Icons.Default.PhotoCamera,
-                            label = context.getString(R.string.attachment_camera),
-                            onClick = launchCameraCapture
-                    ),
-                    AttachmentPanelItem(
-                            icon = Icons.Default.Memory,
-                            label = context.getString(R.string.attachment_memory),
+                            icon = Icons.Default.Notifications,
+                            label = context.getString(R.string.attachment_notifications),
                             onClick = {
-                                onAttachMemory()
+                                onAttachNotifications()
                                 onDismiss()
                             }
-                    ),
-                    AttachmentPanelItem(
-                            icon = Icons.Default.Description,
-                            label = context.getString(R.string.attachment_file),
-                            onClick = { filePickerLauncher.launch("*/*") }
                     ),
                     AttachmentPanelItem(
                             icon = Icons.Default.ScreenshotMonitor,
                             label = context.getString(R.string.attachment_screen_content),
                             onClick = {
                                 onAttachScreenContent()
-                                onDismiss()
-                            }
-                    ),
-                    AttachmentPanelItem(
-                            icon = Icons.Default.Notifications,
-                            label = context.getString(R.string.attachment_notifications),
-                            onClick = {
-                                onAttachNotifications()
                                 onDismiss()
                             }
                     ),
@@ -428,11 +374,40 @@ fun AttachmentSelectorPopupPanel(
                             }
                     ),
                     AttachmentPanelItem(
+                            icon = Icons.Default.Memory,
+                            label = context.getString(R.string.attachment_memory),
+                            onClick = {
+                                onAttachMemory()
+                                onDismiss()
+                            }
+                    )
+            )
+
+    val manualSelectItems =
+            listOf(
+                    AttachmentPanelItem(
+                            icon = Icons.Default.Image,
+                            label = context.getString(R.string.attachment_screenshot),
+                            onClick = { imagePickerLauncher.launch("image/*") }
+                    ),
+                    AttachmentPanelItem(
+                            icon = Icons.Default.PhotoCamera,
+                            label = context.getString(R.string.attachment_camera),
+                            onClick = launchCameraCapture
+                    ),
+                    AttachmentPanelItem(
+                            icon = Icons.Default.Description,
+                            label = context.getString(R.string.attachment_file),
+                            onClick = { filePickerLauncher.launch("*/*") }
+                    ),
+                    AttachmentPanelItem(
                             icon = Icons.Default.AutoAwesome,
                             label = context.getString(R.string.attachment_package),
                             onClick = { showPackageDialog = true }
                     )
             )
+
+    val panelItems = autoInjectItems + manualSelectItems
 
     Popup(
             alignment = Alignment.TopStart,

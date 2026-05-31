@@ -21,6 +21,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.delay
+import kotlin.math.pow
+import kotlin.math.min
 
 /**
  * Handles the extraction and execution of AI tools from responses Supports real-time streaming
@@ -30,6 +34,9 @@ class AIToolHandler private constructor(private val context: Context) {
 
     companion object {
         private const val TAG = "AIToolHandler"
+        private const val TOOL_TIMEOUT_MS = 120_000L
+        private const val MAX_RETRY_COUNT = 3
+        private const val BASE_DELAY_MS = 1000L
 
         @Volatile private var INSTANCE: AIToolHandler? = null
 
@@ -320,7 +327,7 @@ class AIToolHandler private constructor(private val context: Context) {
     }
 
 
-    /** Executes a tool directly */
+    /** Executes a tool directly with timeout and retry */
     fun executeTool(tool: AITool): ToolResult {
         notifyToolCallRequested(tool)
         val executor = getToolExecutorOrActivate(tool.name)
@@ -338,7 +345,6 @@ class AIToolHandler private constructor(private val context: Context) {
             return notFoundResult
         }
 
-        // Validate parameters
         val validationResult = executor.validateParameters(tool)
         if (!validationResult.valid) {
             val validationFailedResult =
@@ -354,19 +360,44 @@ class AIToolHandler private constructor(private val context: Context) {
         }
 
         notifyToolExecutionStarted(tool)
-        return try {
-            val result = executor.invoke(tool)
-            notifyToolExecutionResult(tool, result)
-            result
-        } catch (e: Exception) {
-            notifyToolExecutionError(tool, e)
-            throw e
-        } finally {
-            notifyToolExecutionFinished(tool)
+        var lastException: Exception? = null
+        repeat(MAX_RETRY_COUNT) { attempt ->
+            try {
+                val result = runBlocking {
+                    withTimeout(TOOL_TIMEOUT_MS) {
+                        executor.invoke(tool)
+                    }
+                }
+                notifyToolExecutionResult(tool, result)
+                return result
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                lastException = Exception("Tool execution timed out after ${TOOL_TIMEOUT_MS / 1000}s (attempt ${attempt + 1}/$MAX_RETRY_COUNT)")
+                AppLogger.w(TAG, "Tool '${tool.name}' timed out on attempt ${attempt + 1}/$MAX_RETRY_COUNT")
+                if (attempt < MAX_RETRY_COUNT - 1) {
+                    val delayMs = BASE_DELAY_MS * (2.0.pow(attempt).toLong())
+                    AppLogger.d(TAG, "Retrying tool '${tool.name}' after ${delayMs}ms (exponential backoff)")
+                    Thread.sleep(min(delayMs, 30_000L))
+                }
+            } catch (e: Exception) {
+                lastException = e
+                AppLogger.w(TAG, "Tool '${tool.name}' failed on attempt ${attempt + 1}/$MAX_RETRY_COUNT: ${e.message}")
+                if (attempt < MAX_RETRY_COUNT - 1) {
+                    val delayMs = BASE_DELAY_MS * (2.0.pow(attempt).toLong())
+                    Thread.sleep(min(delayMs, 30_000L))
+                }
+            }
         }
+        notifyToolExecutionError(tool, lastException ?: Exception("Unknown error"))
+        notifyToolExecutionFinished(tool)
+        return ToolResult(
+            toolName = tool.name,
+            success = false,
+            result = StringResultData(""),
+            error = lastException?.message ?: "Tool execution failed after $MAX_RETRY_COUNT retries"
+        )
     }
 
-    /** Executes a tool and preserves intermediate streaming results when supported by the executor. */
+    /** Executes a tool and preserves intermediate streaming results when supported by the executor, with timeout and retry. */
     fun executeToolAndStream(tool: AITool): Flow<ToolResult> = flow {
         notifyToolCallRequested(tool)
         val executor = getToolExecutorOrActivate(tool.name)
@@ -401,17 +432,45 @@ class AIToolHandler private constructor(private val context: Context) {
         }
 
         notifyToolExecutionStarted(tool)
-        try {
-            executor.invokeAndStream(tool).collect { result ->
-                notifyToolExecutionResult(tool, result)
-                emit(result)
+        var lastException: Exception? = null
+        repeat(MAX_RETRY_COUNT) { attempt ->
+            try {
+                var emittedAny = false
+                withTimeout(TOOL_TIMEOUT_MS) {
+                    executor.invokeAndStream(tool).collect { result ->
+                        notifyToolExecutionResult(tool, result)
+                        emittedAny = true
+                    }
+                }
+                if (emittedAny) {
+                    notifyToolExecutionFinished(tool)
+                    return@flow
+                }
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                lastException = Exception("Tool execution timed out after ${TOOL_TIMEOUT_MS / 1000}s (attempt ${attempt + 1}/$MAX_RETRY_COUNT)")
+                AppLogger.w(TAG, "Streaming tool '${tool.name}' timed out on attempt ${attempt + 1}/$MAX_RETRY_COUNT")
+                if (attempt < MAX_RETRY_COUNT - 1) {
+                    val delayMs = BASE_DELAY_MS * (2.0.pow(attempt).toLong())
+                    AppLogger.d(TAG, "Retrying streaming tool '${tool.name}' after ${delayMs}ms")
+                    delay(min(delayMs, 30_000L))
+                }
+            } catch (e: Exception) {
+                lastException = e
+                AppLogger.w(TAG, "Streaming tool '${tool.name}' failed on attempt ${attempt + 1}/$MAX_RETRY_COUNT: ${e.message}")
+                if (attempt < MAX_RETRY_COUNT - 1) {
+                    val delayMs = BASE_DELAY_MS * (2.0.pow(attempt).toLong())
+                    delay(min(delayMs, 30_000L))
+                }
             }
-        } catch (e: Exception) {
-            notifyToolExecutionError(tool, e)
-            throw e
-        } finally {
-            notifyToolExecutionFinished(tool)
         }
+        notifyToolExecutionError(tool, lastException ?: Exception("Unknown error"))
+        notifyToolExecutionFinished(tool)
+        emit(ToolResult(
+            toolName = tool.name,
+            success = false,
+            result = StringResultData(""),
+            error = lastException?.message ?: "Tool execution failed after $MAX_RETRY_COUNT retries"
+        ))
     }
 }
 

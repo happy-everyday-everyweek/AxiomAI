@@ -56,14 +56,11 @@ import com.ai.assistance.operit.data.preferences.UserPreferencesManager
 import com.ai.assistance.operit.ui.components.ErrorDialog
 import com.ai.assistance.operit.ui.features.chat.components.*
 import com.ai.assistance.operit.ui.features.chat.components.style.input.agent.AgentChatInputSection
-import com.ai.assistance.operit.ui.features.chat.components.style.input.classic.ClassicChatInputSection
 import com.ai.assistance.operit.ui.features.chat.components.style.input.common.ChatInputEvents
 import com.ai.assistance.operit.ui.features.chat.components.style.input.common.ChatInputHookContext
 import com.ai.assistance.operit.ui.features.chat.components.style.input.common.ChatInputHookRegistry
 import com.ai.assistance.operit.ui.features.chat.components.style.input.common.ChatInputSubmitActions
-import com.ai.assistance.operit.ui.features.chat.components.style.input.classic.ClassicChatSettingsBar
 import com.ai.assistance.operit.ui.features.chat.components.style.input.common.PendingQueueMessageItem
-import com.ai.assistance.operit.ui.features.chat.components.style.bubble.BubbleImageStyleConfig
 import com.ai.assistance.operit.ui.features.chat.components.AndroidExportDialog
 import com.ai.assistance.operit.ui.features.chat.components.ExportCompleteDialog
 import com.ai.assistance.operit.ui.features.chat.components.ExportPlatformDialog
@@ -102,7 +99,6 @@ import androidx.compose.ui.unit.dp
 import com.ai.assistance.operit.data.preferences.ActivePromptManager
 import com.ai.assistance.operit.data.model.ActivePrompt
 import com.ai.assistance.operit.ui.features.chat.viewmodel.ChatHistoryDisplayMode
-import com.ai.assistance.operit.ui.theme.getTextColorForBackground
 import com.ai.assistance.operit.plugins.chatview.ChatViewEvent
 import com.ai.assistance.operit.plugins.chatview.ChatViewHookParams
 import com.ai.assistance.operit.plugins.chatview.ChatViewHookPluginRegistry
@@ -167,13 +163,6 @@ val actualViewModel: ChatViewModel = viewModel ?: viewModel { ChatViewModel(cont
     val useBackgroundImage by preferencesManager.useBackgroundImage.collectAsState(initial = false)
     val backgroundImageUri by preferencesManager.backgroundImageUri.collectAsState(initial = null)
     val chatHeaderTransparent by preferencesManager.chatHeaderTransparent.collectAsState(initial = false)
-    val chatInputTransparent by preferencesManager.chatInputTransparent.collectAsState(initial = false)
-    val chatInputFloating by preferencesManager.chatInputFloating.collectAsState(initial = false)
-    val chatInputLiquidGlassRaw by
-        preferencesManager.chatInputLiquidGlass.collectAsState(initial = false)
-    val chatInputWaterGlass by
-        preferencesManager.chatInputWaterGlass.collectAsState(initial = false)
-    val chatInputLiquidGlass = chatInputLiquidGlassRaw && !chatInputWaterGlass
     val chatHeaderHistoryIconColor by preferencesManager.chatHeaderHistoryIconColor.collectAsState(
             initial = null
     )
@@ -186,106 +175,6 @@ val actualViewModel: ChatViewModel = viewModel ?: viewModel { ChatViewModel(cont
     val hasBackgroundImageFromPrefs = useBackgroundImage && backgroundImageUri != null
     val effectiveHasBackgroundImage = hasBackgroundImage || hasBackgroundImageFromPrefs
 
-    // Collect chat style from preferences
-    val chatStyleSetting by preferencesManager.chatStyle.collectAsState(initial = UserPreferencesManager.CHAT_STYLE_CURSOR)
-    val chatStyle = remember(chatStyleSetting) {
-        when (chatStyleSetting) {
-            UserPreferencesManager.CHAT_STYLE_BUBBLE -> ChatStyle.BUBBLE
-            else -> ChatStyle.CURSOR
-        }
-    }
-    val inputStyle by
-        preferencesManager.inputStyle.collectAsState(
-            initial = UserPreferencesManager.INPUT_STYLE_AGENT,
-        )
-    val cursorUserBubbleFollowTheme by
-        preferencesManager.cursorUserBubbleFollowTheme.collectAsState(initial = true)
-    val cursorUserBubbleLiquidGlassRaw by
-        preferencesManager.cursorUserBubbleLiquidGlass.collectAsState(initial = false)
-    val cursorUserBubbleWaterGlass by
-        preferencesManager.cursorUserBubbleWaterGlass.collectAsState(initial = false)
-    val cursorUserBubbleLiquidGlass = cursorUserBubbleLiquidGlassRaw && !cursorUserBubbleWaterGlass
-    val bubbleUserBubbleLiquidGlassRaw by
-        preferencesManager.bubbleUserBubbleLiquidGlass.collectAsState(initial = false)
-    val bubbleUserBubbleWaterGlass by
-        preferencesManager.bubbleUserBubbleWaterGlass.collectAsState(initial = false)
-    val bubbleUserBubbleLiquidGlass =
-        bubbleUserBubbleLiquidGlassRaw && !bubbleUserBubbleWaterGlass
-    val bubbleAiBubbleLiquidGlassRaw by
-        preferencesManager.bubbleAiBubbleLiquidGlass.collectAsState(initial = false)
-    val bubbleAiBubbleWaterGlass by
-        preferencesManager.bubbleAiBubbleWaterGlass.collectAsState(initial = false)
-    val bubbleAiBubbleLiquidGlass =
-        bubbleAiBubbleLiquidGlassRaw && !bubbleAiBubbleWaterGlass
-    val cursorUserBubbleColorValue by
-        preferencesManager.cursorUserBubbleColor.collectAsState(initial = null)
-    val bubbleUserBubbleColorValue by
-        preferencesManager.bubbleUserBubbleColor.collectAsState(initial = null)
-    val bubbleAiBubbleColorValue by
-        preferencesManager.bubbleAiBubbleColor.collectAsState(initial = null)
-    val bubbleUserTextColorValue by
-        preferencesManager.bubbleUserTextColor.collectAsState(initial = null)
-    val bubbleAiTextColorValue by
-        preferencesManager.bubbleAiTextColor.collectAsState(initial = null)
-    val bubbleUserUseImage by
-        preferencesManager.bubbleUserUseImage.collectAsState(initial = false)
-    val bubbleAiUseImage by
-        preferencesManager.bubbleAiUseImage.collectAsState(initial = false)
-    val bubbleUserImageUri by preferencesManager.bubbleUserImageUri.collectAsState(initial = null)
-    val bubbleAiImageUri by preferencesManager.bubbleAiImageUri.collectAsState(initial = null)
-    val bubbleUserImageCropLeft by
-        preferencesManager.bubbleUserImageCropLeft.collectAsState(initial = 0f)
-    val bubbleUserImageCropTop by
-        preferencesManager.bubbleUserImageCropTop.collectAsState(initial = 0f)
-    val bubbleUserImageCropRight by
-        preferencesManager.bubbleUserImageCropRight.collectAsState(initial = 0f)
-    val bubbleUserImageCropBottom by
-        preferencesManager.bubbleUserImageCropBottom.collectAsState(initial = 0f)
-    val bubbleUserImageRepeatStart by
-        preferencesManager.bubbleUserImageRepeatStart.collectAsState(initial = 0.35f)
-    val bubbleUserImageRepeatEnd by
-        preferencesManager.bubbleUserImageRepeatEnd.collectAsState(initial = 0.65f)
-    val bubbleUserImageRepeatYStart by
-        preferencesManager.bubbleUserImageRepeatYStart.collectAsState(initial = 0.35f)
-    val bubbleUserImageRepeatYEnd by
-        preferencesManager.bubbleUserImageRepeatYEnd.collectAsState(initial = 0.65f)
-    val bubbleUserImageScale by
-        preferencesManager.bubbleUserImageScale.collectAsState(initial = 1f)
-    val bubbleAiImageCropLeft by
-        preferencesManager.bubbleAiImageCropLeft.collectAsState(initial = 0f)
-    val bubbleAiImageCropTop by
-        preferencesManager.bubbleAiImageCropTop.collectAsState(initial = 0f)
-    val bubbleAiImageCropRight by
-        preferencesManager.bubbleAiImageCropRight.collectAsState(initial = 0f)
-    val bubbleAiImageCropBottom by
-        preferencesManager.bubbleAiImageCropBottom.collectAsState(initial = 0f)
-    val bubbleAiImageRepeatStart by
-        preferencesManager.bubbleAiImageRepeatStart.collectAsState(initial = 0.35f)
-    val bubbleAiImageRepeatEnd by
-        preferencesManager.bubbleAiImageRepeatEnd.collectAsState(initial = 0.65f)
-    val bubbleAiImageRepeatYStart by
-        preferencesManager.bubbleAiImageRepeatYStart.collectAsState(initial = 0.35f)
-    val bubbleAiImageRepeatYEnd by
-        preferencesManager.bubbleAiImageRepeatYEnd.collectAsState(initial = 0.65f)
-    val bubbleAiImageScale by
-        preferencesManager.bubbleAiImageScale.collectAsState(initial = 1f)
-    val bubbleImageRenderMode by
-        preferencesManager.bubbleImageRenderMode.collectAsState(
-            initial = UserPreferencesManager.BUBBLE_IMAGE_RENDER_MODE_TILED_NINE_SLICE,
-        )
-    val bubbleUserRoundedCornersEnabled by
-        preferencesManager.bubbleUserRoundedCornersEnabled.collectAsState(initial = true)
-    val bubbleAiRoundedCornersEnabled by
-        preferencesManager.bubbleAiRoundedCornersEnabled.collectAsState(initial = true)
-    val bubbleUserContentPaddingLeft by
-        preferencesManager.bubbleUserContentPaddingLeft.collectAsState(initial = 12f)
-    val bubbleUserContentPaddingRight by
-        preferencesManager.bubbleUserContentPaddingRight.collectAsState(initial = 12f)
-    val bubbleAiContentPaddingLeft by
-        preferencesManager.bubbleAiContentPaddingLeft.collectAsState(initial = 12f)
-    val bubbleAiContentPaddingRight by
-        preferencesManager.bubbleAiContentPaddingRight.collectAsState(initial = 12f)
-    // Collect chat area horizontal padding from preferences
     val chatAreaHorizontalPadding by preferencesManager.chatAreaHorizontalPadding.collectAsState(initial = 16f)
 
     // 添加编辑按钮和编辑状态
@@ -585,139 +474,16 @@ val actualViewModel: ChatViewModel = viewModel ?: viewModel { ChatViewModel(cont
 
     val defaultUserMessageColor = MaterialTheme.colorScheme.primaryContainer
     val defaultAiMessageColor = MaterialTheme.colorScheme.surface
-    val cursorCustomUserMessageColor = cursorUserBubbleColorValue?.let(::Color)
-    val bubbleCustomUserMessageColor = bubbleUserBubbleColorValue?.let(::Color)
-    val bubbleCustomAiMessageColor = bubbleAiBubbleColorValue?.let(::Color)
-    val bubbleCustomUserTextColor = bubbleUserTextColorValue?.let(::Color)
-    val bubbleCustomAiTextColor = bubbleAiTextColorValue?.let(::Color)
 
-    val userMessageColor =
-        when (chatStyle) {
-            ChatStyle.CURSOR -> {
-                if (cursorUserBubbleFollowTheme) {
-                    defaultUserMessageColor
-                } else {
-                    cursorCustomUserMessageColor ?: defaultUserMessageColor
-                }
-            }
-
-            ChatStyle.BUBBLE -> bubbleCustomUserMessageColor ?: defaultUserMessageColor
-        }
-    val aiMessageColor =
-        when (chatStyle) {
-            ChatStyle.BUBBLE -> bubbleCustomAiMessageColor ?: defaultAiMessageColor
-            ChatStyle.CURSOR -> defaultAiMessageColor
-        }
-    val userTextColor =
-        when {
-            chatStyle == ChatStyle.CURSOR && cursorUserBubbleFollowTheme ->
-                MaterialTheme.colorScheme.onPrimaryContainer
-            chatStyle == ChatStyle.BUBBLE && bubbleCustomUserTextColor != null ->
-                bubbleCustomUserTextColor
-            else -> getTextColorForBackground(userMessageColor.copy(alpha = 1f))
-        }
-    val aiTextColor =
-        when {
-            chatStyle == ChatStyle.BUBBLE && bubbleCustomAiTextColor != null ->
-                bubbleCustomAiTextColor
-            chatStyle == ChatStyle.BUBBLE ->
-                getTextColorForBackground(aiMessageColor.copy(alpha = 1f))
-            else -> MaterialTheme.colorScheme.onSurface
-        }
+    val userMessageColor = defaultUserMessageColor
+    val aiMessageColor = defaultAiMessageColor
+    val userTextColor = MaterialTheme.colorScheme.onPrimaryContainer
+    val aiTextColor = MaterialTheme.colorScheme.onSurface
     val systemMessageColor = MaterialTheme.colorScheme.surfaceVariant
     val systemTextColor = MaterialTheme.colorScheme.onSurfaceVariant
     val thinkingBackgroundColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
     val thinkingTextColor = MaterialTheme.colorScheme.onSurfaceVariant
 
-    val bubbleUserImageStyle =
-        remember(
-            chatStyle,
-            bubbleUserBubbleLiquidGlass,
-            bubbleUserBubbleWaterGlass,
-            bubbleUserUseImage,
-            bubbleUserImageUri,
-            bubbleUserImageCropLeft,
-            bubbleUserImageCropTop,
-            bubbleUserImageCropRight,
-            bubbleUserImageCropBottom,
-            bubbleUserImageRepeatStart,
-            bubbleUserImageRepeatEnd,
-            bubbleUserImageRepeatYStart,
-            bubbleUserImageRepeatYEnd,
-            bubbleUserImageScale,
-            bubbleImageRenderMode,
-        ) {
-            val imageUri = bubbleUserImageUri
-            if (
-                chatStyle == ChatStyle.BUBBLE &&
-                    !bubbleUserBubbleLiquidGlass &&
-                    !bubbleUserBubbleWaterGlass &&
-                    bubbleUserUseImage &&
-                    !imageUri.isNullOrBlank()
-            ) {
-                BubbleImageStyleConfig(
-                    imageUri = imageUri,
-                    cropLeftRatio = bubbleUserImageCropLeft,
-                    cropTopRatio = bubbleUserImageCropTop,
-                    cropRightRatio = bubbleUserImageCropRight,
-                    cropBottomRatio = bubbleUserImageCropBottom,
-                    repeatXStartRatio = bubbleUserImageRepeatStart,
-                    repeatXEndRatio = bubbleUserImageRepeatEnd,
-                    repeatYStartRatio = bubbleUserImageRepeatYStart,
-                    repeatYEndRatio = bubbleUserImageRepeatYEnd,
-                    imageScale = bubbleUserImageScale,
-                    renderMode = bubbleImageRenderMode,
-                )
-            } else {
-                null
-            }
-        }
-
-    val bubbleAiImageStyle =
-        remember(
-            chatStyle,
-            bubbleAiUseImage,
-            bubbleAiBubbleLiquidGlass,
-            bubbleAiBubbleWaterGlass,
-            bubbleAiImageUri,
-            bubbleAiImageCropLeft,
-            bubbleAiImageCropTop,
-            bubbleAiImageCropRight,
-            bubbleAiImageCropBottom,
-            bubbleAiImageRepeatStart,
-            bubbleAiImageRepeatEnd,
-            bubbleAiImageRepeatYStart,
-            bubbleAiImageRepeatYEnd,
-            bubbleAiImageScale,
-            bubbleImageRenderMode,
-        ) {
-            val imageUri = bubbleAiImageUri
-            if (
-                chatStyle == ChatStyle.BUBBLE &&
-                    !bubbleAiBubbleLiquidGlass &&
-                    !bubbleAiBubbleWaterGlass &&
-                    bubbleAiUseImage &&
-                    !imageUri.isNullOrBlank()
-            ) {
-                BubbleImageStyleConfig(
-                    imageUri = imageUri,
-                    cropLeftRatio = bubbleAiImageCropLeft,
-                    cropTopRatio = bubbleAiImageCropTop,
-                    cropRightRatio = bubbleAiImageCropRight,
-                    cropBottomRatio = bubbleAiImageCropBottom,
-                    repeatXStartRatio = bubbleAiImageRepeatStart,
-                    repeatXEndRatio = bubbleAiImageRepeatEnd,
-                    repeatYStartRatio = bubbleAiImageRepeatYStart,
-                    repeatYEndRatio = bubbleAiImageRepeatYEnd,
-                    imageScale = bubbleAiImageScale,
-                    renderMode = bubbleImageRenderMode,
-                )
-            } else {
-                null
-            }
-        }
-
-    // 滚动状态
     var autoScrollToBottom by remember { mutableStateOf(true) }
     val onAutoScrollToBottomChange = remember { { it: Boolean -> autoScrollToBottom = it } }
     val requestAutoScrollToBottom = remember { { autoScrollToBottom = true } }
@@ -785,8 +551,7 @@ val actualViewModel: ChatViewModel = viewModel ?: viewModel { ChatViewModel(cont
     // 收集AI电脑显示状态
     val showAiComputer by actualViewModel.showAiComputer.collectAsState()
     val shouldUseChatLocalImeHandling =
-        inputStyle == UserPreferencesManager.INPUT_STYLE_AGENT &&
-            !showWebView &&
+        !showWebView &&
             !showAiComputer
     var hasEverShownWebView by remember { mutableStateOf(false) }
     LaunchedEffect(showWebView, isWorkspacePreparing) {
@@ -910,12 +675,6 @@ val actualViewModel: ChatViewModel = viewModel ?: viewModel { ChatViewModel(cont
 
     var bottomBarHeightPx by remember { mutableStateOf(0) }
     val bottomBarHeightDp = with(density) { bottomBarHeightPx.toDp() }
-    val classicSettingsBarBottomPadding =
-        if (bottomBarHeightDp > 36.dp) {
-            bottomBarHeightDp - 6.dp
-        } else {
-            18.dp
-        }
     val inputBarTranslationYPx =
         if (shouldUseChatLocalImeHandling && imeBottomPx > 0) {
             imeBottomPx.toFloat()
@@ -1021,106 +780,10 @@ val actualViewModel: ChatViewModel = viewModel ?: viewModel { ChatViewModel(cont
                                 chatHeaderHistoryIconColor = chatHeaderHistoryIconColor,
                                 chatHeaderPipIconColor = chatHeaderPipIconColor,
                                 chatHeaderOverlayMode = chatHeaderOverlayMode,
-                                chatStyle = chatStyle, // Pass chat style
-                                cursorUserBubbleLiquidGlass = cursorUserBubbleLiquidGlass,
-                                cursorUserBubbleWaterGlass = cursorUserBubbleWaterGlass,
-                                bubbleUserBubbleLiquidGlass = bubbleUserBubbleLiquidGlass,
-                                bubbleUserBubbleWaterGlass = bubbleUserBubbleWaterGlass,
-                                bubbleAiBubbleLiquidGlass = bubbleAiBubbleLiquidGlass,
-                                bubbleAiBubbleWaterGlass = bubbleAiBubbleWaterGlass,
                                 historyListState = historyListState,
                                 chatAreaHorizontalPadding = chatAreaHorizontalPadding,
-                                bubbleUserImageStyle = bubbleUserImageStyle,
-                                bubbleAiImageStyle = bubbleAiImageStyle,
-                                bubbleUserRoundedCornersEnabled = bubbleUserRoundedCornersEnabled,
-                                bubbleAiRoundedCornersEnabled = bubbleAiRoundedCornersEnabled,
-                                bubbleUserContentPaddingLeft = bubbleUserContentPaddingLeft,
-                                bubbleUserContentPaddingRight = bubbleUserContentPaddingRight,
-                                bubbleAiContentPaddingLeft = bubbleAiContentPaddingLeft,
-                                bubbleAiContentPaddingRight = bubbleAiContentPaddingRight,
                                 showChatFloatingDotsAnimation = showChatFloatingDotsAnimation,
                         )
-
-                        if (inputStyle == UserPreferencesManager.INPUT_STYLE_CLASSIC) {
-                            ClassicChatSettingsBar(
-                                    modifier =
-                                            Modifier
-                                                    .align(Alignment.BottomEnd)
-                                                    .padding(
-                                                            end = 4.dp,
-                                                            bottom = classicSettingsBarBottomPadding,
-                                                    )
-                                                    .graphicsLayer {
-                                                        translationY = -inputBarTranslationYPx
-                                                    },
-                                    currentChatId = currentChatId,
-                                    featureStates = featureStates,
-                                    onToggleFeature = { featureKey ->
-                                        actualViewModel.toggleFeature(featureKey)
-                                    },
-                                    inputMenuRuntime = chatViewRuntime,
-                                    permissionLevel =
-                                            actualViewModel.masterPermissionLevel
-                                                    .collectAsState()
-                                                    .value,
-                                    onTogglePermission = { actualViewModel.toggleMasterPermission() },
-                                    enableThinkingMode = enableThinkingMode,
-                                    onToggleThinkingMode = { actualViewModel.toggleThinkingMode() },
-                                    thinkingQualityLevel = thinkingQualityLevel,
-                                    onThinkingQualityLevelChange = {
-                                        actualViewModel.updateThinkingQualityLevel(it)
-                                    },
-                                    maxWindowSizeInK =
-                                            actualViewModel.maxWindowSizeInK.collectAsState().value,
-                                    baseContextLengthInK =
-                                            actualViewModel.baseContextLengthInK.collectAsState().value,
-                                    maxContextLengthInK =
-                                            actualViewModel.maxContextLengthInK.collectAsState().value,
-                                    onContextLengthChange = {
-                                        actualViewModel.updateContextLength(it)
-                                    },
-                                    enableMemoryAutoUpdate = enableMemoryAutoUpdate,
-                                    onToggleMemoryAutoUpdate = {
-                                        actualViewModel.toggleMemoryAutoUpdate()
-                                    },
-                                    enableMaxContextMode = enableMaxContextMode,
-                                    onToggleEnableMaxContextMode = {
-                                        actualViewModel.toggleEnableMaxContextMode()
-                                    },
-                                    summaryTokenThreshold = summaryTokenThreshold,
-                                    onSummaryTokenThresholdChange = {
-                                        actualViewModel.updateSummaryTokenThreshold(it)
-                                    },
-                                    onNavigateToUserPreferences = onNavigateToUserPreferences,
-                                    onNavigateToModelConfig = onNavigateToModelConfig,
-                                    onNavigateToModelPrompts = onNavigateToModelPrompts,
-                                    onNavigateToPackageManager = onNavigateToPackageManager,
-                                    enableTools = enableTools,
-                                    onToggleTools = { actualViewModel.toggleTools() },
-                                    toolPromptVisibility = toolPromptVisibility,
-                                    onSaveToolPromptVisibilityMap = { visibilityMap ->
-                                        actualViewModel.saveToolPromptVisibilityMap(visibilityMap)
-                                    },
-                                    disableStreamOutput = disableStreamOutput,
-                                    onToggleDisableStreamOutput = {
-                                        actualViewModel.toggleDisableStreamOutput()
-                                    },
-                                    disableUserPreferenceDescription =
-                                            disableUserPreferenceDescription,
-                                    onToggleDisableUserPreferenceDescription = {
-                                        actualViewModel.toggleDisableUserPreferenceDescription()
-                                    },
-                                    onManualMemoryUpdate = {
-                                        actualViewModel.manuallyUpdateMemory()
-                                    },
-                                    onManualSummarizeConversation = {
-                                        actualViewModel.manuallySummarizeConversation()
-                                    },
-                                    characterCardBoundChatModelConfigId = characterCardBoundChatModelConfigId,
-                                    characterCardBoundChatModelIndex = characterCardBoundChatModelIndex,
-                                    characterCardBoundMemoryProfileId = characterCardBoundMemoryProfileId
-                            )
-                        }
                     }
 
                     Box(
@@ -1134,17 +797,12 @@ val actualViewModel: ChatViewModel = viewModel ?: viewModel { ChatViewModel(cont
                     ) {
                         ChatInputBottomBar(
                                 actualViewModel = actualViewModel,
-                                inputStyle = inputStyle,
                                 currentChatId = currentChatId,
                                 inputMenuRuntime = chatViewRuntime,
                                 enableEnterToSend = enableEnterToSend,
                                 isLoading = isLoading,
                                 inputState = inputProcessingState,
                                 hasBackgroundImage = effectiveHasBackgroundImage,
-                                chatInputTransparent = chatInputTransparent,
-                                chatInputFloating = chatInputFloating,
-                                chatInputLiquidGlass = chatInputLiquidGlass,
-                                chatInputWaterGlass = chatInputWaterGlass,
                                 showInputProcessingStatus = showInputProcessingStatus,
                                 enableTools = enableTools,
                                 isWorkspaceOpen = isWorkspaceOpen,
@@ -1237,14 +895,6 @@ val actualViewModel: ChatViewModel = viewModel ?: viewModel { ChatViewModel(cont
             actualViewModel = actualViewModel,
             bottomBarHeightPx = bottomBarHeightPx,
             inputBarTranslationYPx = inputBarTranslationYPx,
-            panelStyle =
-                MentionSuggestionPanelStyle(
-                    hasBackgroundImage = effectiveHasBackgroundImage,
-                    chatInputTransparent = chatInputTransparent,
-                    chatInputFloating = chatInputFloating,
-                    chatInputLiquidGlass = chatInputLiquidGlass,
-                    chatInputWaterGlass = chatInputWaterGlass,
-                ),
         )
 
         val workspaceOverlayModifier =
@@ -1517,17 +1167,12 @@ val actualViewModel: ChatViewModel = viewModel ?: viewModel { ChatViewModel(cont
 @Composable
 private fun ChatInputBottomBar(
     actualViewModel: ChatViewModel,
-    inputStyle: String,
     currentChatId: String?,
     inputMenuRuntime: String,
     enableEnterToSend: Boolean,
     isLoading: Boolean,
     inputState: InputProcessingState,
     hasBackgroundImage: Boolean,
-    chatInputTransparent: Boolean,
-    chatInputFloating: Boolean,
-    chatInputLiquidGlass: Boolean,
-    chatInputWaterGlass: Boolean,
     showInputProcessingStatus: Boolean,
     enableTools: Boolean,
     isWorkspaceOpen: Boolean,
@@ -1584,7 +1229,7 @@ private fun ChatInputBottomBar(
         text: String = userMessage.text,
         selectionStart: Int = userMessage.selection.start,
         selectionEnd: Int = userMessage.selection.end,
-        source: String = inputStyle,
+        source: String = "agent",
         submitSource: String = ""
     ): ChatInputHookContext {
         val normalizedSelectionStart = selectionStart.coerceIn(0, text.length)
@@ -1788,8 +1433,7 @@ private fun ChatInputBottomBar(
         }
     }
 
-    if (inputStyle == UserPreferencesManager.INPUT_STYLE_AGENT) {
-        AgentChatInputSection(
+    AgentChatInputSection(
                 actualViewModel = actualViewModel,
                 userMessage = userMessage,
                 onUserMessageChange = { value -> handleUserMessageChange(value) },
@@ -1811,10 +1455,6 @@ private fun ChatInputBottomBar(
                 onAttachPackage = actualViewModel::attachPackage,
                 onTakePhoto = actualViewModel::handleTakenPhoto,
                 hasBackgroundImage = hasBackgroundImage,
-                chatInputTransparent = chatInputTransparent,
-                chatInputFloating = chatInputFloating,
-                chatInputLiquidGlass = chatInputLiquidGlass,
-                chatInputWaterGlass = chatInputWaterGlass,
                 externalAttachmentPanelState = attachmentPanelState,
                 onAttachmentPanelStateChange = actualViewModel::updateAttachmentPanelState,
                 showInputProcessingStatus = showInputProcessingStatus,
@@ -1873,65 +1513,7 @@ private fun ChatInputBottomBar(
                         sendQueuedItemNow(queueItem, true)
                     }
                 },
-        )
-    } else {
-        ClassicChatInputSection(
-                actualViewModel = actualViewModel,
-                userMessage = userMessage,
-                onUserMessageChange = { value -> handleUserMessageChange(value) },
-                enableEnterToSend = enableEnterToSend,
-                onSendMessage = sendMessage,
-                onQueueMessage = { enqueueDraftToPendingQueue() },
-                onCancelMessage = actualViewModel::cancelCurrentMessage,
-                isLoading = isLoading,
-                inputState = inputState,
-                allowTextInputWhileProcessing = true,
-                onAttachmentRequest = actualViewModel::handleAttachment,
-                attachments = attachments,
-                onRemoveAttachment = actualViewModel::removeAttachment,
-                onInsertAttachment = actualViewModel::insertAttachmentReference,
-                onAttachScreenContent = actualViewModel::captureScreenContent,
-                onAttachNotifications = actualViewModel::captureNotifications,
-                onAttachLocation = actualViewModel::captureLocation,
-                onAttachMemory = onShowMemoryFolderDialog,
-                onAttachPackage = actualViewModel::attachPackage,
-                onTakePhoto = actualViewModel::handleTakenPhoto,
-                hasBackgroundImage = hasBackgroundImage,
-                chatInputTransparent = chatInputTransparent,
-                chatInputFloating = chatInputFloating,
-                chatInputLiquidGlass = chatInputLiquidGlass,
-                chatInputWaterGlass = chatInputWaterGlass,
-                externalAttachmentPanelState = attachmentPanelState,
-                onAttachmentPanelStateChange = actualViewModel::updateAttachmentPanelState,
-                showInputProcessingStatus = showInputProcessingStatus,
-                enableTools = enableTools,
-                replyToMessage = replyToMessage,
-                onClearReply = actualViewModel::clearReplyToMessage,
-                isWorkspaceOpen = isWorkspaceOpen,
-                pendingQueueMessages = pendingQueueMessages,
-                isPendingQueueExpanded = isPendingQueueExpanded,
-                onPendingQueueExpandedChange = { isPendingQueueExpanded = it },
-                onDeletePendingQueueMessage = { id ->
-                    removePendingQueueMessageById(id)
-                },
-                onEditPendingQueueMessage = { id ->
-                    removePendingQueueMessageById(id)?.let { queueItem ->
-                        val text = queueItem.text
-                        actualViewModel.updateUserMessage(
-                            TextFieldValue(
-                                text = text,
-                                selection = TextRange(text.length),
-                            ),
-                        )
-                    }
-                },
-                onSendPendingQueueMessage = { id ->
-                    removePendingQueueMessageById(id)?.let { queueItem ->
-                        sendQueuedItemNow(queueItem, true)
-                    }
-                },
-        )
-    }
+    )
 }
 
 @Composable
@@ -1939,7 +1521,6 @@ private fun MentionSuggestionOverlay(
     actualViewModel: ChatViewModel,
     bottomBarHeightPx: Int,
     inputBarTranslationYPx: Float,
-    panelStyle: MentionSuggestionPanelStyle,
 ) {
     val density = LocalDensity.current
     val showMentionSuggestionPanel by actualViewModel.showMentionSuggestionPanel.collectAsState()

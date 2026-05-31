@@ -4,6 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Extension
@@ -16,6 +17,7 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.Token
+import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.ai.assistance.operit.R
 
@@ -56,4 +58,6 @@ sealed class NavItem(val route: String, val titleResId: Int, val icon: ImageVect
         object Help : NavItem("help", R.string.nav_help, Icons.AutoMirrored.Filled.Help)
         object TokenConfig : NavItem("token_config", R.string.token_config, Icons.Default.Token)
         object Workflow : NavItem("workflow", R.string.nav_workflow, Icons.Default.AccountTree)
+        object Todo : NavItem("todo", R.string.nav_todo, Icons.Default.Checklist)
+        object Schedule : NavItem("schedule", R.string.nav_schedule, Icons.Default.CalendarMonth)
 }

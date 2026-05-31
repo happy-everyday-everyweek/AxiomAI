@@ -111,7 +111,7 @@ class AccessibilityActionListener(private val context: Context) : ActionListener
     }
 
     /**
-     * 处理从远程无障碍服务通过AIDL回 调传来的事件
+     * 处理从无障碍服务传来的事件
      * @param event 无障碍事件
      */
     private fun handleAccessibilityEvent(event: AccessibilityEvent) {

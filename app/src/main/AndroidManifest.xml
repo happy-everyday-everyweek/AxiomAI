@@ -4,9 +4,6 @@
 
     <!-- Shizuku permissions -->
     <uses-feature
-        android:name="android.hardware.telephony"
-        android:required="false" />
-    <uses-feature
         android:name="android.hardware.camera.any"
         android:required="false" />
 
@@ -20,7 +17,6 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" tools:ignore="ScopedStorage" />
-    <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.WRITE_SETTINGS" tools:ignore="ProtectedPermissions" />
@@ -71,8 +67,6 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <queries>
-        <!-- 允许查询和绑定到无障碍服务提供者应用 -->
-        <package android:name="com.ai.assistance.operit.provider" />
     </queries>
 
     <application
@@ -143,15 +137,6 @@
             android:name="firebase_ml_collection_enabled"
             android:value="false" />
         
-        <provider
-            android:name="rikka.shizuku.ShizukuProvider"
-            android:authorities="${applicationId}.shizuku"
-            android:enabled="true"
-            android:exported="true"
-            android:multiprocess="false"
-            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
-            
-        <!-- FileProvider for APK installation -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -376,6 +361,19 @@
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Shows a user-triggered floating UI debugger overlay across apps for inspection tasks that do not match other foreground service types." />
+        </service>
+
+        <service
+            android:name=".OperitAccessibilityService"
+            android:enabled="true"
+            android:exported="false"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
         </service>
         
         <receiver

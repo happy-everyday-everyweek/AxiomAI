@@ -1,5 +1,7 @@
 package com.ai.assistance.operit.ui.features.chat.components.part
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -10,7 +12,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.SubdirectoryArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,11 +23,12 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.ai.assistance.operit.R
+import kotlinx.coroutines.delay
 
-/** 工具执行结果显示组件 简洁风格，显示工具执行结果，无边框，与CompactToolDisplay风格一致 通过缩进和特殊图标区分工具调用和执行结果 支持点击查看详细内容 */
 @Composable
 fun ToolResultDisplay(
         toolName: String,
@@ -34,16 +36,14 @@ fun ToolResultDisplay(
         isSuccess: Boolean = true,
         onCopyResult: () -> Unit = {},
         modifier: Modifier = Modifier,
-        enableDialog: Boolean = true  // 新增参数：是否启用弹窗功能，默认启用
+        enableDialog: Boolean = true,
 ) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
     val hasContent = result.isNotBlank()
 
-    // 弹窗状态
     var showDetailDialog by remember { mutableStateOf(false) }
 
-    // 显示详细内容的弹窗 - 仅在启用弹窗时显示
     if (showDetailDialog && enableDialog) {
         ToolResultDetailDialog(
                 toolName = toolName,
@@ -57,59 +57,44 @@ fun ToolResultDisplay(
         )
     }
 
-    val summaryText =
-        if (hasContent) {
-            result.take(200)
-        } else if (isSuccess) {
-            context.getString(R.string.execution_success)
-        } else {
-            context.getString(R.string.execution_failed)
-        }
-    val semanticResultText = remember(result, hasContent) {
-        if (!hasContent) {
-            ""
-        } else {
-            result
-                .replace("\n", " ")
-                .replace(Regex("\\s+"), " ")
-                .trim()
-                .let { normalized ->
-                    if (normalized.length <= 20) normalized else normalized.take(20) + "..."
-                }
-        }
-    }
-    val semanticDescription = remember(toolName, summaryText, semanticResultText, isSuccess, hasContent) {
-        val resultLabel = context.getString(R.string.tool_execution_result)
-        val statusLabel =
-            if (isSuccess) context.getString(R.string.success) else context.getString(R.string.failed)
-        if (hasContent && semanticResultText.isNotBlank()) {
-            "$resultLabel: $toolName, $statusLabel, $semanticResultText"
-        } else {
-            "$resultLabel: $toolName, $statusLabel, $summaryText"
-        }
+    val targetColor = if (isSuccess) ToolCallSuccessColor else ToolCallFailureColor
+    var feedbackActive by remember { mutableStateOf(true) }
+
+    LaunchedEffect(Unit) {
+        delay(COLOR_FEEDBACK_DURATION_MS.toLong())
+        feedbackActive = false
     }
 
-    CanvasToolResultRow(
-        summary = summaryText,
-        isSuccess = isSuccess,
-        semanticDescription = semanticDescription,
-        modifier = modifier,
-        emphasizeSummary = !hasContent,
-        onClick =
-            if (hasContent && enableDialog) {
-                { showDetailDialog = true }
-            } else {
-                null
-            },
-        onCopyClick =
-            if (hasContent) {
-                {
-                    clipboardManager.setText(AnnotatedString(result))
-                    onCopyResult()
+    val animatedColor by animateColorAsState(
+        targetValue = if (feedbackActive) targetColor else ToolCallGrayColor,
+        animationSpec = tween(durationMillis = 300),
+        label = "toolResultColor"
+    )
+
+    val statusText = if (isSuccess) {
+        context.getString(R.string.execution_success)
+    } else {
+        context.getString(R.string.execution_failed)
+    }
+
+    val displayText = "$toolName $statusText"
+
+    Text(
+        text = displayText,
+        style = MaterialTheme.typography.bodySmall.copy(
+            fontSize = 12.sp,
+            color = animatedColor,
+        ),
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier
+            .then(
+                if (hasContent && enableDialog) {
+                    Modifier.clickable { showDetailDialog = true }
+                } else {
+                    Modifier
                 }
-            } else {
-                null
-            },
+            ),
     )
 }
 

@@ -75,7 +75,6 @@ class ExternalChatHttpServer(
             session.uri == HEALTH_PATH && session.method == Method.GET -> handleHealth(session)
             session.uri == CHAT_PATH && session.method == Method.POST -> handleChat(session)
             session.uri.startsWith(WEB_API_PREFIX) -> webChatBridge.handleApi(session)
-            !session.uri.startsWith(API_PREFIX) -> webChatBridge.serveStatic(session)
             else -> jsonResponse(
                 Response.Status.NOT_FOUND,
                 ExternalChatResult(

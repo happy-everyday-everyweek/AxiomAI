@@ -3,6 +3,8 @@ package com.ai.assistance.operit.core.tools
 import android.content.Context
 import com.ai.assistance.operit.R
 import com.ai.assistance.operit.api.chat.enhance.ToolExecutionManager
+import com.ai.assistance.operit.core.tools.autoglm.AutoGLMSubAgentExecutor
+import com.ai.assistance.operit.core.tools.browser.BrowserToolExecutor
 import com.ai.assistance.operit.core.tools.climode.CliToolModeSupport
 import com.ai.assistance.operit.core.tools.climode.ToolExposureMode
 import com.ai.assistance.operit.core.tools.defaultTool.ToolGetter
@@ -298,6 +300,39 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                     )
                 }
             }
+    )
+
+    // AutoGLM SubAgent built-in tools
+    val autoGlmExecutor = AutoGLMSubAgentExecutor(context)
+
+    handler.registerTool(
+            name = "run_subagent_main",
+            descriptionGenerator = { tool ->
+                val intent = tool.parameters.find { it.name == "intent" }?.value ?: ""
+                "Run UI sub-agent on main screen: ${intent.take(50)}"
+            },
+            executor = { tool -> autoGlmExecutor.invoke(tool) }
+    )
+
+    handler.registerTool(
+            name = "run_subagent_virtual",
+            descriptionGenerator = { tool ->
+                val intent = tool.parameters.find { it.name == "intent" }?.value ?: ""
+                val agentId = tool.parameters.find { it.name == "agent_id" }?.value ?: ""
+                "Run UI sub-agent on virtual screen (agent_id=$agentId): ${intent.take(50)}"
+            },
+            executor = { tool -> autoGlmExecutor.invoke(tool) }
+    )
+
+    handler.registerTool(
+            name = "run_subagent_parallel_virtual",
+            descriptionGenerator = { tool ->
+                val count = (1..4).count { i ->
+                    tool.parameters.find { it.name == "intent_$i" }?.value?.isNotBlank() == true
+                }
+                "Run $count UI sub-agents in parallel on virtual screens"
+            },
+            executor = { tool -> autoGlmExecutor.invoke(tool) }
     )
 
     // 终端命令执行工具 - 一次性收集输出
@@ -2605,5 +2640,106 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val ffmpegConvertTool = ToolGetter.getFFmpegConvertToolExecutor(context)
                 ffmpegConvertTool.invoke(tool)
             }
+    )
+
+    // Todo tools
+    val todoTools = ToolGetter.getTodoTools(context)
+
+    handler.registerTool(
+            name = "create_todo",
+            descriptionGenerator = { tool ->
+                val title = tool.parameters.find { it.name == "title" }?.value ?: ""
+                "Create todo: $title"
+            },
+            executor = { tool -> runBlocking(Dispatchers.IO) { todoTools.createTodo(tool) } }
+    )
+
+    handler.registerTool(
+            name = "list_todos",
+            descriptionGenerator = { tool ->
+                val status = tool.parameters.find { it.name == "status" }?.value ?: "active"
+                "List todos (status=$status)"
+            },
+            executor = { tool -> runBlocking(Dispatchers.IO) { todoTools.listTodos(tool) } }
+    )
+
+    handler.registerTool(
+            name = "get_todo",
+            descriptionGenerator = { tool ->
+                val todoId = tool.parameters.find { it.name == "todo_id" }?.value ?: ""
+                "Get todo: $todoId"
+            },
+            executor = { tool -> runBlocking(Dispatchers.IO) { todoTools.getTodo(tool) } }
+    )
+
+    handler.registerTool(
+            name = "update_todo",
+            descriptionGenerator = { tool ->
+                val todoId = tool.parameters.find { it.name == "todo_id" }?.value ?: ""
+                "Update todo: $todoId"
+            },
+            executor = { tool -> runBlocking(Dispatchers.IO) { todoTools.updateTodo(tool) } }
+    )
+
+    handler.registerTool(
+            name = "delete_todo",
+            descriptionGenerator = { tool ->
+                val todoId = tool.parameters.find { it.name == "todo_id" }?.value ?: ""
+                "Delete todo: $todoId"
+            },
+            executor = { tool -> runBlocking(Dispatchers.IO) { todoTools.deleteTodo(tool) } }
+    )
+
+    // Schedule tools
+    val scheduleTools = ToolGetter.getScheduleTools(context)
+
+    handler.registerTool(
+            name = "create_schedule",
+            descriptionGenerator = { tool ->
+                val title = tool.parameters.find { it.name == "title" }?.value ?: ""
+                "Create schedule: $title"
+            },
+            executor = { tool -> runBlocking(Dispatchers.IO) { scheduleTools.createSchedule(tool) } }
+    )
+
+    handler.registerTool(
+            name = "list_schedules",
+            descriptionGenerator = { tool ->
+                val startTime = tool.parameters.find { it.name == "start_time" }?.value
+                val endTime = tool.parameters.find { it.name == "end_time" }?.value
+                if (!startTime.isNullOrBlank() && !endTime.isNullOrBlank()) {
+                    "List schedules in time range"
+                } else {
+                    "List upcoming schedules"
+                }
+            },
+            executor = { tool -> runBlocking(Dispatchers.IO) { scheduleTools.listSchedules(tool) } }
+    )
+
+    handler.registerTool(
+            name = "get_schedule",
+            descriptionGenerator = { tool ->
+                val scheduleId = tool.parameters.find { it.name == "schedule_id" }?.value ?: ""
+                "Get schedule: $scheduleId"
+            },
+            executor = { tool -> runBlocking(Dispatchers.IO) { scheduleTools.getSchedule(tool) } }
+    )
+
+    handler.registerTool(
+            name = "update_schedule",
+            descriptionGenerator = { tool ->
+                val scheduleId = tool.parameters.find { it.name == "schedule_id" }?.value ?: ""
+                "Update schedule: $scheduleId"
+            },
+            executor = { tool -> runBlocking(Dispatchers.IO) { scheduleTools.updateSchedule(tool) } }
+    )
+
+    handler.registerTool(
+            name = "delete_schedule",
+            descriptionGenerator = { tool ->
+                val scheduleId = tool.parameters.find { it.name == "schedule_id" }?.value ?: ""
+                "Delete schedule: $scheduleId"
+            },
+            executor = { tool -> runBlocking(Dispatchers.IO) { scheduleTools.deleteSchedule(tool) } }
     )
 }

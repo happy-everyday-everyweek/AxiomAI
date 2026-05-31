@@ -15,7 +15,7 @@ class FloatingWindowState(context: Context) {
 
     // Window position
     var x: Int = 200
-    var y: Int = 200
+    var y: Int = 50
 
     // Window size
     val windowWidth = mutableStateOf(300.dp)
@@ -24,8 +24,8 @@ class FloatingWindowState(context: Context) {
     var lastWindowScale: Float = 0.8f
 
     // Mode state
-    val currentMode = mutableStateOf(FloatingMode.WINDOW)
-    var previousMode: FloatingMode = FloatingMode.WINDOW
+    val currentMode = mutableStateOf(FloatingMode.BALL)
+    var previousMode: FloatingMode = FloatingMode.BALL
     val ballSize = mutableStateOf(60.dp)
     val isAtEdge = mutableStateOf(false)
 
@@ -83,18 +83,18 @@ class FloatingWindowState(context: Context) {
         windowWidth.value = storedWidth.coerceIn(200f, screenWidthDp.value * 0.8f).dp
         windowHeight.value = storedHeight.coerceIn(250f, screenHeightDp.value * 0.8f).dp
 
-        val modeName = prefs.getString("current_mode", FloatingMode.WINDOW.name)
+        val modeName = prefs.getString("current_mode", FloatingMode.BALL.name)
         currentMode.value = try {
-            FloatingMode.valueOf(modeName ?: FloatingMode.WINDOW.name)
+            FloatingMode.valueOf(modeName ?: FloatingMode.BALL.name)
         } catch (_: Exception) {
-            FloatingMode.WINDOW
+            FloatingMode.BALL
         }
 
-        val prevModeName = prefs.getString("previous_mode", FloatingMode.WINDOW.name)
+        val prevModeName = prefs.getString("previous_mode", FloatingMode.BALL.name)
         previousMode = try {
-            FloatingMode.valueOf(prevModeName ?: FloatingMode.WINDOW.name)
+            FloatingMode.valueOf(prevModeName ?: FloatingMode.BALL.name)
         } catch (_: Exception) {
-            FloatingMode.WINDOW
+            FloatingMode.BALL
         }
 
         val storedScale = prefs.getFloat("window_scale", 0.8f)

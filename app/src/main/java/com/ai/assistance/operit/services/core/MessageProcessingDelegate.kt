@@ -31,6 +31,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -534,6 +535,15 @@ class MessageProcessingDelegate(
 
         val originalMessageText = rawMessageText.trim()
         var messageText = originalMessageText
+
+        val autoContext = runCatching {
+            runBlocking {
+                com.ai.assistance.operit.core.context.ContextInjector.collectContext(context)
+            }
+        }.getOrNull()
+        if (!autoContext.isNullOrBlank() && !isAutoContinuation) {
+            messageText = "$autoContext\n\n$messageText"
+        }
         
         if (messageTextOverride == null) {
             _userMessage.value = TextFieldValue("")

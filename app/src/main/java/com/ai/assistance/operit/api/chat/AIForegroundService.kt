@@ -32,6 +32,7 @@ import com.ai.assistance.operit.integrations.http.ExternalChatHttpServer
 import com.ai.assistance.operit.integrations.http.ExternalChatHttpState
 import com.ai.assistance.operit.services.FloatingChatService
 import com.ai.assistance.operit.services.UIDebuggerService
+import com.ai.assistance.operit.core.tools.ToolProgressBus
 import com.ai.assistance.operit.data.preferences.DisplayPreferencesManager
 import com.ai.assistance.operit.data.repository.WorkflowRepository
 import com.ai.assistance.operit.ui.main.MainActivity
@@ -573,8 +574,9 @@ class AIForegroundService : Service() {
         serviceScope.launch {
             kotlinx.coroutines.flow.combine(
                 chatRuntimeHolder.activeConversationCount,
-                chatRuntimeHolder.currentSessionToolCount
-            ) { _, _ ->
+                chatRuntimeHolder.currentSessionToolCount,
+                ToolProgressBus.progress
+            ) { _, _, _ ->
                 Unit
             }.collect {
                 if (!isRunning.get()) return@collect
@@ -872,6 +874,7 @@ class AIForegroundService : Service() {
         val title = getString(R.string.service_operit_running)
         val activeConversationCount = chatRuntimeHolder.activeConversationCount.value
         val currentSessionToolCount = chatRuntimeHolder.currentSessionToolCount.value
+        val taskProgress = ToolProgressBus.progress.value
         val contentText =
             if (isAiBusy && activeConversationCount > 0) {
                 val statsText = getString(
@@ -879,14 +882,17 @@ class AIForegroundService : Service() {
                     activeConversationCount,
                     currentSessionToolCount
                 )
+                val taskInfo = taskProgress?.let { progress ->
+                    if (progress.message.isNotBlank()) " - ${progress.message}" else ""
+                } ?: ""
                 if (externalHttpSnapshot.isRunning && externalHttpSnapshot.port != null) {
                     getString(
                         R.string.service_running_with_http,
-                        statsText,
+                        statsText + taskInfo,
                         externalHttpSnapshot.port
                     )
                 } else {
-                    statsText
+                    statsText + taskInfo
                 }
             } else if (externalHttpSnapshot.isRunning && externalHttpSnapshot.port != null) {
                 getString(

@@ -5,7 +5,6 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -38,7 +37,6 @@ import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Speed
-import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.TipsAndUpdates
 import androidx.compose.material.icons.rounded.Psychology
 import androidx.compose.material.icons.rounded.Save
@@ -146,13 +144,12 @@ import com.ai.assistance.operit.ui.features.chat.components.style.input.common.P
 import com.ai.assistance.operit.ui.features.chat.components.style.input.common.PendingQueueMessageItem
 import com.ai.assistance.operit.ui.features.chat.components.style.input.common.ToolPromptManagerDialog
 import com.ai.assistance.operit.ui.features.chat.components.style.input.common.rememberMentionVisualTransformation
+import com.ai.assistance.operit.ui.features.chat.components.slashcommand.SlashCommand
+import com.ai.assistance.operit.ui.features.chat.components.slashcommand.SlashCommandAction
+import com.ai.assistance.operit.ui.features.chat.components.slashcommand.SlashCommandPanel
 import com.ai.assistance.operit.ui.features.chat.viewmodel.ChatViewModel
 import com.ai.assistance.operit.ui.floating.FloatingMode
 import com.ai.assistance.operit.ui.permissions.PermissionLevel
-import com.ai.assistance.operit.ui.theme.isLiquidGlassSupported
-import com.ai.assistance.operit.ui.theme.isWaterGlassSupported
-import com.ai.assistance.operit.ui.theme.liquidGlass
-import com.ai.assistance.operit.ui.theme.waterGlass
 import com.ai.assistance.operit.util.ChatUtils
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -181,10 +178,6 @@ fun AgentChatInputSection(
     onAttachPackage: (String) -> Unit = {},
     onTakePhoto: (Uri) -> Unit,
     hasBackgroundImage: Boolean = false,
-    chatInputTransparent: Boolean = false,
-    chatInputFloating: Boolean = false,
-    chatInputLiquidGlass: Boolean = false,
-    chatInputWaterGlass: Boolean = false,
     modifier: Modifier = Modifier,
     externalAttachmentPanelState: Boolean? = null,
     onAttachmentPanelStateChange: ((Boolean) -> Unit)? = null,
@@ -252,6 +245,33 @@ fun AgentChatInputSection(
             inputState is InputProcessingState.ProcessingToolResult ||
             inputState is InputProcessingState.Summarizing ||
             inputState is InputProcessingState.Receiving
+
+    fun handleSlashCommand(command: SlashCommand) {
+        onUserMessageChange(TextFieldValue(""))
+        when (command.action) {
+            is SlashCommandAction.ToggleThinking -> {
+                onToggleThinkingMode()
+            }
+            is SlashCommandAction.SelectModel -> {
+                showModelSelectorPopup.value = true
+            }
+            is SlashCommandAction.SelectMemory -> {
+                showExtraSettingsPopup.value = true
+            }
+            is SlashCommandAction.ToggleTools -> {
+                onToggleTools()
+            }
+            is SlashCommandAction.SwitchPermission -> {
+                onTogglePermission()
+            }
+            is SlashCommandAction.ConfigContext -> {
+                onToggleEnableMaxContextMode()
+            }
+            is SlashCommandAction.ToggleStream -> {
+                onToggleDisableStreamOutput()
+            }
+        }
+    }
     if (showTokenLimitDialog.value) {
         AlertDialog(
             onDismissRequest = {
@@ -491,31 +511,10 @@ fun AgentChatInputSection(
             0.08f,
         )
 
-    val inputContainerColor =
-        when {
-            chatInputTransparent -> Color.Transparent
-            isDarkTheme && hasBackgroundImage -> darkModeInputColor.copy(alpha = 0.82f)
-            isDarkTheme -> darkModeInputColor
-            hasBackgroundImage -> MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
-            else -> MaterialTheme.colorScheme.surface
-        }
-    val popupContainerColor =
-        when {
-            isDarkTheme && chatInputTransparent -> darkModeInputColor
-            isDarkTheme -> inputContainerColor
-            else -> MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
-        }
-    val queueContainerColor =
-        when {
-            chatInputTransparent -> MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)
-            else -> inputContainerColor
-        }
-    val queueItemColor =
-        when {
-            chatInputTransparent -> MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
-            isDarkTheme -> MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
-            else -> MaterialTheme.colorScheme.surface
-        }
+    val inputContainerColor = MaterialTheme.colorScheme.surface
+    val popupContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
+    val queueContainerColor = inputContainerColor
+    val queueItemColor = MaterialTheme.colorScheme.surface
     val modelLabel =
         if (displayModelName.isBlank()) {
             context.getString(R.string.model_config)
@@ -739,77 +738,45 @@ fun AgentChatInputSection(
                 }
             }
 
-            val inputCardShape =
-                if (chatInputFloating) {
-                    RoundedCornerShape(22.dp)
-                } else {
-                    RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
-                }
-            val inputLiquidGlassEnabled =
-                chatInputTransparent && chatInputLiquidGlass && !chatInputWaterGlass && isLiquidGlassSupported()
-            val inputWaterGlassEnabled =
-                chatInputTransparent && chatInputWaterGlass && isWaterGlassSupported()
-            val inputLiquidGlassTint =
-                if (isDarkTheme) {
-                    darkModeInputColor
-                } else {
-                    MaterialTheme.colorScheme.surface
-                }
+            val showSlashCommandPanel = userMessage.text.startsWith("/") && userMessage.text.length <= 20 && !userMessage.text.contains(" ")
+
+            if (showSlashCommandPanel) {
+                SlashCommandPanel(
+                    query = userMessage.text,
+                    onCommandSelected = { command ->
+                        handleSlashCommand(command)
+                    },
+                    modifier = Modifier.padding(horizontal = 8.dp),
+                )
+            }
+
+            val inputCardShape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
             val inputContainerEffectModifier =
                 if (isDarkTheme) {
                     Modifier.topEdgeHighlight(
                         shape = inputCardShape,
                         lineColor =
-                            MaterialTheme.colorScheme.onSurface.copy(
-                                alpha = if (chatInputFloating) 0.03f else 0.05f,
-                            ),
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
                         glowColor =
-                            MaterialTheme.colorScheme.onSurface.copy(
-                                alpha = if (chatInputFloating) 0.008f else 0.015f,
-                            ),
-                        glowHeight = if (chatInputFloating) 1.dp else 2.dp,
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.015f),
+                        glowHeight = 2.dp,
                     )
                 } else {
                     Modifier.outerDiffuseShadow(
                         shape = inputCardShape,
-                        spread = if (chatInputFloating) 3.dp else 6.dp,
+                        spread = 6.dp,
                     )
                 }
 
-            if (chatInputTransparent) {
-                // 透明模式：暗色顶部高光，亮色保持原阴影
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(top = if (chatInputFloating) 2.dp else 4.dp)
-                            .then(inputContainerEffectModifier)
-                            .waterGlass(
-                                enabled = inputWaterGlassEnabled,
-                                shape = inputCardShape,
-                                containerColor = inputLiquidGlassTint,
-                                shadowElevation = if (chatInputFloating) 12.dp else 18.dp,
-                                borderWidth = 0.7.dp,
-                                overlayAlphaBoost = if (chatInputFloating) 0.04f else 0.08f,
-                            )
-                            .liquidGlass(
-                                enabled = inputLiquidGlassEnabled,
-                                shape = inputCardShape,
-                                containerColor = inputLiquidGlassTint,
-                                shadowElevation = if (chatInputFloating) 12.dp else 18.dp,
-                                borderWidth = 0.42.dp,
-                                blurRadius = if (chatInputFloating) 16.dp else 20.dp,
-                                overlayAlphaBoost = if (chatInputFloating) 0.06f else 0.10f,
-                            )
-                            .clip(inputCardShape)
-                            .background(
-                                if (inputLiquidGlassEnabled || inputWaterGlassEnabled) {
-                                    Color.Transparent
-                                } else {
-                                    inputContainerColor
-                                }
-                            ),
-                ) {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp)
+                        .then(inputContainerEffectModifier)
+                        .clip(inputCardShape)
+                        .background(inputContainerColor),
+            ) {
                 Column(
                     modifier =
                         Modifier
@@ -877,72 +844,17 @@ fun AgentChatInputSection(
                             modifier = Modifier.weight(1f),
                             contentAlignment = Alignment.CenterStart,
                         ) {
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = Color.Transparent,
-                                modifier =
-                                    Modifier
-                                        .widthIn(min = 0.dp, max = 220.dp)
-                                        .border(
-                                            width = 1.dp,
-                                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
-                                            shape = RoundedCornerShape(12.dp),
-                                        )
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .clickable(onClick = onModelSelectorClick),
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Text(
-                                        text = modelLabel,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.widthIn(max = 160.dp),
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Icon(
-                                        imageVector =
-                                            if (showModelSelectorPopup.value) {
-                                                Icons.Default.KeyboardArrowUp
-                                            } else {
-                                                Icons.Default.KeyboardArrowDown
-                                            },
-                                        contentDescription = context.getString(R.string.select_model_config),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(18.dp),
-                                    )
-                                }
-                            }
-                        }
-
-                        Box(
-                            modifier =
-                                Modifier
-                                    .padding(start = 6.dp)
-                                    .size(34.dp)
-                                    .clickable(
-                                        enabled = true,
-                                        onClick = {
-                                            showModelSelectorPopup.value = false
-                                            showExtraSettingsPopup.value = !showExtraSettingsPopup.value
-                                        },
-                                    ),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Tune,
-                                contentDescription = context.getString(R.string.settings_options),
-                                tint =
-                                    if (showExtraSettingsPopup.value) {
-                                        MaterialTheme.colorScheme.primary
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                    },
-                                modifier = Modifier.size(20.dp),
+                            Text(
+                                text = modelLabel,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier
+                                    .widthIn(max = 200.dp)
+                                    .clickable(onClick = onModelSelectorClick),
                             )
                         }
 
@@ -1066,299 +978,6 @@ fun AgentChatInputSection(
                     }
 
                     tokenLimitWarning()
-                }
-            }
-            } else {
-                // 非透明模式：暗色顶部高光，亮色保持原阴影
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(top = if (chatInputFloating) 2.dp else 4.dp)
-                            .then(inputContainerEffectModifier)
-                            .waterGlass(
-                                enabled = inputWaterGlassEnabled,
-                                shape = inputCardShape,
-                                containerColor = inputLiquidGlassTint,
-                                shadowElevation = if (chatInputFloating) 12.dp else 18.dp,
-                                borderWidth = 0.7.dp,
-                                overlayAlphaBoost = if (chatInputFloating) 0.04f else 0.08f,
-                            )
-                            .liquidGlass(
-                                enabled = inputLiquidGlassEnabled,
-                                shape = inputCardShape,
-                                containerColor = inputLiquidGlassTint,
-                                shadowElevation = if (chatInputFloating) 12.dp else 18.dp,
-                                borderWidth = 0.42.dp,
-                                blurRadius = if (chatInputFloating) 16.dp else 20.dp,
-                                overlayAlphaBoost = if (chatInputFloating) 0.06f else 0.10f,
-                            )
-                            .clip(inputCardShape)
-                            .background(
-                                if (inputLiquidGlassEnabled || inputWaterGlassEnabled) {
-                                    Color.Transparent
-                                } else {
-                                    inputContainerColor
-                                }
-                            ),
-                ) {
-                    Column(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                    ) {
-                        OutlinedTextField(
-                            value = userMessage,
-                            onValueChange = onUserMessageChange,
-                            visualTransformation = mentionVisualTransformation,
-                            placeholder = {
-                                Text(
-                                    if (isWorkspaceOpen) {
-                                        context.getString(R.string.input_question_with_workspace)
-                                    } else {
-                                        context.getString(R.string.input_question_hint)
-                                    },
-                                    style = inputTextStyle,
-                                )
-                            },
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp).onPreviewKeyEvent(onEnterToSendKeyEvent),
-                            textStyle = inputTextStyle,
-                            maxLines = 6,
-                            minLines = 1,
-                            singleLine = false,
-                            keyboardOptions =
-                                KeyboardOptions(
-                                    imeAction = if (enableEnterToSend) ImeAction.Send else ImeAction.Default
-                                ),
-                            keyboardActions =
-                                if (enableEnterToSend) {
-                                    KeyboardActions(onSend = { handleEnterSendAction() })
-                                } else {
-                                    KeyboardActions()
-                                },
-                            colors =
-                                OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = Color.Transparent,
-                                    unfocusedBorderColor = Color.Transparent,
-                                    disabledBorderColor = Color.Transparent,
-                                    focusedContainerColor = Color.Transparent,
-                                    unfocusedContainerColor = Color.Transparent,
-                                    disabledContainerColor = Color.Transparent,
-                                ),
-                            shape = RoundedCornerShape(14.dp),
-                            trailingIcon = {
-                                IconButton(onClick = { showFullscreenInput.value = true }) {
-                                    Icon(
-                                        imageVector = Icons.Default.Fullscreen,
-                                        contentDescription = stringResource(R.string.chat_fullscreen_input),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            },
-                            enabled = !isProcessing || allowTextInputWhileProcessing,
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Box(
-                                modifier = Modifier.weight(1f),
-                                contentAlignment = Alignment.CenterStart,
-                            ) {
-                                Surface(
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = Color.Transparent,
-                                    modifier =
-                                        Modifier
-                                            .widthIn(min = 0.dp, max = 220.dp)
-                                            .border(
-                                                width = 1.dp,
-                                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
-                                                shape = RoundedCornerShape(12.dp),
-                                            )
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .clickable(onClick = onModelSelectorClick),
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        Text(
-                                            text = modelLabel,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            modifier = Modifier.widthIn(max = 160.dp),
-                                        )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Icon(
-                                            imageVector =
-                                                if (showModelSelectorPopup.value) {
-                                                    Icons.Default.KeyboardArrowUp
-                                                } else {
-                                                    Icons.Default.KeyboardArrowDown
-                                                },
-                                            contentDescription = context.getString(R.string.select_model_config),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.size(18.dp),
-                                        )
-                                    }
-                                }
-                            }
-
-                                Box(
-                                    modifier =
-                                        Modifier
-                                            .padding(start = 6.dp)
-                                            .size(34.dp)
-                                            .clickable(
-                                                enabled = true,
-                                                onClick = {
-                                                    showModelSelectorPopup.value = false
-                                                    showExtraSettingsPopup.value = !showExtraSettingsPopup.value
-                                                },
-                                            ),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Tune,
-                                    contentDescription = context.getString(R.string.settings_options),
-                                    tint =
-                                        if (showExtraSettingsPopup.value) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant
-                                        },
-                                    modifier = Modifier.size(20.dp),
-                                )
-                            }
-
-                                Box(
-                                    modifier =
-                                        Modifier
-                                            .padding(start = 8.dp)
-                                            .size(36.dp)
-                                            .clickable(
-                                                enabled = true,
-                                                onClick = {
-                                                    showModelSelectorPopup.value = false
-                                                    showExtraSettingsPopup.value = false
-                                                    setShowAttachmentPanel(!showAttachmentPanel)
-                                                },
-                                            ),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Add,
-                                    contentDescription = context.getString(R.string.add_attachment),
-                                    tint =
-                                        if (showAttachmentPanel) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f)
-                                        },
-                                    modifier = Modifier.size(24.dp),
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.width(6.dp))
-
-                            val actionButtonBackground =
-                                when {
-                                    showCancelAction -> MaterialTheme.colorScheme.error
-                                    showQueueAction -> MaterialTheme.colorScheme.tertiary
-                                    canSendMessage ->
-                                        if (isOverTokenLimit) {
-                                            MaterialTheme.colorScheme.secondary
-                                        } else {
-                                            MaterialTheme.colorScheme.primary
-                                        }
-                                    else -> MaterialTheme.colorScheme.primary
-                                }
-
-                            val actionButtonIconTint =
-                                when {
-                                    showCancelAction -> MaterialTheme.colorScheme.onError
-                                    showQueueAction -> MaterialTheme.colorScheme.onTertiary
-                                    canSendMessage ->
-                                        if (isOverTokenLimit) {
-                                            MaterialTheme.colorScheme.onSecondary
-                                        } else {
-                                            MaterialTheme.colorScheme.onPrimary
-                                        }
-                                    else -> MaterialTheme.colorScheme.onPrimary
-                                }
-
-                            Box(
-                                modifier = Modifier.size(40.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                if (showProcessingStatus) {
-                                    CircularProgressIndicator(
-                                        progress = { processingProgressValue },
-                                        modifier = Modifier.fillMaxSize(),
-                                        color = processingProgressColor,
-                                        trackColor = processingProgressColor.copy(alpha = 0.2f),
-                                        strokeWidth = 2.dp,
-                                    )
-                                }
-
-                                Box(
-                                    modifier =
-                                        Modifier
-                                            .size(36.dp)
-                                            .background(actionButtonBackground, CircleShape)
-                                            .clickable(
-                                                enabled = sendButtonEnabled,
-                                                onClick = {
-                                                    when {
-                                                        showCancelAction -> onCancelMessage()
-                                                        showQueueAction -> {
-                                                            onQueueMessage()
-                                                            setShowAttachmentPanel(false)
-                                                        }
-                                                        canSendMessage -> {
-                                                            if (isOverTokenLimit) {
-                                                                showTokenLimitDialog.value = true
-                                                            } else {
-                                                                onSendMessage()
-                                                                setShowAttachmentPanel(false)
-                                                            }
-                                                        }
-                                                    }
-                                                },
-                                            ),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Icon(
-                                        imageVector =
-                                            when {
-                                                showCancelAction -> Icons.Default.Close
-                                                showQueueAction -> Icons.Default.Add
-                                                canSendMessage -> Icons.AutoMirrored.Filled.Send
-                                                else -> Icons.AutoMirrored.Filled.Send
-                                            },
-                                        contentDescription =
-                                            when {
-                                                showCancelAction -> context.getString(R.string.cancel)
-                                                showQueueAction -> context.getString(R.string.chat_queue_add_message)
-                                                canSendMessage -> context.getString(R.string.send)
-                                                else -> context.getString(R.string.send)
-                                            },
-                                        tint = actionButtonIconTint,
-                                        modifier = Modifier.size(18.dp),
-                                    )
-                                }
-                            }
-                        }
-
-                        tokenLimitWarning()
-                    }
                 }
             }
 

@@ -288,20 +288,18 @@ class FloatingWindowManager(
                     updateWindowSizeInLayoutParams()
                     callback.saveState()
                 },
-                currentMode = state.currentMode.value,
-                previousMode = state.previousMode,
+                currentMode = FloatingMode.BALL,
+                previousMode = FloatingMode.BALL,
                 ballSize = state.ballSize.value,
-                onModeChange = { newMode -> switchMode(newMode) },
+                onModeChange = { },
                 onMove = { dx, dy, scale -> onMove(dx, dy, scale) },
                 saveWindowState = { callback.saveState() },
-                onSendMessage = { message, promptType ->
-                    callback.onSendMessage(message, promptType)
-                },
-                onCancelMessage = { callback.onCancelMessage() },
-                onInputFocusRequest = { setFocusable(it) },
+                onSendMessage = { _, _ -> },
+                onCancelMessage = { },
+                onInputFocusRequest = { },
                 attachments = callback.getAttachments(),
-                onAttachmentRequest = { callback.onAttachmentRequest(it) },
-                onRemoveAttachment = { callback.onRemoveAttachment(it) },
+                onAttachmentRequest = { },
+                onRemoveAttachment = { },
                 chatService = context as? FloatingChatService,
                 windowState = state,
                 inputProcessingState = callback.getInputProcessingState()
@@ -532,29 +530,6 @@ class FloatingWindowManager(
                                 screenWidth - minVisible - safeMargin
                         )
                 state.y = state.y.coerceIn(safeMargin, screenHeight - minVisible - safeMargin)
-            }
-            FloatingMode.WINDOW -> {
-                val scale = state.windowScale.value
-                val windowWidthDp = state.windowWidth.value
-                val windowHeightDp = state.windowHeight.value
-                params.width = (windowWidthDp.value * density * scale).toInt()
-                params.height = (windowHeightDp.value * density * scale).toInt()
-                params.flags =
-                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-
-                val minVisibleWidth = (params.width * 2 / 3)
-                val safeMargin = (20 * density).toInt()
-                state.x =
-                        state.x.coerceIn(
-                                -(params.width - minVisibleWidth) + safeMargin,
-                                screenWidth - minVisibleWidth - safeMargin
-                        )
-                state.y =
-                        state.y.coerceIn(
-                                safeMargin,
-                                screenHeight - (params.height / 2) - safeMargin
-                        )
             }
             FloatingMode.RESULT_DISPLAY -> {
                 params.width = WindowManager.LayoutParams.WRAP_CONTENT

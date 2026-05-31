@@ -1,31 +1,19 @@
 package com.ai.assistance.operit.ui.features.workflow.screens
 
-import androidx.compose.animation.*
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -47,7 +35,6 @@ import com.ai.assistance.operit.data.model.ExtractNode
 import com.ai.assistance.operit.data.model.ExtractMode
 import com.ai.assistance.operit.data.model.ParameterValue
 import com.ai.assistance.operit.data.model.ToolParameterSchema
-import com.ai.assistance.operit.data.model.WorkflowExecutionRecord
 import com.ai.assistance.operit.ui.components.CustomScaffold
 import com.ai.assistance.operit.ui.features.workflow.viewmodel.WorkflowViewModel
 import com.ai.assistance.operit.ui.features.workflow.components.GridWorkflowCanvas
@@ -56,9 +43,6 @@ import com.ai.assistance.operit.ui.features.workflow.components.NodeActionMenuDi
 import com.ai.assistance.operit.ui.features.workflow.components.ScheduleConfigDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 @Composable
 private fun ConditionOperator.toDisplayText(): String {
@@ -109,11 +93,8 @@ fun WorkflowDetailScreen(
     var showAddNodeDialog by remember { mutableStateOf(false) }
     var showDeleteNodeDialog by remember { mutableStateOf<String?>(null) }
     var showNodeActionMenu by remember { mutableStateOf<String?>(null) }
-    var showConnectionMenu by remember { mutableStateOf<String?>(null) }
     var showEditNodeDialog by remember { mutableStateOf<WorkflowNode?>(null) }
-    var isFabMenuExpanded by remember { mutableStateOf(false) }
-    var showExecutionLogDialog by remember { mutableStateOf(false) }
-    var showExecutionLogsForNodeId by remember { mutableStateOf<String?>(null) }
+    var showConnectionMenu by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(workflowId) {
         viewModel.loadWorkflow(workflowId)
@@ -130,90 +111,52 @@ fun WorkflowDetailScreen(
             if (workflow != null) {
                 Column(
                     horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Animated secondary actions
-                    AnimatedVisibility(
-                        visible = isFabMenuExpanded,
-                        enter = fadeIn() + expandVertically(expandFrom = Alignment.Bottom),
-                        exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Bottom)
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.End,
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            if (workflow.enabled || isWorkflowRunning) {
-                                SpeedDialAction(
-                                    text = if (isWorkflowRunning) {
-                                        stringResource(R.string.cancel)
-                                    } else {
-                                        stringResource(R.string.workflow_action_trigger)
-                                    },
-                                    icon = if (isWorkflowRunning) {
-                                        Icons.Default.Close
-                                    } else {
-                                        Icons.Default.PlayArrow
-                                    },
-                                    onClick = {
-                                        if (isWorkflowRunning) {
-                                            viewModel.cancelWorkflow(workflowId) { result -> showTriggerResult = result }
-                                        } else {
-                                            viewModel.triggerWorkflow(workflowId) { result -> showTriggerResult = result }
-                                        }
-                                        isFabMenuExpanded = false
-                                    }
-                                )
+                    if (workflow.enabled || isWorkflowRunning) {
+                        SmallFloatingActionButton(
+                            onClick = {
+                                if (isWorkflowRunning) {
+                                    viewModel.cancelWorkflow(workflowId) { result -> showTriggerResult = result }
+                                } else {
+                                    viewModel.triggerWorkflow(workflowId) { result -> showTriggerResult = result }
+                                }
+                            },
+                            containerColor = if (isWorkflowRunning) {
+                                MaterialTheme.colorScheme.errorContainer
+                            } else {
+                                MaterialTheme.colorScheme.secondaryContainer
+                            },
+                            contentColor = if (isWorkflowRunning) {
+                                MaterialTheme.colorScheme.onErrorContainer
+                            } else {
+                                MaterialTheme.colorScheme.onSecondaryContainer
                             }
-                            SpeedDialAction(
-                                text = stringResource(R.string.workflow_view_logs),
-                                icon = Icons.Default.Call,
-                                onClick = {
-                                    viewModel.loadLatestExecutionRecord(workflowId)
-                                    showExecutionLogsForNodeId = null
-                                    showExecutionLogDialog = true
-                                    isFabMenuExpanded = false
+                        ) {
+                            Icon(
+                                if (isWorkflowRunning) Icons.Default.Close else Icons.Default.PlayArrow,
+                                contentDescription = if (isWorkflowRunning) {
+                                    stringResource(R.string.cancel)
+                                } else {
+                                    stringResource(R.string.workflow_action_trigger)
                                 }
-                            )
-                            SpeedDialAction(
-                                text = stringResource(R.string.workflow_action_add_node),
-                                icon = Icons.Default.Add,
-                                onClick = {
-                                    showAddNodeDialog = true
-                                    isFabMenuExpanded = false
-                                }
-                            )
-                            SpeedDialAction(
-                                text = stringResource(R.string.workflow_action_edit_workflow),
-                                icon = Icons.Default.Edit,
-                                onClick = {
-                                    showEditDialog = true
-                                    isFabMenuExpanded = false
-                                }
-                            )
-                            SpeedDialAction(
-                                text = stringResource(R.string.workflow_delete),
-                                icon = Icons.Default.Delete,
-                                onClick = {
-                                    showDeleteDialog = true
-                                    isFabMenuExpanded = false
-                                },
-                                containerColor = MaterialTheme.colorScheme.errorContainer,
-                                contentColor = MaterialTheme.colorScheme.onErrorContainer
                             )
                         }
                     }
 
-                    // Main FAB
+                    SmallFloatingActionButton(
+                        onClick = { showAddNodeDialog = true },
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.workflow_action_add_node))
+                    }
+
                     FloatingActionButton(
-                        onClick = { isFabMenuExpanded = !isFabMenuExpanded },
+                        onClick = { showEditDialog = true },
                         containerColor = MaterialTheme.colorScheme.primary
                     ) {
-                        val rotation by animateFloatAsState(targetValue = if (isFabMenuExpanded) 45f else 0f, label = "fab_icon_rotation")
-                        Icon(
-                            Icons.Default.Add,
-                            contentDescription = stringResource(R.string.workflow_open_action_menu),
-                            modifier = Modifier.rotate(rotation)
-                        )
+                        Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.workflow_action_edit_workflow))
                     }
                 }
             }
@@ -368,21 +311,6 @@ fun WorkflowDetailScreen(
                 )
             }
 
-            if (showExecutionLogDialog) {
-                val targetNode = showExecutionLogsForNodeId?.let { targetNodeId ->
-                    workflow?.nodes?.find { it.id == targetNodeId }
-                }
-                WorkflowExecutionLogDialog(
-                    record = latestExecutionRecord,
-                    nodeId = targetNode?.id,
-                    nodeName = targetNode?.name,
-                    onDismiss = {
-                        showExecutionLogDialog = false
-                        showExecutionLogsForNodeId = null
-                    }
-                )
-            }
-
             // 错误提示
             viewModel.error?.let { error ->
                 AlertDialog(
@@ -457,12 +385,6 @@ fun WorkflowDetailScreen(
                             showEditNodeDialog = node
                             showNodeActionMenu = null
                         },
-                        onViewLogs = {
-                            viewModel.loadLatestExecutionRecord(workflowId)
-                            showExecutionLogsForNodeId = nodeId
-                            showExecutionLogDialog = true
-                            showNodeActionMenu = null
-                        },
                         onConnect = {
                             showConnectionMenu = nodeId
                             showNodeActionMenu = null
@@ -525,118 +447,6 @@ fun WorkflowDetailScreen(
     }
 }
 
-@Composable
-private fun SpeedDialAction(
-    text: String,
-    icon: ImageVector,
-    onClick: () -> Unit,
-    containerColor: Color = MaterialTheme.colorScheme.secondaryContainer,
-    contentColor: Color = MaterialTheme.colorScheme.onSecondaryContainer
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Card(
-            shape = MaterialTheme.shapes.small,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
-            Text(
-                text = text,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                style = MaterialTheme.typography.labelLarge
-            )
-        }
-        SmallFloatingActionButton(
-            onClick = onClick,
-            containerColor = containerColor,
-            contentColor = contentColor
-        ) {
-            Icon(icon, contentDescription = text)
-        }
-    }
-}
-
-@Composable
-private fun WorkflowExecutionLogDialog(
-    record: WorkflowExecutionRecord?,
-    nodeId: String? = null,
-    nodeName: String? = null,
-    onDismiss: () -> Unit
-) {
-    val dateTimeFormatter = remember { SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()) }
-    val timeFormatter = remember { SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault()) }
-    val filteredLogs = remember(record, nodeId) {
-        val allLogs = record?.logs.orEmpty()
-        if (nodeId.isNullOrBlank()) {
-            allLogs
-        } else {
-            allLogs.filter { it.nodeId == nodeId }
-        }
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = if (nodeName.isNullOrBlank()) {
-                    stringResource(R.string.workflow_execution_log_title)
-                } else {
-                    stringResource(R.string.workflow_execution_log_node_title, nodeName)
-                }
-            )
-        },
-        text = {
-            if (record == null) {
-                Text(stringResource(R.string.workflow_execution_log_empty))
-            } else {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 420.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = "${dateTimeFormatter.format(Date(record.startedAt))} - ${if (record.success) stringResource(R.string.operation_success) else stringResource(R.string.operation_failed)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    if (filteredLogs.isEmpty()) {
-                        Text(
-                            text = if (nodeName.isNullOrBlank()) {
-                                stringResource(R.string.workflow_execution_log_empty)
-                            } else {
-                                stringResource(R.string.workflow_execution_log_empty_for_node, nodeName)
-                            },
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            items(filteredLogs) { item ->
-                                Text(
-                                    text = "${timeFormatter.format(Date(item.timestamp))} [${item.level}] ${item.message}",
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.confirm))
-            }
-        }
-    )
-}
-
-/**
- * 参数配置数据类
- */
 data class ParameterConfig(
     val key: String,
     val isReference: Boolean, // true表示引用节点，false表示静态值

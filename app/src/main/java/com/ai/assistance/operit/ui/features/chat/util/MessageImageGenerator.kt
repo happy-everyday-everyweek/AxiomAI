@@ -41,8 +41,6 @@ import coil.compose.LocalImageLoader
 import coil.request.CachePolicy
 import com.ai.assistance.operit.data.model.ChatMessage
 import com.ai.assistance.operit.data.preferences.UserPreferencesManager
-import com.ai.assistance.operit.ui.features.chat.components.ChatStyle
-import com.ai.assistance.operit.ui.features.chat.components.style.bubble.BubbleStyleChatMessage
 import com.ai.assistance.operit.ui.features.chat.components.style.cursor.CursorStyleChatMessage
 import com.ai.assistance.operit.ui.theme.AppBackgroundLayer
 
@@ -75,7 +73,6 @@ object MessageImageGenerator {
      * @param systemTextColor 系统消息文字颜色
      * @param thinkingBackgroundColor 思考块背景色
      * @param thinkingTextColor 思考块文字颜色
-     * @param chatStyle 聊天风格
      * @param width 图片宽度（像素）
      * @return 生成的图片文件
      */
@@ -90,13 +87,6 @@ object MessageImageGenerator {
         systemTextColor: Color,
         thinkingBackgroundColor: Color,
         thinkingTextColor: Color,
-        chatStyle: ChatStyle = ChatStyle.CURSOR,
-        cursorUserBubbleLiquidGlass: Boolean = false,
-        cursorUserBubbleWaterGlass: Boolean = false,
-        bubbleUserBubbleLiquidGlass: Boolean = false,
-        bubbleUserBubbleWaterGlass: Boolean = false,
-        bubbleAiBubbleLiquidGlass: Boolean = false,
-        bubbleAiBubbleWaterGlass: Boolean = false,
         initialThinkingExpanded: Boolean = false,
         expandThinkToolsGroups: Boolean = false,
         includeBackground: Boolean = true,
@@ -105,7 +95,7 @@ object MessageImageGenerator {
         width: Int = 1440
     ): File {
         try {
-            AppLogger.d(TAG, "开始生成消息图片（ComposeView），消息数量: ${messages.size}, 宽度: $width, 风格: $chatStyle")
+            AppLogger.d(TAG, "开始生成消息图片（ComposeView），消息数量: ${messages.size}, 宽度: $width")
 
             if (messages.isEmpty()) {
                 throw IllegalArgumentException("Message list cannot be empty")
@@ -263,49 +253,23 @@ object MessageImageGenerator {
                                                     }
 
                                                     staticMessages.forEach { message ->
-                                                        when (chatStyle) {
-                                                            ChatStyle.BUBBLE -> {
-                                                                BubbleStyleChatMessage(
-                                                                    message = message,
-                                                                    userMessageColor = userMessageColor,
-                                                                    aiMessageColor = aiMessageColor,
-                                                                    userTextColor = userTextColor,
-                                                                    aiTextColor = aiTextColor,
-                                                                    systemMessageColor = systemMessageColor,
-                                                                    systemTextColor = systemTextColor,
-                                                                    userMessageLiquidGlassEnabled = bubbleUserBubbleLiquidGlass,
-                                                                    userMessageWaterGlassEnabled = bubbleUserBubbleWaterGlass,
-                                                                    aiMessageLiquidGlassEnabled = bubbleAiBubbleLiquidGlass,
-                                                                    aiMessageWaterGlassEnabled = bubbleAiBubbleWaterGlass,
-                                                                    initialThinkingExpanded = initialThinkingExpanded,
-                                                                    allowExpandedThinkingFullHeight = allowExpandedThinkingFullHeight,
-                                                                    expandThinkToolsGroups = expandThinkToolsGroups,
-                                                                    forceShowThinkingProcess = forceShowThinkingProcess,
-                                                                    enableDialogs = false
-                                                                )
-                                                            }
-                                                            ChatStyle.CURSOR -> {
-                                                                CursorStyleChatMessage(
-                                                                    message = message,
-                                                                    userMessageColor = userMessageColor,
-                                                                    userMessageLiquidGlassEnabled = cursorUserBubbleLiquidGlass,
-                                                                    userMessageWaterGlassEnabled = cursorUserBubbleWaterGlass,
-                                                                    aiMessageColor = aiMessageColor,
-                                                                    userTextColor = userTextColor,
-                                                                    aiTextColor = aiTextColor,
-                                                                    systemMessageColor = systemMessageColor,
-                                                                    systemTextColor = systemTextColor,
-                                                                    thinkingBackgroundColor = thinkingBackgroundColor,
-                                                                    thinkingTextColor = thinkingTextColor,
-                                                                    supportToolMarkup = true,
-                                                                    initialThinkingExpanded = initialThinkingExpanded,
-                                                                    allowExpandedThinkingFullHeight = allowExpandedThinkingFullHeight,
-                                                                    expandThinkToolsGroups = expandThinkToolsGroups,
-                                                                    forceShowThinkingProcess = forceShowThinkingProcess,
-                                                                    enableDialogs = false
-                                                                )
-                                                            }
-                                                        }
+                                                        CursorStyleChatMessage(
+                                                            message = message,
+                                                            userMessageColor = userMessageColor,
+                                                            aiMessageColor = aiMessageColor,
+                                                            userTextColor = userTextColor,
+                                                            aiTextColor = aiTextColor,
+                                                            systemMessageColor = systemMessageColor,
+                                                            systemTextColor = systemTextColor,
+                                                            thinkingBackgroundColor = thinkingBackgroundColor,
+                                                            thinkingTextColor = thinkingTextColor,
+                                                            supportToolMarkup = true,
+                                                            initialThinkingExpanded = initialThinkingExpanded,
+                                                            allowExpandedThinkingFullHeight = allowExpandedThinkingFullHeight,
+                                                            expandThinkToolsGroups = expandThinkToolsGroups,
+                                                            forceShowThinkingProcess = forceShowThinkingProcess,
+                                                            enableDialogs = false
+                                                        )
                                                     }
                                                 }
                                             }
