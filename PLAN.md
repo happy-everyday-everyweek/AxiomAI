@@ -666,23 +666,315 @@ AppSidebar
 
 ---
 
-## 九、P3 - 新功能
+## 九、P2.5 - 首次使用引导（新功能）
 
-### 9.1 待办功能
+### 9.1 整体设计
+
+首次使用引导界面与普通聊天页面基本一致，用户在引导过程中就像在和AI对话。AI逐步发送消息和卡片，引导用户完成初始化配置。整个引导流程在同一个聊天页面内完成，不跳转到其他页面。
+
+### 9.2 引导流程步骤
+
+#### 步骤0：后台准备（引导开始前）
+
+在引导界面展示之前，后台静默启动终端依赖安装：
+
+| 依赖 | 说明 |
+|------|------|
+| Node.js | JavaScript运行时 |
+| PNPM | Node包管理器 |
+| Python环境 | Python运行时 |
+| Python链接 | 系统路径配置 |
+| Python虚拟环境 | 隔离环境 |
+| Pip | Python包管理器 |
+| uv | 快速Python包管理器 |
+
+终端依赖安装与引导流程并行执行，不阻塞用户操作。
+
+#### 步骤1：AI自我介绍
+
+AI向用户发送一条消息，简单介绍自己：
+
+> 你好！我是你的AI助手。我可以帮你完成各种任务，比如操作手机、搜索信息、管理文件、编写代码等等。在开始之前，我需要做一些简单的配置，只需要几分钟就好。
+
+#### 步骤2：GitHub登录（可跳过）
+
+AI发送一张卡片，引导用户登录GitHub：
+
+> 登录GitHub后，你可以从市场安装MCP服务器、Skill插件和工具包，也可以发布自己创建的扩展。
+
+卡片包含：
+- **登录GitHub按钮**：点击后打开GitHub OAuth授权流程（复用现有 `GitHubOAuthCoordinator` + `GitHubLoginWebViewDialog`）
+- **跳过按钮**：用户可选择跳过，后续在设置中随时登录
+
+涉及文件：
+- `ui/features/github/GitHubOAuthCoordinator.kt` - OAuth流程
+- `ui/features/github/GitHubLoginWebViewDialog.kt` - 登录对话框
+- `data/preferences/GitHubAuthPreferences.kt` - 认证状态持久化
+
+#### 步骤3：主题选择
+
+AI发送一张卡片，让用户选择喜欢的主题风格：
+
+> 选择一个你喜欢的主题吧！你可以随时在设置中更改。
+
+| 主题 | 风格描述 |
+|------|---------|
+| 明快 | 黑白灰配色，简洁利落，其他颜色仅用于强调 |
+| 温暖 | 暖黄色、棕色等暖色调，柔和舒适 |
+
+**关键交互**：用户选择主题时，整个页面实时更新主题效果，让用户立即看到变化。
+
+涉及文件：
+- `ui/theme/Theme.kt` - 主题定义，需新增"温暖"主题色彩方案
+- `data/preferences/DisplayPreferencesManager.kt` - 主题偏好持久化
+- 引导页面需监听主题变化并实时重组
+
+#### 步骤4：DeepSeek API配置（可跳过）
+
+AI发送文字说明 + 操作卡片，引导用户配置DeepSeek API：
+
+> 接下来需要配置AI模型的API。我推荐先配置DeepSeek，它的性价比很高，适合日常使用。
+>
+> 配置方法很简单：
+> 1. 打开DeepSeek API开放平台
+> 2. 注册账号并登录
+> 3. 在左侧菜单找到"API Keys"，点击"创建API Key"
+> 4. 复制生成的密钥
+>
+> 温馨提示：建议先少充一点，只充值1块钱就足够体验了。DeepSeek的价格非常实惠，1块钱可以用很久。
+>
+> 如果你暂时不想配置DeepSeek，也可以跳过，后续在设置中随时配置。
+
+卡片包含：
+- **前往DeepSeek获取API Key按钮**：点击后跳转到 `https://platform.deepseek.com/api_keys`
+- **API Key输入框**：用户粘贴API Key后自动保存配置
+- **跳过按钮**：用户可选择跳过，后续在设置中配置
+
+DeepSeek API定位说明：
+- **主要用途**：日常对话和任务处理的主力模型，性价比高
+- **降级关系**：当DeepSeek API不可用时，智谱API可作为降级备选
+- **可跳过原因**：智谱API已提供免费语言模型（GLM-4.7-Flash），可覆盖基本对话需求
+
+涉及文件：
+- `data/collects/ApiProviderConfigCollect.kt` - DeepSeek配置（默认模型：deepseek-v4-flash，端点：https://api.deepseek.com/v1/chat/completions）
+- `data/preferences/ModelConfigManager.kt` - 模型配置持久化
+- `ui/features/settings/sections/ModelApiSettingsSection.kt` - 模型配置UI
+
+DeepSeek当前模型定价参考（CNY）：
+
+| 模型 | 输入价格/百万Token | 输出价格/百万Token | 缓存命中/百万Token |
+|------|-------------------|-------------------|-------------------|
+| deepseek-chat | 1元 | 2元 | 0.02元 |
+| deepseek-reasoner | 1元 | 2元 | 0.02元 |
+| deepseek-v4-flash | 1元 | 2元 | 0.02元 |
+| deepseek-v4-pro | 3元 | 6元 | 0.025元 |
+
+#### 步骤5：智谱API配置（必配）
+
+AI发送文字说明 + 操作卡片，引导用户配置智谱API：
+
+> 接下来需要配置智谱的API，这一步是必须的。因为GUI自动化操作（AutoGLM）依赖智谱的视觉模型，不配置的话将无法使用手机操作功能。
+>
+> 不过好消息是，智谱有很多免费模型，不需要充值就能使用！
+>
+> 配置方法：
+> 1. 打开智谱BigModel开放平台
+> 2. 注册账号并登录
+> 3. 在控制台获取API Key
+>
+> 智谱的免费模型包括：
+> - **GLM-4.7-Flash**：旗舰级语言模型的免费版，200K上下文，支持深度思考和函数调用，完全免费
+> - **GLM-4.6V-Flash**：多模态视觉理解模型，免费，支持图片和视频输入，用于屏幕内容理解
+> - **GLM-4V-Flash**：图像理解模型，免费，用于图片分析
+> - **CogView-3-Flash**：文生图模型，免费
+> - **CogVideoX-Flash**：文生视频模型，免费
+>
+> 不用充值，把API密钥给我就行！
+
+卡片包含：
+- **前往智谱获取API Key按钮**：点击后跳转到 `https://open.bigmodel.cn/usercenter/apikeys`
+- **API Key输入框**：用户粘贴API Key后自动保存配置
+- **不提供跳过按钮**：智谱API为必配项，AutoGLM依赖智谱视觉模型
+
+智谱API定位说明：
+- **主要用途1**：GUI自动化操作（AutoGLM），依赖智谱视觉模型理解手机屏幕内容并执行操作
+- **主要用途2**：DeepSeek API不可用时的降级备选，智谱免费语言模型可覆盖基本对话需求
+- **必配原因**：AutoGLM手机操作功能完全依赖智谱API，无替代方案
+
+涉及文件：
+- `data/collects/ApiProviderConfigCollect.kt` - 智谱配置（默认模型：glm-4.5，端点：https://open.bigmodel.cn/api/paas/v4/chat/completions）
+- `data/preferences/ModelConfigManager.kt` - 模型配置持久化
+
+智谱免费模型定价参考：
+
+| 模型 | 类型 | 输入 | 输出 | 上下文 | 并发限制 |
+|------|------|------|------|--------|---------|
+| GLM-4.7-Flash | 语言模型 | 免费 | 免费 | 200K | 1并发 |
+| GLM-4-Flash-250414 | 语言模型 | 免费 | 免费 | 128K | 1并发 |
+| GLM-4.6V-Flash | 视觉推理 | 免费 | 免费 | 128K | 1并发 |
+| GLM-4.1V-Thinking-Flash | 视觉推理 | 免费 | 免费 | 64K | 1并发 |
+| GLM-4V-Flash | 图像理解 | 免费 | 免费 | 16K | 1并发 |
+| CogView-3-Flash | 文生图 | 免费 | 免费 | - | 有限制 |
+| CogVideoX-Flash | 文生视频 | 免费 | 免费 | - | 有限制 |
+
+智谱主要用途说明：
+- **多模态免费模型**（GLM-4.6V-Flash / GLM-4V-Flash）：用于图片理解、屏幕内容分析、AutoGLM视觉输入
+- **手机屏幕操作模型**（AutoGLM）：基于智谱视觉模型的手机自动化操作能力，autoglm-phone模型限时免费
+
+#### 步骤6：权限授权
+
+在引导过程中，根据需要请求Android系统权限：
+
+| 权限 | 用途 | 请求时机 |
+|------|------|---------|
+| 存储权限 | 文件读写 | 引导过程中 |
+| 悬浮窗权限 | 进度气泡展示 | 引导过程中 |
+| 电池优化豁免 | 后台保活 | 引导过程中 |
+| 位置权限 | 上下文自动注入 | 引导过程中 |
+| 通知监听 | 上下文自动注入 | 引导过程中 |
+| 无障碍服务 | AutoGLM手机操作（高级权限） | 可选，引导末尾 |
+
+涉及文件：
+- `ui/features/permission/screens/PermissionGuideScreen.kt` - 现有权限引导页面，需重构为聊天卡片式
+- `ui/features/permission/viewmodel/PermissionGuideViewModel.kt` - 权限状态管理
+- 引导流程中的权限请求通过聊天卡片发出，用户点击卡片上的按钮授权
+
+#### 步骤7：引导完成
+
+AI根据配置完成情况发送不同的完成消息：
+
+**全部配置完成**（终端依赖安装完成 + 智谱API已配置）：
+
+> 其他项目我已经帮你配置完成了，现在可以直接和我对话，使用我的全部能力了！
+
+**部分配置完成**（终端依赖安装未完成，或智谱API未配置）：
+
+> 我的一些能力还没有完成配置，但是大部分功能已经可以稳定使用了。可以先开始和我对话体验一下！
+
+**未配置DeepSeek但已配置智谱**（终端依赖安装完成 + 智谱API已配置 + DeepSeek未配置）：
+
+> 基本配置已经完成了！目前你使用的是智谱的免费模型。如果后续需要更强大的对话能力，可以在设置中配置DeepSeek API。现在就可以开始和我对话了！
+
+### 9.3 技术实现要点
+
+#### 引导聊天页面
+
+引导页面复用现有聊天界面框架，但有以下区别：
+- 不显示侧边栏
+- 不显示模型选择等高级控件
+- AI消息自动发送，不需要用户输入
+- 卡片式交互组件嵌入聊天消息流中
+
+涉及文件：
+- `ui/features/chat/screens/AIChatScreen.kt` - 聊天界面，需新增引导模式
+- `ui/features/chat/viewmodel/ChatViewModel.kt` - 聊天ViewModel，需新增引导流程状态
+- 新建 `ui/features/onboarding/OnboardingViewModel.kt` - 引导流程状态管理
+- 新建 `ui/features/onboarding/OnboardingChatScreen.kt` - 引导聊天页面
+
+#### 引导卡片组件
+
+引导流程中的交互卡片需要以下类型：
+
+| 卡片类型 | 用途 | 交互 |
+|---------|------|------|
+| GitHub登录卡片 | GitHub OAuth授权 | 登录按钮 + 跳过按钮 |
+| 主题选择卡片 | 明快/温暖主题切换 | 两个选项按钮，点击实时切换 |
+| API配置卡片 | DeepSeek/智谱API Key输入 | 跳转链接按钮 + 输入框 + 保存按钮 |
+| 权限授权卡片 | Android权限请求 | 授权按钮 + 跳过按钮 |
+
+新建文件：
+- `ui/features/onboarding/components/GitHubLoginCard.kt`
+- `ui/features/onboarding/components/ThemeSelectionCard.kt`
+- `ui/features/onboarding/components/ApiKeyConfigCard.kt`
+- `ui/features/onboarding/components/PermissionGrantCard.kt`
+
+#### 引导状态持久化
+
+| 状态 | 存储位置 | 说明 |
+|------|---------|------|
+| 引导是否完成 | SharedPreferences | 首次启动检测 |
+| 当前引导步骤 | SharedPreferences | 中断后恢复 |
+| GitHub是否已登录 | GitHubAuthPreferences | 步骤2状态 |
+| 主题是否已选择 | DisplayPreferencesManager | 步骤3状态 |
+| DeepSeek API是否已配置 | ModelConfigManager | 步骤4状态 |
+| 智谱API是否已配置 | ModelConfigManager | 步骤5状态 |
+| 权限是否已授权 | PermissionGuideViewModel | 步骤6状态 |
+| 终端依赖是否安装完成 | OperitTerminalManager | 步骤0状态 |
+
+#### 首次启动检测
+
+在 `MainActivity.kt` 中检测是否为首次启动：
+- 如果引导未完成，跳转到 `OnboardingChatScreen`
+- 如果引导已完成，跳转到主聊天界面
+- 引导完成后设置标记，后续启动不再显示引导
+
+### 9.4 引导流程状态机
+
+```
+[应用启动]
+    │
+    ▼
+[步骤0: 后台启动终端依赖安装] ─── 异步执行，不阻塞
+    │
+    ▼
+[步骤1: AI自我介绍] ─── 自动发送
+    │
+    ▼
+[步骤2: GitHub登录] ─── 卡片交互（可跳过）
+    │
+    ▼
+[步骤3: 主题选择] ─── 卡片交互（实时预览）
+    │
+    ▼
+[步骤4: DeepSeek API配置] ─── 卡片交互（可跳过）
+    │
+    ▼
+[步骤5: 智谱API配置] ─── 卡片交互（必配，AutoGLM依赖）
+    │
+    ▼
+[步骤6: 权限授权] ─── 卡片交互
+    │
+    ▼
+[检查终端依赖安装状态]
+    │
+    ├── 完成 ──→ [步骤7a: 全部配置完成消息]
+    │
+    └── 未完成 ──→ [步骤7b: 部分配置完成消息]
+    │
+    ▼
+[引导结束，进入主界面]
+```
+
+### 9.5 与现有PermissionGuideScreen的关系
+
+现有 `PermissionGuideScreen.kt` 采用 HorizontalPager 分页式引导，包含3个介绍页 + 欢迎页 + 基础权限页 + 权限级别页。
+
+**重构方案**：
+- 移除 `PermissionGuideScreen.kt` 的独立引导页面
+- 将权限引导逻辑合并到新的 `OnboardingChatScreen` 中
+- 权限请求通过聊天卡片发出，而非独立分页
+- 保留 `PermissionGuideViewModel.kt` 的权限检查逻辑
+- 权限级别选择（基本/高级）合并到引导流程的步骤6中
+
+---
+
+## 十、P3 - 新功能
+
+### 10.1 待办功能
 
 ObjectBox持久化，AI工具调用集成，侧边栏入口
 
-### 9.2 日程功能
+### 10.2 日程功能
 
 ObjectBox持久化，AI工具调用集成，侧边栏入口
 
-### 9.3 上下文自动注入
+### 10.3 上下文自动注入
 
 通知/屏幕内容/位置/使用时间/记忆自动注入，Token上限500，优先级：记忆>通知>屏幕>位置>使用时间
 
 ---
 
-## 十、P4 - 收尾打磨
+## 十一、P4 - 收尾打磨
 
 - 字符串资源清理
 - 模型定价数据完整保留
@@ -692,7 +984,7 @@ ObjectBox持久化，AI工具调用集成，侧边栏入口
 
 ---
 
-## 十一、风险与注意事项
+## 十二、风险与注意事项
 
 1. **沙箱包兼容性**：虚拟形象API保留签名返回空值、角色卡后端完整保留、语音API保留调用能力
 2. **数据库迁移**：每次数据模型变更需Room迁移脚本
@@ -702,3 +994,6 @@ ObjectBox持久化，AI工具调用集成，侧边栏入口
 6. **C++模块编译**：移除dragonbones/fbx/mmd后确保CMakeLists.txt正确
 7. **模型定价数据**：完整保留，不可删减
 8. **权限系统简化**：移除ROOT/ADMIN/SHIZUKU/DEBUGGER后，需要这些权限的工具将不可用，需在工具提示词中说明
+9. **首次引导中断恢复**：引导状态需持久化，用户中途退出后应能从断点继续，而非重新开始
+10. **引导与权限重构**：移除PermissionGuideScreen前，需确保所有权限请求逻辑已迁移到OnboardingChatScreen
+11. **主题实时预览**：主题选择卡片需在用户点击选项时立即切换整个页面主题，需确保Compose重组性能
