@@ -44,7 +44,6 @@ import com.ai.assistance.operit.data.model.ActivePrompt
 import com.ai.assistance.operit.data.preferences.UserPreferencesManager
 import com.ai.assistance.operit.ui.features.chat.viewmodel.ChatViewModel
 import com.ai.assistance.operit.ui.features.chat.viewmodel.ChatHistoryDisplayMode
-import com.ai.assistance.operit.ui.features.chat.components.style.bubble.BubbleImageStyleConfig
 import com.ai.assistance.operit.ui.features.chat.webview.workspace.WorkspaceBackupManager
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
@@ -117,26 +116,12 @@ fun ChatScreenContent(
           chatHeaderPipIconColor: Int?,
           chatHeaderOverlayMode: Boolean,
         chatStyle: ChatStyle,
-        cursorUserBubbleLiquidGlass: Boolean = false,
-        cursorUserBubbleWaterGlass: Boolean = false,
-        bubbleUserBubbleLiquidGlass: Boolean = false,
-        bubbleUserBubbleWaterGlass: Boolean = false,
-        bubbleAiBubbleLiquidGlass: Boolean = false,
-        bubbleAiBubbleWaterGlass: Boolean = false,
         historyListState: LazyListState,
         showCharacterSelector: Boolean,
         onShowCharacterSelectorChange: (Boolean) -> Unit,
         onSwitchCharacter: (CharacterSelectorTarget) -> Unit,
         onOpenCharacterSettings: () -> Unit,
         chatAreaHorizontalPadding: Float = 16f,
-        bubbleUserImageStyle: BubbleImageStyleConfig? = null,
-        bubbleAiImageStyle: BubbleImageStyleConfig? = null,
-        bubbleUserRoundedCornersEnabled: Boolean = true,
-        bubbleAiRoundedCornersEnabled: Boolean = true,
-        bubbleUserContentPaddingLeft: Float = 12f,
-        bubbleUserContentPaddingRight: Float = 12f,
-        bubbleAiContentPaddingLeft: Float = 12f,
-        bubbleAiContentPaddingRight: Float = 12f,
         showChatFloatingDotsAnimation: Boolean = true,
 ) {
     val density = LocalDensity.current
@@ -281,12 +266,6 @@ fun ChatScreenContent(
                         topPadding = headerHeight,
                         bottomPadding = bottomInset,
                         chatStyle = chatStyle,
-                        cursorUserBubbleLiquidGlass = cursorUserBubbleLiquidGlass,
-                        cursorUserBubbleWaterGlass = cursorUserBubbleWaterGlass,
-                        bubbleUserBubbleLiquidGlass = bubbleUserBubbleLiquidGlass,
-                        bubbleUserBubbleWaterGlass = bubbleUserBubbleWaterGlass,
-                        bubbleAiBubbleLiquidGlass = bubbleAiBubbleLiquidGlass,
-                        bubbleAiBubbleWaterGlass = bubbleAiBubbleWaterGlass,
                         isMultiSelectMode = isMultiSelectMode,
                         selectedMessageIndices = selectedMessageIndices,
                         onToggleMultiSelectMode = { initialIndex ->
@@ -306,14 +285,6 @@ fun ChatScreenContent(
                             }
                         },
                         horizontalPadding = chatAreaHorizontalPadding.dp,
-                        bubbleUserImageStyle = bubbleUserImageStyle,
-                        bubbleAiImageStyle = bubbleAiImageStyle,
-                        bubbleUserRoundedCornersEnabled = bubbleUserRoundedCornersEnabled,
-                        bubbleAiRoundedCornersEnabled = bubbleAiRoundedCornersEnabled,
-                        bubbleUserContentPaddingLeft = bubbleUserContentPaddingLeft,
-                        bubbleUserContentPaddingRight = bubbleUserContentPaddingRight,
-                        bubbleAiContentPaddingLeft = bubbleAiContentPaddingLeft,
-                        bubbleAiContentPaddingRight = bubbleAiContentPaddingRight,
                         showChatFloatingDotsAnimation = showChatFloatingDotsAnimation,
                 )
                 ChatScreenHeader(
@@ -397,12 +368,6 @@ fun ChatScreenContent(
                         },
                         bottomPadding = bottomInset,
                         chatStyle = chatStyle,
-                        cursorUserBubbleLiquidGlass = cursorUserBubbleLiquidGlass,
-                        cursorUserBubbleWaterGlass = cursorUserBubbleWaterGlass,
-                        bubbleUserBubbleLiquidGlass = bubbleUserBubbleLiquidGlass,
-                        bubbleUserBubbleWaterGlass = bubbleUserBubbleWaterGlass,
-                        bubbleAiBubbleLiquidGlass = bubbleAiBubbleLiquidGlass,
-                        bubbleAiBubbleWaterGlass = bubbleAiBubbleWaterGlass,
                         isMultiSelectMode = isMultiSelectMode,
                         selectedMessageIndices = selectedMessageIndices,
                         horizontalPadding = chatAreaHorizontalPadding.dp,
@@ -423,14 +388,6 @@ fun ChatScreenContent(
                             }
                         },
                         showChatFloatingDotsAnimation = showChatFloatingDotsAnimation,
-                        bubbleUserImageStyle = bubbleUserImageStyle,
-                        bubbleAiImageStyle = bubbleAiImageStyle,
-                        bubbleUserRoundedCornersEnabled = bubbleUserRoundedCornersEnabled,
-                        bubbleAiRoundedCornersEnabled = bubbleAiRoundedCornersEnabled,
-                        bubbleUserContentPaddingLeft = bubbleUserContentPaddingLeft,
-                        bubbleUserContentPaddingRight = bubbleUserContentPaddingRight,
-                        bubbleAiContentPaddingLeft = bubbleAiContentPaddingLeft,
-                        bubbleAiContentPaddingRight = bubbleAiContentPaddingRight,
                 )
             }
         }
@@ -770,12 +727,6 @@ fun ChatScreenContent(
                         thinkingBackgroundColor = thinkingBackgroundColor,
                         thinkingTextColor = thinkingTextColor,
                         chatStyle = chatStyle,
-                        cursorUserBubbleLiquidGlass = cursorUserBubbleLiquidGlass,
-                        cursorUserBubbleWaterGlass = cursorUserBubbleWaterGlass,
-                        bubbleUserBubbleLiquidGlass = bubbleUserBubbleLiquidGlass,
-                        bubbleUserBubbleWaterGlass = bubbleUserBubbleWaterGlass,
-                        bubbleAiBubbleLiquidGlass = bubbleAiBubbleLiquidGlass,
-                        bubbleAiBubbleWaterGlass = bubbleAiBubbleWaterGlass,
                         initialThinkingExpanded = sharePreviewThinkingExpanded,
                         expandThinkToolsGroups = sharePreviewExpandThinkToolsGroups,
                         includeBackground = sharePreviewIncludeBackground,

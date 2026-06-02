@@ -16,9 +16,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
@@ -27,12 +25,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.ai.assistance.operit.data.model.ChatMessage
-import com.ai.assistance.operit.data.preferences.UserPreferencesManager
 import com.ai.assistance.operit.ui.features.chat.components.rememberChatMessageHeightMemory
-import com.ai.assistance.operit.ui.features.chat.components.style.bubble.BubbleStyleChatMessage
+import com.ai.assistance.operit.ui.features.chat.components.style.cursor.CursorStyleChatMessage
 
 /**
  * 消息显示组件
@@ -45,20 +41,6 @@ fun MessageDisplay(
     showSpeechOverlay: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-    val preferencesManager = remember { UserPreferencesManager.getInstance(context) }
-    val bubbleUserRoundedCornersEnabled by
-        preferencesManager.bubbleUserRoundedCornersEnabled.collectAsState(initial = true)
-    val bubbleAiRoundedCornersEnabled by
-        preferencesManager.bubbleAiRoundedCornersEnabled.collectAsState(initial = true)
-    val bubbleUserContentPaddingLeft by
-        preferencesManager.bubbleUserContentPaddingLeft.collectAsState(initial = 12f)
-    val bubbleUserContentPaddingRight by
-        preferencesManager.bubbleUserContentPaddingRight.collectAsState(initial = 12f)
-    val bubbleAiContentPaddingLeft by
-        preferencesManager.bubbleAiContentPaddingLeft.collectAsState(initial = 12f)
-    val bubbleAiContentPaddingRight by
-        preferencesManager.bubbleAiContentPaddingRight.collectAsState(initial = 12f)
     val listState = rememberLazyListState()
     val displayMessages =
         messages
@@ -78,6 +60,8 @@ fun MessageDisplay(
     val aiTextColor = MaterialTheme.colorScheme.onSurface
     val systemMessageColor = MaterialTheme.colorScheme.surfaceVariant
     val systemTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val thinkingBackgroundColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+    val thinkingTextColor = MaterialTheme.colorScheme.onSurfaceVariant
 
     val listAlpha by animateFloatAsState(targetValue = 1f)
 
@@ -121,7 +105,7 @@ fun MessageDisplay(
                 items = displayMessages,
                 key = { it.timestamp }
             ) { message ->
-                BubbleStyleChatMessage(
+                CursorStyleChatMessage(
                     message = message,
                     userMessageColor = userMessageColor,
                     aiMessageColor = aiMessageColor,
@@ -129,12 +113,8 @@ fun MessageDisplay(
                     aiTextColor = aiTextColor,
                     systemMessageColor = systemMessageColor,
                     systemTextColor = systemTextColor,
-                    bubbleUserRoundedCornersEnabled = bubbleUserRoundedCornersEnabled,
-                    bubbleAiRoundedCornersEnabled = bubbleAiRoundedCornersEnabled,
-                    bubbleUserContentPaddingLeft = bubbleUserContentPaddingLeft,
-                    bubbleUserContentPaddingRight = bubbleUserContentPaddingRight,
-                    bubbleAiContentPaddingLeft = bubbleAiContentPaddingLeft,
-                    bubbleAiContentPaddingRight = bubbleAiContentPaddingRight,
+                    thinkingBackgroundColor = thinkingBackgroundColor,
+                    thinkingTextColor = thinkingTextColor,
                     heightMemory = messageHeightMemory,
                     enableDialogs = false
                 )
@@ -154,7 +134,7 @@ fun MessageDisplay(
                 contentAlignment = Alignment.BottomCenter
             ) {
                 if (speechPreviewText.isNotBlank()) {
-                    BubbleStyleChatMessage(
+                    CursorStyleChatMessage(
                         message = ChatMessage(sender = "user", content = speechPreviewText, timestamp = 0L),
                         userMessageColor = userMessageColor,
                         aiMessageColor = aiMessageColor,
@@ -162,12 +142,8 @@ fun MessageDisplay(
                         aiTextColor = aiTextColor,
                         systemMessageColor = systemMessageColor,
                         systemTextColor = systemTextColor,
-                        bubbleUserRoundedCornersEnabled = bubbleUserRoundedCornersEnabled,
-                        bubbleAiRoundedCornersEnabled = bubbleAiRoundedCornersEnabled,
-                        bubbleUserContentPaddingLeft = bubbleUserContentPaddingLeft,
-                        bubbleUserContentPaddingRight = bubbleUserContentPaddingRight,
-                        bubbleAiContentPaddingLeft = bubbleAiContentPaddingLeft,
-                        bubbleAiContentPaddingRight = bubbleAiContentPaddingRight,
+                        thinkingBackgroundColor = thinkingBackgroundColor,
+                        thinkingTextColor = thinkingTextColor,
                         enableDialogs = false
                     )
                 }

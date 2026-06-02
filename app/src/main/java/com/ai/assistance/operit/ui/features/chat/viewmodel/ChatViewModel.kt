@@ -13,7 +13,6 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.TextFieldValue.Companion
 import androidx.core.content.FileProvider
-import com.ai.assistance.operit.ui.features.chat.components.ChatStyle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ai.assistance.operit.api.chat.ChatRuntimeHolder
@@ -1031,13 +1030,8 @@ class ChatViewModel(private val context: Context) : ViewModel() {
         systemTextColor: Color,
         thinkingBackgroundColor: Color,
         thinkingTextColor: Color,
-        chatStyle: ChatStyle,
         cursorUserBubbleLiquidGlass: Boolean = false,
         cursorUserBubbleWaterGlass: Boolean = false,
-        bubbleUserBubbleLiquidGlass: Boolean = false,
-        bubbleUserBubbleWaterGlass: Boolean = false,
-        bubbleAiBubbleLiquidGlass: Boolean = false,
-        bubbleAiBubbleWaterGlass: Boolean = false,
         initialThinkingExpanded: Boolean = false,
         expandThinkToolsGroups: Boolean = false,
         includeBackground: Boolean = true,
@@ -1077,13 +1071,8 @@ class ChatViewModel(private val context: Context) : ViewModel() {
                         systemTextColor = systemTextColor,
                         thinkingBackgroundColor = thinkingBackgroundColor,
                         thinkingTextColor = thinkingTextColor,
-                        chatStyle = chatStyle,
                         cursorUserBubbleLiquidGlass = cursorUserBubbleLiquidGlass,
                         cursorUserBubbleWaterGlass = cursorUserBubbleWaterGlass,
-                        bubbleUserBubbleLiquidGlass = bubbleUserBubbleLiquidGlass,
-                        bubbleUserBubbleWaterGlass = bubbleUserBubbleWaterGlass,
-                        bubbleAiBubbleLiquidGlass = bubbleAiBubbleLiquidGlass,
-                        bubbleAiBubbleWaterGlass = bubbleAiBubbleWaterGlass,
                         initialThinkingExpanded = initialThinkingExpanded,
                         expandThinkToolsGroups = expandThinkToolsGroups,
                         includeBackground = includeBackground,
