@@ -16,8 +16,10 @@ jobs:
         run: git config --global url."https://github.com/".insteadOf "git@github.com:"
 
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
+
+      - name: Initialize submodules
+        run: |
+          git submodule update --init --recursive 2>&1 || echo "WARNING: Some submodules failed to initialize, continuing..."
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
