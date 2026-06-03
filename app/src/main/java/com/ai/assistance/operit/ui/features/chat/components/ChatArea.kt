@@ -1155,7 +1155,6 @@ private fun MessageItem(
         }
 
     }
-}
 
 private fun hasDisplayableTokenStats(message: ChatMessage): Boolean {
     return message.inputTokens > 0 || message.cachedInputTokens > 0 || message.outputTokens > 0
