@@ -726,7 +726,6 @@ fun ChatScreenContent(
                         systemTextColor = systemTextColor,
                         thinkingBackgroundColor = thinkingBackgroundColor,
                         thinkingTextColor = thinkingTextColor,
-                        chatStyle = chatStyle,
                         initialThinkingExpanded = sharePreviewThinkingExpanded,
                         expandThinkToolsGroups = sharePreviewExpandThinkToolsGroups,
                         includeBackground = sharePreviewIncludeBackground,

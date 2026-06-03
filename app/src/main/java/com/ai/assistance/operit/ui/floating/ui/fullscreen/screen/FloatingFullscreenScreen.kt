@@ -69,6 +69,8 @@ import com.ai.assistance.operit.data.preferences.UserPreferencesManager
 
 
 import com.ai.assistance.operit.data.repository.AvatarSettings
+import com.ai.assistance.operit.data.repository.AvatarConfig
+import com.ai.assistance.operit.data.repository.AvatarInstanceSettings
 import com.ai.assistance.operit.data.repository.getEmotionAnimationMapping
 import com.ai.assistance.operit.data.repository.getMoodAnimationMapping
 import com.ai.assistance.operit.ui.floating.FloatContext
@@ -141,13 +143,12 @@ fun FloatingFullscreenMode(floatContext: FloatContext) {
     val aiAvatarUri = activeCharacterAvatarUri ?: globalAiAvatarUri
 
     val avatarModelFactory = remember { AvatarModelFactoryImpl() }
-    val avatarRepository: Nothing? = null
     val avatarControllerFactory = remember { AvatarControllerFactoryImpl() }
     val avatarRendererFactory = remember { AvatarRendererFactoryImpl() }
     val currentAvatarModel by remember { mutableStateOf<com.ai.assistance.operit.core.avatar.common.model.AvatarModel?>(null) }
     val avatarSettings by remember { mutableStateOf(AvatarSettings()) }
-    val avatarConfigs by remember { mutableStateOf(emptyList<com.ai.assistance.operit.data.repository.AvatarConfig>()) }
-    val avatarInstanceSettings by remember { mutableStateOf(emptyMap<String, com.ai.assistance.operit.data.repository.AvatarInstanceSettings>()) }
+    val avatarConfigs by remember { mutableStateOf(emptyList<AvatarConfig>()) }
+    val avatarInstanceSettings by remember { mutableStateOf(emptyMap<String, AvatarInstanceSettings>()) }
     val currentAvatarConfig = remember(avatarConfigs, currentAvatarModel?.id) {
         currentAvatarModel?.let { avatar -> avatarConfigs.find { it.id == avatar.id } }
     }
@@ -185,7 +186,6 @@ fun FloatingFullscreenMode(floatContext: FloatContext) {
     val autoNewChatGroup by remember { mutableStateOf(false) }
     
     val volumeLevel by viewModel.volumeLevelFlow.collectAsState()
-    
     var pendingSpeechPreview by remember { mutableStateOf<String?>(null) }
     var lastUserMessageTimestampBeforeSpeech by remember { mutableStateOf<Long?>(null) }
 

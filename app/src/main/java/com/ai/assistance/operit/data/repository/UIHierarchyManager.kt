@@ -23,6 +23,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.StringReader
 import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 object UIHierarchyManager {
     private const val TAG = "UIHierarchyManager"
@@ -255,18 +256,21 @@ object UIHierarchyManager {
         val service = accessibilityService ?: return false
         return withContext(Dispatchers.IO) {
             try {
-                val screenshotResult = withTimeoutOrNull(5000L) {
-                    suspendCancellableCoroutine<AccessibilityService.Screenshot> { cont ->
+                val screenshotResult = withTimeoutOrNull<android.graphics.HardwareBuffer>(5000L) {
+                    suspendCancellableCoroutine { cont ->
                         val executor = java.util.concurrent.Executor { r ->
                             android.os.Handler(android.os.Looper.getMainLooper()).post(r)
                         }
                         service.takeScreenshot(
                             android.view.Display.DEFAULT_DISPLAY,
-                            5000L,
                             executor,
-                            object : AccessibilityService.TakeScreenshotCallback() {
-                                override fun onScreenshot(screenshot: AccessibilityService.Screenshot) {
-                                    if (cont.isActive) cont.resume(screenshot)
+                            object : AccessibilityService.TakeScreenshotCallback {
+                                override fun onScreenshot(screenshot: AccessibilityService.ScreenshotResult) {
+                                    if (cont.isActive) {
+                                        val hwBuffer = screenshot.hardwareBuffer
+                                        cont.resume(hwBuffer) { }
+                                        screenshot.close()
+                                    }
                                 }
                                 override fun onError(errorCode: Int) {
                                     if (cont.isActive) {
@@ -282,15 +286,12 @@ object UIHierarchyManager {
                     return@withContext false
                 }
 
-                val hardwareBuffer = screenshotResult.hardwareBuffer
-                val bitmap = Bitmap.wrapHardwareBuffer(hardwareBuffer, null)
+                val bitmap = Bitmap.wrapHardwareBuffer(screenshotResult, null)
                 if (bitmap == null) {
-                    hardwareBuffer.close()
                     screenshotResult.close()
                     return@withContext false
                 }
                 val softwareBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, false)
-                hardwareBuffer.close()
                 screenshotResult.close()
 
                 if (softwareBitmap == null) return@withContext false

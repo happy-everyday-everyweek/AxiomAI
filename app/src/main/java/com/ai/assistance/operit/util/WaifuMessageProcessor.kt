@@ -896,37 +896,8 @@ object WaifuMessageProcessor {
      */
     private fun getRandomEmojiPath(emotion: String): String? {
         try {
-            // 只从自定义表情中查找
-            val customEmoji = try {
-                customEmojiRepository?.let { repo ->
-                    runBlocking {
-                        val activePrompt = activePromptManager?.getActivePrompt() ?: return@runBlocking null
-                        repo.initializeBuiltinEmojis(activePrompt)
-                        val emojis = repo.getEmojisForCategory(activePrompt, emotion).first()
-                        if (emojis.isNotEmpty()) {
-                            val randomEmoji = emojis.random()
-                            val file = repo.getEmojiFile(activePrompt, randomEmoji)
-                            if (file.exists()) {
-                                return@runBlocking file.absolutePath
-                            }
-                        }
-                        null
-                    }
-                }
-            } catch (e: Exception) {
-                com.ai.assistance.operit.util.AppLogger.e("WaifuMessageProcessor", "查询自定义表情失败", e)
-                null
-            }
-            
-            // 如果找到自定义表情，直接返回（已经是完整路径）
-            if (customEmoji != null) {
-                return customEmoji
-            }
-            
-            // 如果自定义表情中没有找到，则直接返回null
-            com.ai.assistance.operit.util.AppLogger.w("WaifuMessageProcessor", "在自定义表情中未找到对于情绪 '$emotion' 的表情")
+            // Note: customEmojiRepository methods (initializeBuiltinEmojis, getEmojisForCategory, getEmojiFile) have been removed
             return null
-            
         } catch (e: Exception) {
             com.ai.assistance.operit.util.AppLogger.e("WaifuMessageProcessor", "获取表情图片失败: $emotion", e)
             return null

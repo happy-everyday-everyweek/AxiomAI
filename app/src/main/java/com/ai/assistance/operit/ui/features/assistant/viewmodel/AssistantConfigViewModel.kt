@@ -13,6 +13,7 @@ import com.ai.assistance.operit.core.avatar.common.state.AvatarMoodTypes
 import com.ai.assistance.operit.core.avatar.impl.factory.AvatarModelFactoryImpl
 import com.ai.assistance.operit.data.repository.AvatarConfig
 import com.ai.assistance.operit.data.repository.AvatarInstanceSettings
+import com.ai.assistance.operit.data.repository.AvatarRepository
 
 import com.ai.assistance.operit.data.repository.getCustomMoodDefinitions
 import com.ai.assistance.operit.data.repository.getEmotionAnimationMapping
@@ -27,6 +28,8 @@ import kotlinx.coroutines.launch
 class AssistantConfigViewModel(
     private val context: Context
 ) : ViewModel() {
+
+    private val repository = AvatarRepository.getInstance()
 
     data class UiState(
         val isLoading: Boolean = false,

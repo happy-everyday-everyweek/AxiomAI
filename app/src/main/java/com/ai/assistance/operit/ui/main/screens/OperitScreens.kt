@@ -56,6 +56,7 @@ import com.ai.assistance.operit.ui.features.settings.screens.LanguageSettingsScr
 import com.ai.assistance.operit.ui.features.settings.screens.LayoutAdjustmentSettingsScreen
 import com.ai.assistance.operit.ui.features.settings.screens.ModelConfigScreen
 import com.ai.assistance.operit.ui.features.settings.screens.ModelPromptsSettingsScreen
+import com.ai.assistance.operit.ui.features.settings.screens.SpeechServicesSettingsScreen
 import com.ai.assistance.operit.ui.features.settings.screens.TagMarketScreen
 import com.ai.assistance.operit.ui.features.settings.screens.SettingsScreen
 
@@ -1026,6 +1027,22 @@ sealed class Screen(
                 onGestureConsumed: (Boolean) -> Unit
         ) {
             LanguageSettingsScreen(onBackPressed = onGoBack)
+        }
+    }
+
+    data object SpeechServicesSettings :
+            Screen(navItem = NavItem.Settings, titleRes = R.string.settings_speech_services) {
+        @Composable
+        override fun Content(
+                navController: NavController,
+                navigateTo: ScreenNavigationHandler,
+                onGoBack: () -> Unit,
+                hasBackgroundImage: Boolean,
+                onLoading: (Boolean) -> Unit,
+                onError: (String) -> Unit,
+                onGestureConsumed: (Boolean) -> Unit
+        ) {
+            SpeechServicesSettingsScreen(onBackPressed = onGoBack)
         }
     }
 

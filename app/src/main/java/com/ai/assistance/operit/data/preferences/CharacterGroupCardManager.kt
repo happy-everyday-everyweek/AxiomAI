@@ -157,7 +157,7 @@ class CharacterGroupCardManager private constructor(private val context: Context
 
         runCatching { userPreferencesManager.deleteCharacterGroupTheme(groupId) }
         runCatching { waifuPreferences.deleteCharacterGroupWaifuSettings(groupId) }
-        runCatching { customEmojiRepository.deleteCharacterGroupEmojis(groupId) }
+        runCatching { /* Note: deleteCharacterGroupEmojis has been removed */ }
     }
 
     suspend fun setActiveCharacterGroupCard(groupId: String?) {
@@ -199,7 +199,7 @@ class CharacterGroupCardManager private constructor(private val context: Context
             waifuPreferences.cloneWaifuSettingsBetweenCharacterGroups(sourceGroupId, targetGroupId)
         }
         runCatching {
-            customEmojiRepository.cloneEmojisBetweenCharacterGroups(sourceGroupId, targetGroupId)
+            // Note: cloneEmojisBetweenCharacterGroups has been removed
         }
     }
 
@@ -254,7 +254,7 @@ class CharacterGroupCardManager private constructor(private val context: Context
     ) {
         runCatching { userPreferencesManager.copyCurrentThemeToCharacterGroup(group.id) }
         runCatching { waifuPreferences.copyCurrentWaifuSettingsToCharacterGroup(group.id) }
-        runCatching { customEmojiRepository.cloneEmojiSet(emojiSourcePrompt, ActivePrompt.CharacterGroup(group.id)) }
+        runCatching { /* Note: cloneEmojiSet has been removed */ }
         runCatching {
             val avatarUri = buildDefaultGroupAvatar(group)
             userPreferencesManager.saveAiAvatarForCharacterGroup(group.id, avatarUri)

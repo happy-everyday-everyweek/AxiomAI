@@ -201,10 +201,7 @@ class CharacterCardManager private constructor(private val context: Context) {
         // 同时也复制当前Waifu模式配置
         waifuPreferences.copyCurrentWaifuSettingsToCharacterCard(characterCardId)
         // 同时复制创建前活跃目标的自定义表情配置
-        customEmojiRepository.cloneEmojiSet(
-            emojiSourcePrompt,
-            ActivePrompt.CharacterCard(characterCardId)
-        )
+        // Note: cloneEmojiSet has been removed
     }
 
 
@@ -222,7 +219,7 @@ class CharacterCardManager private constructor(private val context: Context) {
         }
 
         try {
-            customEmojiRepository.cloneEmojisBetweenCharacterCards(sourceCharacterCardId, targetCharacterCardId)
+            // Note: cloneEmojisBetweenCharacterCards has been removed
         } catch (e: Exception) {
             AppLogger.e("CharacterCardManager", "克隆角色卡自定义表情失败", e)
         }
@@ -378,7 +375,7 @@ class CharacterCardManager private constructor(private val context: Context) {
         // 删除角色卡对应的Waifu模式配置
         waifuPreferences.deleteCharacterCardWaifuSettings(id)
         // 删除角色卡对应的自定义表情配置
-        customEmojiRepository.deleteCharacterCardEmojis(id)
+        // Note: deleteCharacterCardEmojis has been removed
         
     }
     

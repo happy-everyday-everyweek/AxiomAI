@@ -18,6 +18,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 private const val TAG = "FloatingFullscreenViewModel"
@@ -70,6 +74,13 @@ class FloatingFullscreenModeViewModel(
     val isProcessingSpeech: Boolean get() = false
     val userMessage: String get() = ""
     val hasFocus: Boolean get() = false
+
+    private val _volumeLevelFlow = MutableStateFlow(0f)
+    val volumeLevelFlow: StateFlow<Float> = _volumeLevelFlow.asStateFlow()
+
+    data class RecognitionResult(val text: String, val isFinal: Boolean)
+    private val _recognitionResultFlow = MutableStateFlow(RecognitionResult("", false))
+    val recognitionResultFlow: StateFlow<RecognitionResult> = _recognitionResultFlow.asStateFlow()
 
     fun toggleStreamingTtsMuted() {
         isStreamingTtsMuted = !isStreamingTtsMuted

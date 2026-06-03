@@ -320,8 +320,8 @@ fun ShizukuDemoScreen(
                         }
                     },
                     updateNeeded = isAccessibilityUpdateNeeded,
-                    installedVersion = accessibilityInstalledVersion,
-                    bundledVersion = accessibilityBundledVersion,
+                    installedVersion = accessibilityInstalledVersion?.toString(),
+                    bundledVersion = accessibilityBundledVersion.toString(),
                     onUpdateProvider = {
                         try {
                             val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
