@@ -256,42 +256,66 @@ object UIHierarchyManager {
         val service = accessibilityService ?: return false
         return withContext(Dispatchers.IO) {
             try {
-                val screenshotResult = withTimeoutOrNull<android.graphics.HardwareBuffer>(5000L) {
-                    suspendCancellableCoroutine { cont ->
+                val screenshotResult = withTimeoutOrNull(5000L) {
+                    suspendCancellableCoroutine<AccessibilityService.ScreenshotResult> { cont ->
                         val executor = java.util.concurrent.Executor { r ->
                             android.os.Handler(android.os.Looper.getMainLooper()).post(r)
                         }
-                        service.takeScreenshot(
-                            android.view.Display.DEFAULT_DISPLAY,
-                            executor,
-                            object : AccessibilityService.TakeScreenshotCallback {
-                                override fun onScreenshot(screenshot: AccessibilityService.ScreenshotResult) {
-                                    if (cont.isActive) {
-                                        val hwBuffer = screenshot.hardwareBuffer
-                                        cont.resume(hwBuffer) { }
-                                        screenshot.close()
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            service.takeScreenshot(
+                                android.view.Display.DEFAULT_DISPLAY,
+                                executor,
+                                object : AccessibilityService.TakeScreenshotCallback {
+                                    override fun onSuccess(screenshot: AccessibilityService.ScreenshotResult) {
+                                        if (cont.isActive) cont.resume(screenshot)
+                                    }
+                                    override fun onFailure(errorCode: Int) {
+                                        if (cont.isActive) {
+                                            AppLogger.e(TAG, "takeScreenshot error: $errorCode")
+                                            cont.resumeWithException(Exception("Screenshot error code: $errorCode"))
+                                        }
                                     }
                                 }
-                                override fun onError(errorCode: Int) {
-                                    if (cont.isActive) {
-                                        AppLogger.e(TAG, "takeScreenshot error: $errorCode")
-                                        cont.resumeWithException(Exception("Screenshot error code: $errorCode"))
+                            )
+                        } else {
+                            @Suppress("DEPRECATION")
+                            service.takeScreenshot(
+                                android.view.Display.DEFAULT_DISPLAY,
+                                5000L,
+                                executor,
+                                object : AccessibilityService.TakeScreenshotCallback() {
+                                    override fun onScreenshot(screenshot: AccessibilityService.Screenshot) {
+                                        if (cont.isActive) {
+                                            val result = AccessibilityService.ScreenshotResult(
+                                                screenshot.hardwareBuffer, screenshot.colorSpace, screenshot.timestamp
+                                            )
+                                            cont.resume(result)
+                                        }
+                                    }
+                                    override fun onError(errorCode: Int) {
+                                        if (cont.isActive) {
+                                            AppLogger.e(TAG, "takeScreenshot error: $errorCode")
+                                            cont.resumeWithException(Exception("Screenshot error code: $errorCode"))
+                                        }
                                     }
                                 }
-                            }
-                        )
+                            )
+                        }
                     }
                 } ?: run {
                     AppLogger.e(TAG, "takeScreenshot timed out")
                     return@withContext false
                 }
 
-                val bitmap = Bitmap.wrapHardwareBuffer(screenshotResult, null)
+                val hardwareBuffer = screenshotResult.hardwareBuffer
+                val bitmap = Bitmap.wrapHardwareBuffer(hardwareBuffer, null)
                 if (bitmap == null) {
+                    hardwareBuffer.close()
                     screenshotResult.close()
                     return@withContext false
                 }
                 val softwareBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, false)
+                hardwareBuffer.close()
                 screenshotResult.close()
 
                 if (softwareBitmap == null) return@withContext false
